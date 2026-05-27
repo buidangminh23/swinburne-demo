@@ -130,11 +130,6 @@ const avatarLetter = computed(() => props.session.user.name.trim().split(/\s+/).
               <span>29/5 Sprint 1 demo</span>
             </div>
           </div>
-          <div class="profile-progress">
-            <span>Progress<br />(4/5)</span>
-            <div class="progress-track"><div class="progress-fill"></div></div>
-            <strong>80%</strong>
-          </div>
           <SummaryCards :summary="state.summary" />
         </div>
 

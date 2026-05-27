@@ -427,39 +427,6 @@ textarea:focus {
   margin-right: 6px;
 }
 
-.profile-progress {
-  align-items: center;
-  display: grid;
-  gap: 18px;
-  grid-template-columns: 70px minmax(180px, 1fr) 46px;
-  justify-self: end;
-  max-width: 500px;
-  width: 100%;
-}
-
-.profile-progress span {
-  color: #555562;
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.profile-progress strong {
-  color: #44444e;
-  font-size: 14px;
-}
-
-.progress-track {
-  background: #eeeef4;
-  height: 5px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  background: #37b495;
-  height: 100%;
-  width: 80%;
-}
-
 .notice {
   border-radius: 2px;
   font-size: 13px;
@@ -781,10 +748,6 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
-  .profile-progress {
-    justify-self: stretch;
-  }
-
   .summary-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -875,10 +838,6 @@ tbody tr:hover {
   .profile-meta {
     display: grid;
     gap: 10px;
-  }
-
-  .profile-progress {
-    grid-template-columns: 64px 1fr 40px;
   }
 
   .summary-row,
