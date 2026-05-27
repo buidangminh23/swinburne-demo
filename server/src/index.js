@@ -1,15 +1,26 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { createRepository } from "./repository.js";
 
 const app = express();
 const repository = createRepository();
 const port = Number(process.env.PORT ?? 4000);
+const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://127.0.0.1:5173";
+const serverDir = path.dirname(fileURLToPath(import.meta.url));
+const clientDist = path.resolve(serverDir, "../../client/dist");
+const hasClientBuild = fs.existsSync(path.join(clientDist, "index.html"));
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173" }));
+app.use(cors({ origin: clientOrigin }));
 app.use(express.json());
+
+if (hasClientBuild) {
+  app.use(express.static(clientDist));
+}
 
 const loginSchema = z.object({
   email: z.email(),
@@ -41,6 +52,14 @@ function route(handler) {
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, store: process.env.DATABASE_URL ? "mysql-prisma" : "demo" });
+});
+
+app.get("/", (req, res) => {
+  if (hasClientBuild) {
+    res.sendFile(path.join(clientDist, "index.html"));
+    return;
+  }
+  res.redirect(302, clientOrigin);
 });
 
 app.post(
@@ -107,6 +126,14 @@ app.get(
   })
 );
 
+app.get(/^\/(?!api\/).*/, (req, res) => {
+  if (hasClientBuild) {
+    res.sendFile(path.join(clientDist, "index.html"));
+    return;
+  }
+  res.redirect(302, clientOrigin);
+});
+
 app.use((error, req, res, next) => {
   if (error instanceof z.ZodError) {
     res.status(400).json({ message: "Invalid request", issues: error.issues });
@@ -118,4 +145,3 @@ app.use((error, req, res, next) => {
 app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
 });
-
