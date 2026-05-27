@@ -232,20 +232,6 @@ textarea:focus {
   position: relative;
 }
 
-.loading-chip {
-  background: #ffffff;
-  box-shadow: 0 4px 18px rgba(28, 28, 43, 0.12);
-  color: #5d5d68;
-  font-size: 14px;
-  left: 50%;
-  min-width: 130px;
-  padding: 13px 22px;
-  position: absolute;
-  text-align: center;
-  top: 0;
-  transform: translateX(-50%);
-}
-
 .topbar-actions {
   align-items: center;
   color: #727285;
@@ -868,10 +854,6 @@ tbody tr:hover {
 }
 
 @media (max-width: 640px) {
-  .loading-chip {
-    display: none;
-  }
-
   .topbar-actions {
     width: 100%;
     justify-content: flex-end;

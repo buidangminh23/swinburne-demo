@@ -78,7 +78,6 @@ const avatarLetter = computed(() => props.session.user.name.trim().split(/\s+/).
 
     <main class="portal-frame">
       <header class="portal-topbar">
-        <div class="loading-chip">Loading ...</div>
         <div class="topbar-actions">
           <button class="icon-button" aria-label="Notifications">
             <Bell :size="18" />
