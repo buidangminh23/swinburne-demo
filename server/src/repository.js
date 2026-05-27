@@ -3,7 +3,8 @@ import { PrismaClient } from "@prisma/client";
 const users = [
   { id: 1, name: "Dr Minh Nguyen", email: "lecturer@swin.edu.au", role: "LECTURER" },
   { id: 2, name: "Support Desk", email: "support@swin.edu.au", role: "SUPPORT" },
-  { id: 3, name: "Admin Office", email: "admin@swin.edu.au", role: "ADMIN" }
+  { id: 3, name: "Admin Office", email: "admin@swin.edu.au", role: "ADMIN" },
+  { id: 4, name: "Bui Dang Minh", email: "student@swin.edu.au", role: "STUDENT" }
 ];
 
 const equipment = [
@@ -71,6 +72,30 @@ const borrowRequests = [
     handoverNotes: "Collected by lecturer for morning tutorial",
     createdAt: new Date("2026-05-27T09:10:00.000Z").toISOString(),
     updatedAt: new Date("2026-05-27T09:10:00.000Z").toISOString()
+  },
+  {
+    id: 2,
+    equipmentId: 4,
+    lecturerId: 4,
+    classroom: "ATC 625",
+    dueAt: new Date("2026-05-26T10:30:00.000Z").toISOString(),
+    returnedAt: new Date("2026-05-26T10:05:00.000Z").toISOString(),
+    status: "RETURNED",
+    handoverNotes: "Used for data science workshop recording",
+    createdAt: new Date("2026-05-24T08:20:00.000Z").toISOString(),
+    updatedAt: new Date("2026-05-26T10:05:00.000Z").toISOString()
+  },
+  {
+    id: 3,
+    equipmentId: 5,
+    lecturerId: 4,
+    classroom: "EN402",
+    dueAt: new Date("2026-05-29T12:00:00.000Z").toISOString(),
+    returnedAt: null,
+    status: "BORROWED",
+    handoverNotes: "Microphone set for classroom presentation",
+    createdAt: new Date("2026-05-27T11:45:00.000Z").toISOString(),
+    updatedAt: new Date("2026-05-27T11:45:00.000Z").toISOString()
   }
 ];
 
@@ -137,6 +162,13 @@ class DemoRepository {
   async listActiveRequests() {
     return borrowRequests
       .filter((request) => request.status !== "RETURNED")
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .map(attachEquipment);
+  }
+
+  async listBorrowHistory(userId) {
+    return borrowRequests
+      .filter((request) => request.lecturerId === userId)
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
       .map(attachEquipment);
   }
@@ -239,6 +271,14 @@ class PrismaRepository {
   async listActiveRequests() {
     return this.prisma.borrowRequest.findMany({
       where: { status: { not: "RETURNED" } },
+      include: { equipment: true, lecturer: true },
+      orderBy: { createdAt: "desc" }
+    });
+  }
+
+  async listBorrowHistory(userId) {
+    return this.prisma.borrowRequest.findMany({
+      where: { lecturerId: userId },
       include: { equipment: true, lecturer: true },
       orderBy: { createdAt: "desc" }
     });

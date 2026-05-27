@@ -12,6 +12,7 @@ const state = reactive({
   summary: null,
   equipment: [],
   requests: [],
+  borrowHistory: [],
   sprints: []
 });
 
@@ -21,6 +22,7 @@ async function loadPortal() {
   state.loading = true;
   state.error = "";
   try {
+    const user = session.value?.user;
     const [summary, equipment, requests, sprints] = await Promise.all([
       api.summary(),
       api.equipment(),
@@ -31,6 +33,7 @@ async function loadPortal() {
     state.equipment = equipment;
     state.requests = requests;
     state.sprints = sprints;
+    state.borrowHistory = user?.role === "STUDENT" ? await api.borrowHistory(user.id) : [];
   } catch (error) {
     state.error = error.message;
   } finally {

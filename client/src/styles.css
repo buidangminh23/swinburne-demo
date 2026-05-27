@@ -274,6 +274,7 @@ textarea:focus {
   display: flex;
   font-size: 13px;
   gap: 10px;
+  position: relative;
 }
 
 .icon-button {
@@ -311,6 +312,85 @@ textarea:focus {
   justify-content: center;
   margin-left: 4px;
   width: 40px;
+}
+
+.avatar-button {
+  background: transparent;
+  min-height: 40px;
+  padding: 0;
+}
+
+.profile-menu {
+  background: #ffffff;
+  border-radius: 3px;
+  box-shadow: 0 10px 30px rgba(20, 20, 35, 0.16);
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  top: 54px;
+  width: 380px;
+  z-index: 20;
+}
+
+.profile-menu-hero {
+  align-items: center;
+  background: radial-gradient(circle at 70% 30%, #6d4df6, #4d22c9 55%, #421aa9);
+  color: #ffffff;
+  display: flex;
+  gap: 14px;
+  min-height: 112px;
+  padding: 22px;
+}
+
+.profile-menu-avatar {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #20d47f;
+  display: flex;
+  font-size: 30px;
+  font-weight: 800;
+  height: 60px;
+  justify-content: center;
+  width: 60px;
+}
+
+.profile-menu-hero strong,
+.profile-menu-hero span {
+  display: block;
+}
+
+.profile-menu-hero strong {
+  font-size: 16px;
+}
+
+.profile-menu-hero span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.profile-menu a {
+  align-items: center;
+  border-bottom: 1px solid #eeeeef;
+  color: #555562;
+  display: flex;
+  font-size: 14px;
+  gap: 14px;
+  min-height: 56px;
+  padding: 0 22px;
+  text-decoration: none;
+}
+
+.profile-menu a svg {
+  color: #20b486;
+}
+
+.profile-signout {
+  background: #f7f5ff;
+  color: #6d55ff;
+  margin: 22px;
+  min-height: 38px;
 }
 
 .breadcrumb-bar {
@@ -529,10 +609,33 @@ textarea:focus {
   padding: 0 26px 30px;
 }
 
+.table-empty {
+  color: #727285;
+  font-size: 13px;
+  margin: 0;
+  padding: 0 0 22px;
+}
+
 table {
   border-collapse: collapse;
   min-width: 760px;
   width: 100%;
+}
+
+.borrow-history-panel table {
+  min-width: 560px;
+  table-layout: fixed;
+}
+
+.borrow-history-panel th,
+.borrow-history-panel td {
+  font-size: 12px;
+  padding: 10px 6px;
+}
+
+.borrow-history-panel .status-chip {
+  font-size: 10px;
+  padding: 4px 6px;
 }
 
 th,
@@ -794,6 +897,12 @@ tbody tr:hover {
   .topbar-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .profile-menu {
+    max-width: calc(100vw - 20px);
+    right: 0;
+    width: 340px;
   }
 
   .profile-meta {

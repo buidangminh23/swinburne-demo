@@ -38,6 +38,9 @@ export const api = {
   borrowRequests() {
     return request("/api/borrow-requests");
   },
+  borrowHistory(userId) {
+    return request(`/api/users/${userId}/borrow-history`);
+  },
   borrow(payload) {
     return request("/api/borrow-requests", {
       method: "POST",
@@ -57,4 +60,3 @@ export const api = {
     return request("/api/sprints");
   }
 };
-

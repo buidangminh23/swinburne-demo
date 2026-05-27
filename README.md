@@ -32,6 +32,7 @@ Backend: `http://localhost:4000`
 Demo login:
 
 - `lecturer@swin.edu.au`
+- `student@swin.edu.au`
 - any password
 
 ## MySQL + Prisma
@@ -44,4 +45,3 @@ npm run prisma:seed
 ```
 
 Set `DATABASE_URL` to a MySQL connection string before running migrations.
-

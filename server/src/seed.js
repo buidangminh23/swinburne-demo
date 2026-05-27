@@ -24,6 +24,16 @@ async function main() {
     }
   });
 
+  const student = await prisma.user.upsert({
+    where: { email: "student@swin.edu.au" },
+    update: {},
+    create: {
+      name: "Bui Dang Minh",
+      email: "student@swin.edu.au",
+      role: "STUDENT"
+    }
+  });
+
   const items = [
     ["SW-EQ-1001", "Logitech Rally Camera Kit", "Video", "ATC 625", "AVAILABLE", "Ready for classroom recording"],
     ["SW-EQ-1002", "Wireless Presentation Clicker", "Teaching", "Library Desk", "BORROWED", "Borrowed for tutorial room EN402"],
@@ -57,6 +67,25 @@ async function main() {
       }
     });
   }
+
+  const adapter = await prisma.equipment.findUnique({ where: { assetCode: "SW-EQ-1004" } });
+  const existingHistory = await prisma.borrowRequest.findFirst({
+    where: { equipmentId: adapter.id, lecturerId: student.id, status: "RETURNED" }
+  });
+
+  if (!existingHistory) {
+    await prisma.borrowRequest.create({
+      data: {
+        equipmentId: adapter.id,
+        lecturerId: student.id,
+        classroom: "ATC 625",
+        dueAt: new Date("2026-05-26T10:30:00.000Z"),
+        returnedAt: new Date("2026-05-26T10:05:00.000Z"),
+        status: "RETURNED",
+        handoverNotes: "Used for data science workshop recording"
+      }
+    });
+  }
 }
 
 main()
@@ -69,4 +98,3 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
-

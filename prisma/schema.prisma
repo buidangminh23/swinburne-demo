@@ -8,6 +8,7 @@ datasource db {
 }
 
 enum UserRole {
+  STUDENT
   LECTURER
   SUPPORT
   ADMIN
@@ -64,4 +65,3 @@ model BorrowRequest {
   equipment     Equipment    @relation(fields: [equipmentId], references: [id])
   lecturer      User         @relation(fields: [lecturerId], references: [id])
 }
-

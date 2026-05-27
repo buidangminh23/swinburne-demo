@@ -1,4 +1,5 @@
 <script setup>
+import { computed, ref } from "vue";
 import {
   Bell,
   BookOpen,
@@ -10,20 +11,23 @@ import {
   CreditCard,
   DoorOpen,
   FileQuestion,
+  History,
   Home,
   MessageSquare,
+  UserRound,
   Settings2,
   ShieldCheck,
   Users
 } from "@lucide/vue";
 import BorrowPanel from "./BorrowPanel.vue";
+import BorrowHistory from "./BorrowHistory.vue";
 import EquipmentTable from "./EquipmentTable.vue";
 import ReturnPanel from "./ReturnPanel.vue";
 import SprintTimeline from "./SprintTimeline.vue";
 import StatusPanel from "./StatusPanel.vue";
 import SummaryCards from "./SummaryCards.vue";
 
-defineProps({
+const props = defineProps({
   session: {
     type: Object,
     required: true
@@ -35,6 +39,13 @@ defineProps({
 });
 
 defineEmits(["logout", "borrow", "return", "status"]);
+
+const profileOpen = ref(false);
+const isStudent = computed(() => props.session.user.role === "STUDENT");
+const displayEmail = computed(() => props.session.user.email);
+const displayName = computed(() => props.session.user.name);
+const displayRole = computed(() => (isStudent.value ? "Student" : "Lecturer"));
+const avatarLetter = computed(() => props.session.user.name.trim().split(/\s+/).at(-1).charAt(0).toUpperCase());
 </script>
 
 <template>
@@ -56,6 +67,7 @@ defineEmits(["logout", "borrow", "return", "status"]);
         <a href="#notifications"><Bell :size="18" /> Notification</a>
         <a href="#equipment"><Boxes :size="18" /> Equipment</a>
         <a href="#borrow"><ClipboardList :size="18" /> Borrow Equipment</a>
+        <a v-if="isStudent" href="#borrow-history"><History :size="18" /> Borrow History</a>
         <a href="#returns"><CheckCircle2 :size="18" /> Confirm Return</a>
         <a href="#status"><Settings2 :size="18" /> Update Status</a>
         <a href="#roadmap"><CalendarDays :size="18" /> Sprint Roadmap</a>
@@ -76,7 +88,27 @@ defineEmits(["logout", "borrow", "return", "status"]);
             <span>0</span>
           </button>
           <span>Hi, {{ session.user.name.split(" ").at(-1) }}</span>
-          <div class="avatar">M</div>
+          <button class="avatar-button" aria-label="Open profile menu" @click="profileOpen = !profileOpen">
+            <span class="avatar">{{ avatarLetter }}</span>
+          </button>
+          <div v-if="profileOpen" class="profile-menu">
+            <div class="profile-menu-hero">
+              <div class="profile-menu-avatar">{{ avatarLetter }}</div>
+              <div>
+                <strong>{{ displayName }}</strong>
+                <span>{{ displayRole }}</span>
+              </div>
+            </div>
+            <a href="#dashboard" @click="profileOpen = false">
+              <UserRound :size="18" />
+              My Profile
+            </a>
+            <a v-if="isStudent" href="#borrow-history" @click="profileOpen = false">
+              <History :size="18" />
+              Borrow history
+            </a>
+            <button class="profile-signout" @click="$emit('logout')">Sign Out</button>
+          </div>
         </div>
       </header>
 
@@ -96,7 +128,7 @@ defineEmits(["logout", "borrow", "return", "status"]);
               <ShieldCheck :size="20" />
             </div>
             <div class="profile-meta">
-              <span>lecturer@swin.edu.au</span>
+              <span>{{ displayEmail }}</span>
               <span>Classroom Use</span>
               <span>Equipment Portal</span>
               <span>29/5 Sprint 1 demo</span>
@@ -116,6 +148,7 @@ defineEmits(["logout", "borrow", "return", "status"]);
         <section class="portal-grid">
           <div class="main-column">
             <EquipmentTable id="equipment" :equipment="state.equipment" />
+            <BorrowHistory v-if="isStudent" :history="state.borrowHistory" />
             <SprintTimeline id="roadmap" :sprints="state.sprints" />
           </div>
           <div class="side-column">

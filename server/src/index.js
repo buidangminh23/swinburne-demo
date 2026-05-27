@@ -96,6 +96,13 @@ app.get(
   })
 );
 
+app.get(
+  "/api/users/:id/borrow-history",
+  route(async (req, res) => {
+    res.json(await repository.listBorrowHistory(Number(req.params.id)));
+  })
+);
+
 app.post(
   "/api/borrow-requests",
   route(async (req, res) => {
