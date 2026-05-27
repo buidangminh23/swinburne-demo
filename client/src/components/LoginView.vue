@@ -1,6 +1,7 @@
 <script setup>
 import { reactive, ref } from "vue";
 import { KeyRound } from "@lucide/vue";
+import swinburneLogo from "../assets/swinburne-vietnam-logo.svg";
 
 defineProps({
   error: {
@@ -29,7 +30,7 @@ async function submit() {
 <template>
   <main class="login-page">
     <section class="login-panel">
-      <div class="brand-mark">S</div>
+      <img class="login-logo" :src="swinburneLogo" alt="Swinburne Vietnam Alliance Program" />
       <h1>Swinburne Equipment Portal</h1>
       <p>Classroom borrowing workflow for lecturer demo on 29/5.</p>
       <form class="login-form" @submit.prevent="submit">

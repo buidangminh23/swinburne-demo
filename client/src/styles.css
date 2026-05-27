@@ -61,17 +61,11 @@ button:disabled {
   width: 100%;
 }
 
-.brand-mark {
-  align-items: center;
-  background: #c71f34;
-  border-radius: 3px;
-  color: #ffffff;
-  display: inline-flex;
-  font-weight: 800;
-  height: 44px;
-  justify-content: center;
-  margin-bottom: 18px;
-  width: 44px;
+.login-logo {
+  display: block;
+  height: auto;
+  margin-bottom: 22px;
+  width: 118px;
 }
 
 .login-panel h1,
@@ -164,25 +158,9 @@ textarea:focus {
 }
 
 .swin-logo {
-  background: #ffffff;
-  border: 1px solid #d9d9e4;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-  color: #ffffff;
-  display: grid;
-  font-size: 9px;
-  font-weight: 800;
-  gap: 1px;
-  height: 46px;
-  line-height: 1;
-  padding: 4px;
-  width: 56px;
-}
-
-.swin-logo span {
-  align-items: center;
-  background: #c92232;
-  display: flex;
-  justify-content: center;
+  display: block;
+  height: auto;
+  width: 92px;
 }
 
 .collapse-button {

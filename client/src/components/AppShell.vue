@@ -26,6 +26,7 @@ import ReturnPanel from "./ReturnPanel.vue";
 import SprintTimeline from "./SprintTimeline.vue";
 import StatusPanel from "./StatusPanel.vue";
 import SummaryCards from "./SummaryCards.vue";
+import swinburneLogo from "../assets/swinburne-vietnam-logo.svg";
 
 const props = defineProps({
   session: {
@@ -52,11 +53,7 @@ const avatarLetter = computed(() => props.session.user.name.trim().split(/\s+/).
   <div class="portal-shell">
     <aside class="sidebar">
       <div class="sidebar-logo">
-        <div class="swin-logo">
-          <span>SWIN</span>
-          <span>BUR</span>
-          <span>NE</span>
-        </div>
+        <img class="swin-logo" :src="swinburneLogo" alt="Swinburne Vietnam Alliance Program" />
         <button class="collapse-button" aria-label="Collapse sidebar">
           <ChevronLeft :size="18" />
         </button>
