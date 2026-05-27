@@ -30,7 +30,7 @@ async function submit() {
 <template>
   <main class="login-page">
     <section class="login-panel">
-      <img class="login-logo" :src="swinburneLogo" alt="Swinburne Vietnam Alliance Program" />
+      <img class="login-logo" :src="swinburneLogo" alt="Swinburne University of Technology Alliance with FPT Education" />
       <h1>Swinburne Equipment Portal</h1>
       <p>Classroom borrowing workflow for lecturer demo on 29/5.</p>
       <form class="login-form" @submit.prevent="submit">

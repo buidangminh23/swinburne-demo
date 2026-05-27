@@ -53,7 +53,7 @@ const avatarLetter = computed(() => props.session.user.name.trim().split(/\s+/).
   <div class="portal-shell">
     <aside class="sidebar">
       <div class="sidebar-logo">
-        <img class="swin-logo" :src="swinburneLogo" alt="Swinburne Vietnam Alliance Program" />
+        <img class="swin-logo" :src="swinburneLogo" alt="Swinburne University of Technology Alliance with FPT Education" />
         <button class="collapse-button" aria-label="Collapse sidebar">
           <ChevronLeft :size="18" />
         </button>
