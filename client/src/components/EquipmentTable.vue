@@ -23,7 +23,7 @@ function statusClass(status) {
       <table>
         <thead>
           <tr>
-            <th>Asset</th>
+            <th>ID</th>
             <th>Equipment</th>
             <th>Category</th>
             <th>Location</th>
@@ -45,4 +45,3 @@ function statusClass(status) {
     </div>
   </section>
 </template>
-
