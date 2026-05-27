@@ -1,24 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 255 185" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 170" role="img" aria-labelledby="title desc">
   <title id="title">Swinburne University of Technology Alliance with FPT Education</title>
   <desc id="desc">Swinburne University of Technology logo with Alliance with FPT Education lockup</desc>
-  <rect x="0" y="0" width="110" height="110" fill="#050505"/>
-  <rect x="110" y="0" width="110" height="110" fill="#ef2335"/>
-  <text x="10" y="33" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="31" letter-spacing="-2">SWIN</text>
-  <text x="10" y="65" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="31" letter-spacing="-2">BUR</text>
-  <text x="39" y="97" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="31" letter-spacing="-2">NE</text>
-  <path d="M20 86h9v5h-9zM22 84h5v9h-5z" fill="#ffffff"/>
-  <path d="M91 86h9v5h-9zM93 84h5v9h-5z" fill="#ffffff"/>
-  <text x="134" y="47" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="700">SWINBURNE</text>
-  <text x="134" y="64" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="700">UNIVERSITY OF</text>
-  <text x="134" y="81" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="700">TECHNOLOGY</text>
-  <text x="0" y="163" fill="#2853a4" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">Alliance with</text>
-  <g transform="translate(104 135)">
-    <path d="M5 0h24c7 0 12 5 12 12v32H17c-7 0-12-5-12-12z" fill="#f58220"/>
-    <path d="M25 0h24c7 0 12 5 12 12v32H37c-7 0-12-5-12-12z" fill="#2f80c1"/>
-    <path d="M45 0h24c7 0 12 5 12 12v32H57c-7 0-12-5-12-12z" fill="#31a852"/>
-    <text x="14" y="29" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="24" font-style="italic" font-weight="800">F</text>
-    <text x="35" y="29" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="24" font-style="italic" font-weight="800">P</text>
-    <text x="56" y="29" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="24" font-style="italic" font-weight="800">T</text>
+  <rect width="220" height="170" fill="#ffffff"/>
+  <rect x="14" y="14" width="91" height="91" fill="#050505"/>
+  <rect x="105" y="14" width="91" height="91" fill="#ef2335"/>
+  <text x="22" y="43" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="27" letter-spacing="-1.6">SWIN</text>
+  <text x="22" y="70" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="27" letter-spacing="-1.6">BUR</text>
+  <text x="48" y="97" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="27" letter-spacing="-1.6">NE</text>
+  <text x="26" y="91" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="800">*</text>
+  <text x="88" y="91" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="800">*</text>
+  <text x="126" y="52" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700">SWINBURNE</text>
+  <text x="122" y="66" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700">UNIVERSITY OF</text>
+  <text x="126" y="80" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700">TECHNOLOGY</text>
+  <text x="14" y="148" fill="#2755a3" font-family="Arial, Helvetica, sans-serif" font-size="11.7" font-weight="700">Alliance with</text>
+  <g transform="translate(94 124)">
+    <rect x="0" y="0" width="23" height="30" rx="5" fill="#f58220"/>
+    <rect x="18" y="0" width="23" height="30" rx="5" fill="#2f80c1"/>
+    <rect x="36" y="0" width="23" height="30" rx="5" fill="#31a852"/>
+    <text x="7" y="22" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="18" font-style="italic" font-weight="800">F</text>
+    <text x="25" y="22" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="18" font-style="italic" font-weight="800">P</text>
+    <text x="43" y="22" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="18" font-style="italic" font-weight="800">T</text>
   </g>
-  <text x="187" y="163" fill="#2853a4" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">Education</text>
+  <text x="158" y="148" fill="#2755a3" font-family="Arial, Helvetica, sans-serif" font-size="11.7" font-weight="700">Education</text>
 </svg>

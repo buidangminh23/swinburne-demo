@@ -65,7 +65,7 @@ button:disabled {
   display: block;
   height: auto;
   margin-bottom: 22px;
-  width: 168px;
+  width: 190px;
 }
 
 .login-panel h1,
@@ -152,15 +152,18 @@ textarea:focus {
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
-  height: 104px;
+  height: 152px;
   justify-content: space-between;
-  padding: 12px 22px 12px 50px;
+  padding: 12px 20px 12px 34px;
 }
 
 .swin-logo {
+  background: #ffffff;
+  border-radius: 2px;
   display: block;
+  flex-shrink: 0;
   height: auto;
-  width: 142px;
+  width: 162px;
 }
 
 .collapse-button {
@@ -809,8 +812,12 @@ tbody tr:hover {
   }
 
   .sidebar-logo {
-    height: 72px;
+    height: 98px;
     padding: 8px 14px;
+  }
+
+  .swin-logo {
+    width: 106px;
   }
 
   .sidebar-nav {
