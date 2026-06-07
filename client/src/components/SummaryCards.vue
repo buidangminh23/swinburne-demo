@@ -34,7 +34,6 @@ defineProps({
     <article class="summary-card meeting">
       <CalendarClock :size="30" />
       <span>{{ summary?.nextMeeting ?? "29/5 Sprint 1 demo" }}</span>
-      <a href="#roadmap">Roadmap</a>
     </article>
   </section>
 </template>

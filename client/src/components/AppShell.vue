@@ -22,7 +22,6 @@ import {
 import BorrowPanel from "./BorrowPanel.vue";
 import EquipmentTable from "./EquipmentTable.vue";
 import ReturnPanel from "./ReturnPanel.vue";
-import SprintTimeline from "./SprintTimeline.vue";
 import StatusPanel from "./StatusPanel.vue";
 import SummaryCards from "./SummaryCards.vue";
 import HistoryLog from "./HistoryLog.vue";
@@ -106,7 +105,6 @@ function formatDate(dateStr) {
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="activeTab = 'schedules'"><CalendarDays :size="18" /> Schedules</a>
         <a :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> Confirm Return</a>
         <a :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> Update Status</a>
-        <a :class="{ active: activeTab === 'roadmap' }" href="#" @click.prevent="activeTab = 'roadmap'"><CalendarDays :size="18" /> Sprint Roadmap</a>
       </nav>
     </aside>
 
@@ -324,10 +322,6 @@ function formatDate(dateStr) {
         
         <template v-else-if="activeTab === 'status'">
           <StatusPanel :equipment="state.equipment" @status="$emit('status', $event)" />
-        </template>
-        
-        <template v-else-if="activeTab === 'roadmap'">
-          <SprintTimeline :sprints="state.sprints" />
         </template>
       </section>
     </main>
