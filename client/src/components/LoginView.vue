@@ -314,7 +314,7 @@ function getInitial(name) {
 }
 
 .logo-img {
-  width: 190px;
+  width: 260px;
   height: auto;
   margin-bottom: 24px;
 }
