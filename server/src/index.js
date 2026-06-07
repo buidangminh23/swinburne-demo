@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
 import { createRepository } from "./repository.js";
+import { sendNotification, listNotifications } from "./notifications.js";
 
 const app = express();
 const repository = createRepository();
@@ -32,7 +33,7 @@ const loginSchema = z.object({
 
 const borrowSchema = z.object({
   equipmentId: z.number().int().positive(),
-  lecturerId: z.number().int().positive(),
+  lecturerId: z.number().int().positive().optional(),
   classroom: z.string().max(40).optional().nullable(),
   dueAt: z.string().datetime(),
   handoverNotes: z.string().max(240).optional().nullable(),
@@ -42,6 +43,24 @@ const borrowSchema = z.object({
   quantity: z.number().int().positive().optional(),
   startDate: z.string().datetime().optional().nullable(),
   recurrence: z.string().max(50).optional().nullable()
+});
+
+const editSchema = z.object({
+  classroom: z.string().max(40).optional().nullable(),
+  dueAt: z.string().datetime().optional(),
+  handoverNotes: z.string().max(240).optional().nullable(),
+  purpose: z.enum(["CLASSROOM", "LAB", "RESEARCH", "EVENT"]).optional(),
+  program: z.string().max(100).optional().nullable(),
+  unitOrProject: z.string().max(100).optional().nullable(),
+  quantity: z.number().int().positive().optional(),
+  startDate: z.string().datetime().optional().nullable(),
+  recurrence: z.string().max(50).optional().nullable()
+});
+
+const custodySchema = z.object({
+  action: z.string().max(40).optional(),
+  actor: z.string().max(120).optional(),
+  notes: z.string().max(240).optional().nullable()
 });
 
 const statusSchema = z.object({
@@ -167,110 +186,168 @@ app.post("/api/auth/logout", (req, res) => {
 // ==========================================
 app.use("/api", authenticateToken);
 
-app.get(
-  "/api/summary",
-  route(async (req, res) => {
-    res.json(await repository.summary());
-  })
-);
+function requireStaff(req, res, next) {
+  if (!req.user || req.user.role === "STUDENT") {
+    return res.status(403).json({ message: "Chức năng này chỉ dành cho cán bộ/giảng viên." });
+  }
+  next();
+}
 
-app.get(
-  "/api/equipment",
-  route(async (req, res) => {
-    res.json(await repository.listEquipment());
-  })
-);
-
-app.get(
-  "/api/borrow-requests",
-  route(async (req, res) => {
-    res.json(await repository.listActiveRequests());
-  })
-);
-
-app.get(
-  "/api/users/:id/borrow-history",
-  route(async (req, res) => {
-    res.json(await repository.listBorrowHistory(Number(req.params.id)));
-  })
-);
-
-app.post(
-  "/api/borrow-requests",
-  route(async (req, res) => {
-    if (Array.isArray(req.body)) {
-      const payloads = z.array(borrowSchema).parse(req.body);
-      const results = [];
-      for (const payload of payloads) {
-        results.push(await repository.borrowEquipment(payload));
+function loadOwnRequest(req, res, next) {
+  Promise.resolve()
+    .then(async () => {
+      const request = await repository.getRequest(Number(req.params.id));
+      if (!request) {
+        return res.status(404).json({ message: "Không tìm thấy yêu cầu mượn." });
       }
-      res.status(201).json(results);
-    } else {
-      const payload = borrowSchema.parse(req.body);
-      res.status(201).json(await repository.borrowEquipment(payload));
+      if (req.user.role === "STUDENT" && request.lecturerId !== req.user.id) {
+        return res.status(403).json({ message: "Bạn chỉ có thể thao tác trên yêu cầu của chính mình." });
+      }
+      req.borrowRequest = request;
+      next();
+    })
+    .catch(next);
+}
+
+function safeNotify(task) {
+  Promise.resolve()
+    .then(task)
+    .catch((error) => console.error(`[notification] handler error: ${error.message}`));
+}
+
+async function notifyStaff(type, subject, message, meta) {
+  const staff = await repository.listStaff();
+  await sendNotification({ to: staff.map((member) => member.email), type, subject, message, meta });
+}
+
+function notifyBorrower(request, type, subject, message) {
+  return sendNotification({ to: request.lecturer?.email, type, subject, message, meta: { requestId: request.id } });
+}
+
+const itemName = (request) => request.equipment?.name ?? "equipment";
+
+app.get("/api/summary", route(async (req, res) => {
+  res.json(await repository.summary());
+}));
+
+app.get("/api/equipment", route(async (req, res) => {
+  res.json(await repository.listEquipment());
+}));
+
+app.get("/api/equipment/:id/schedule", route(async (req, res) => {
+  res.json(await repository.getEquipmentSchedule(Number(req.params.id)));
+}));
+
+app.get("/api/borrow-requests", route(async (req, res) => {
+  res.json(await repository.listActiveRequests());
+}));
+
+app.get("/api/notifications", route(async (req, res) => {
+  res.json(listNotifications(Number(req.query.limit ?? 20)));
+}));
+
+app.get("/api/users/:id/borrow-history", route(async (req, res) => {
+  const targetId = Number(req.params.id);
+  if (req.user.role === "STUDENT" && targetId !== req.user.id) {
+    return res.status(403).json({ message: "Bạn chỉ có thể xem lịch sử của chính mình." });
+  }
+  res.json(await repository.listBorrowHistory(targetId));
+}));
+
+app.post("/api/borrow-requests", route(async (req, res) => {
+  const assignOwner = (payload) => ({ ...payload, lecturerId: req.user.id });
+  const announce = (created) =>
+    safeNotify(() =>
+      created.status === "REQUESTED"
+        ? notifyStaff("BORROW_REQUEST", `New borrow request • ${itemName(created)}`, `${created.lecturer?.name ?? "A user"} requested ${itemName(created)} for ${created.purpose}. Classroom: ${created.classroom ?? "-"}. Needed until ${created.dueAt}.`, { requestId: created.id })
+        : notifyStaff("EQUIPMENT_BORROWED", `Equipment borrowed • ${itemName(created)}`, `${created.lecturer?.name ?? "A user"} borrowed ${itemName(created)} (${created.purpose}). Due ${created.dueAt}.`, { requestId: created.id })
+    );
+
+  if (Array.isArray(req.body)) {
+    const payloads = z.array(borrowSchema).parse(req.body);
+    const results = [];
+    for (const payload of payloads) {
+      const created = await repository.borrowEquipment(assignOwner(payload));
+      results.push(created);
+      announce(created);
     }
-  })
-);
+    res.status(201).json(results);
+  } else {
+    const payload = borrowSchema.parse(req.body);
+    const created = await repository.borrowEquipment(assignOwner(payload));
+    announce(created);
+    res.status(201).json(created);
+  }
+}));
 
-app.post(
-  "/api/borrow-requests/:id/approve",
-  route(async (req, res) => {
-    const userId = Number(req.body.userId ?? 1);
-    res.json(await repository.approveRequest(Number(req.params.id), userId));
-  })
-);
+app.patch("/api/borrow-requests/:id", loadOwnRequest, route(async (req, res) => {
+  const payload = editSchema.parse(req.body);
+  res.json(await repository.editRequest(Number(req.params.id), payload));
+}));
 
-app.post(
-  "/api/borrow-requests/:id/deny",
-  route(async (req, res) => {
-    const userId = Number(req.body.userId ?? 1);
-    res.json(await repository.denyRequest(Number(req.params.id), userId));
-  })
-);
+app.post("/api/borrow-requests/:id/approve", requireStaff, route(async (req, res) => {
+  const updated = await repository.approveRequest(Number(req.params.id), req.user.id);
+  safeNotify(() => notifyBorrower(updated, "REQUEST_APPROVED", `Request approved • ${itemName(updated)}`, `Your borrow request for ${itemName(updated)} was approved. Due ${updated.dueAt}.`));
+  res.json(updated);
+}));
 
-app.post(
-  "/api/borrow-requests/:id/extend",
-  route(async (req, res) => {
-    res.json(await repository.extendRequest(Number(req.params.id), req.body));
-  })
-);
+app.post("/api/borrow-requests/:id/deny", requireStaff, route(async (req, res) => {
+  const updated = await repository.denyRequest(Number(req.params.id), req.user.id);
+  safeNotify(() => notifyBorrower(updated, "REQUEST_DENIED", `Request denied • ${itemName(updated)}`, `Your borrow request for ${itemName(updated)} was denied.`));
+  res.json(updated);
+}));
 
-app.post(
-  "/api/borrow-requests/:id/remind",
-  route(async (req, res) => {
-    console.log(`[Email Reminder] To borrower of request ID ${req.params.id}: Please return equipment soon.`);
-    res.json({ success: true, message: "Email reminder sent successfully." });
-  })
-);
+app.post("/api/borrow-requests/:id/extend", loadOwnRequest, route(async (req, res) => {
+  const updated = await repository.extendRequest(Number(req.params.id), req.body);
+  safeNotify(async () => {
+    await notifyBorrower(updated, "BORROW_EXTENDED", `Borrow extended • ${itemName(updated)}`, `The borrow for ${itemName(updated)} was extended. New due date ${updated.dueAt}.`);
+    await notifyStaff("EXTENSION_REQUEST", `Extension recorded • ${itemName(updated)}`, `${updated.lecturer?.name ?? "A user"} extended ${itemName(updated)} to ${updated.dueAt}.`, { requestId: updated.id });
+  });
+  res.json(updated);
+}));
 
-app.get(
-  "/api/borrow-history",
-  route(async (req, res) => {
-    res.json(await repository.listAllHistory(req.query));
-  })
-);
+app.post("/api/borrow-requests/:id/custody", loadOwnRequest, route(async (req, res) => {
+  const payload = custodySchema.parse(req.body);
+  res.json(await repository.addCustody(Number(req.params.id), { ...payload, actor: payload.actor ?? req.user.email }));
+}));
 
-app.post(
-  "/api/borrow-requests/:id/return",
-  route(async (req, res) => {
-    res.json(await repository.confirmReturn(Number(req.params.id), req.body));
-  })
-);
+app.post("/api/borrow-requests/:id/remind", requireStaff, route(async (req, res) => {
+  const request = await repository.getRequest(Number(req.params.id));
+  if (!request) {
+    return res.status(404).json({ message: "Không tìm thấy yêu cầu mượn." });
+  }
+  await sendNotification({
+    to: request.lecturer?.email,
+    type: "OVERDUE_REMINDER",
+    subject: `Reminder • return ${itemName(request)}`,
+    message: `Please return ${itemName(request)} (due ${request.dueAt}) as soon as possible.`,
+    meta: { requestId: request.id }
+  });
+  res.json({ success: true, message: "Email reminder sent successfully." });
+}));
 
-app.patch(
-  "/api/equipment/:id/status",
-  route(async (req, res) => {
-    const payload = statusSchema.parse(req.body);
-    res.json(await repository.updateEquipmentStatus(Number(req.params.id), payload));
-  })
-);
+app.get("/api/borrow-history", route(async (req, res) => {
+  const query = { ...req.query };
+  if (req.user.role === "STUDENT") {
+    query.userId = req.user.id;
+  }
+  res.json(await repository.listAllHistory(query));
+}));
 
-app.get(
-  "/api/sprints",
-  route(async (req, res) => {
-    res.json(await repository.sprintPlan());
-  })
-);
+app.post("/api/borrow-requests/:id/return", loadOwnRequest, route(async (req, res) => {
+  const updated = await repository.confirmReturn(Number(req.params.id), { ...req.body, actorName: req.user.email });
+  safeNotify(() => notifyBorrower(updated, "EQUIPMENT_RETURNED", `Return confirmed • ${itemName(updated)}`, `Return of ${itemName(updated)} has been confirmed.`));
+  res.json(updated);
+}));
+
+app.patch("/api/equipment/:id/status", requireStaff, route(async (req, res) => {
+  const payload = statusSchema.parse(req.body);
+  res.json(await repository.updateEquipmentStatus(Number(req.params.id), payload));
+}));
+
+app.get("/api/sprints", route(async (req, res) => {
+  res.json(await repository.sprintPlan());
+}));
 
 // Fallback for spa routing
 app.get(/^\/(?!api\/).*/, (req, res) => {

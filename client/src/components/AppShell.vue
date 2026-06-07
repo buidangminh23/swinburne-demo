@@ -1,25 +1,22 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import {
   Bell,
-  BookOpen,
   Boxes,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ClipboardList,
-  CreditCard,
-  DoorOpen,
-  FileQuestion,
   History,
   Home,
-  MessageSquare,
+  Pencil,
+  ScrollText,
   UserRound,
   Settings2,
-  ShieldCheck,
-  Users
+  ShieldCheck
 } from "@lucide/vue";
 import BorrowPanel from "./BorrowPanel.vue";
+import EditBorrowModal from "./EditBorrowModal.vue";
 import EquipmentTable from "./EquipmentTable.vue";
 import ReturnPanel from "./ReturnPanel.vue";
 import StatusPanel from "./StatusPanel.vue";
@@ -39,10 +36,40 @@ const props = defineProps({
   }
 });
 
-defineEmits(["logout", "borrow", "return", "status", "approve", "deny", "extend", "remind", "fetch-history"]);
+const emit = defineEmits(["logout", "borrow", "return", "status", "approve", "deny", "extend", "edit", "custody", "remind", "fetch-history"]);
 
 const profileOpen = ref(false);
 const activeTab = ref("dashboard");
+const notifOpen = ref(false);
+const editingRequest = ref(null);
+const custodyTarget = ref(null);
+const custodyForm = reactive({ action: "HANDOVER", notes: "" });
+
+function parseCustody(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return [];
+  }
+}
+
+function openCustody(request) {
+  custodyTarget.value = request;
+  custodyForm.action = "HANDOVER";
+  custodyForm.notes = "";
+}
+
+function submitCustody() {
+  emit("custody", { id: custodyTarget.value.id, payload: { action: custodyForm.action, notes: custodyForm.notes } });
+  custodyTarget.value = null;
+}
+
+function submitEdit(event) {
+  emit("edit", event);
+  editingRequest.value = null;
+}
 
 const isStudent = computed(() => props.session.user.role === "STUDENT");
 const displayEmail = computed(() => props.session.user.email);
@@ -75,8 +102,8 @@ const nearDueRequests = computed(() => {
   return props.state.requests.filter(r => r.status === "BORROWED" && new Date(r.dueAt) > now && new Date(r.dueAt) < limit);
 });
 
-const userBorrowedRequests = computed(() => {
-  return props.state.requests.filter(r => r.status === "BORROWED" && r.lecturerId === props.session.user.id);
+const myActiveRequests = computed(() => {
+  return props.state.requests.filter(r => ["REQUESTED", "BORROWED"].includes(r.status) && r.lecturerId === props.session.user.id);
 });
 
 function formatDate(dateStr) {
@@ -111,11 +138,22 @@ function formatDate(dateStr) {
     <main class="portal-frame">
       <header class="portal-topbar">
         <div class="topbar-actions">
-          <button class="icon-button" aria-label="Notifications">
-            <Bell :size="18" />
-            <span v-if="pendingRequests.length > 0">{{ pendingRequests.length }}</span>
-            <span v-else>0</span>
-          </button>
+          <div class="notif-wrap">
+            <button class="icon-button" aria-label="Notifications" @click="notifOpen = !notifOpen">
+              <Bell :size="18" />
+              <span v-if="pendingRequests.length > 0">{{ pendingRequests.length }}</span>
+              <span v-else>0</span>
+            </button>
+            <div v-if="notifOpen" class="notif-menu">
+              <div class="notif-head">Notifications</div>
+              <div v-if="state.notifications.length === 0" class="notif-empty">No notifications yet.</div>
+              <div v-for="n in state.notifications" :key="n.id" class="notif-item">
+                <strong>{{ n.subject }}</strong>
+                <span>{{ n.message }}</span>
+                <small>{{ n.type }} · {{ n.channel }}</small>
+              </div>
+            </div>
+          </div>
           <span>Hi, {{ session.user.name.split(" ").at(-1) }}</span>
           <button class="avatar-button" aria-label="Open profile menu" @click="profileOpen = !profileOpen">
             <span class="avatar">{{ avatarLetter }}</span>
@@ -256,7 +294,7 @@ function formatDate(dateStr) {
                       <td>{{ req.equipment?.name }}</td>
                       <td class="warning-text">{{ formatDate(req.dueAt) }}</td>
                       <td class="action-cell">
-                        <button class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
+                        <button v-if="req.purpose === 'RESEARCH'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
                         <button class="widget-btn remind-btn" @click="$emit('remind', req.id)">Send Reminder</button>
                       </td>
                     </tr>
@@ -265,10 +303,10 @@ function formatDate(dateStr) {
               </div>
             </div>
 
-            <!-- 4. CURRENTLY BORROWED BY ME -->
+            <!-- 4. MY REQUESTS & BORROWS -->
             <div class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
-                <h2>My Current Borrows ({{ userBorrowedRequests.length }})</h2>
+                <h2>My Requests & Borrows ({{ myActiveRequests.length }})</h2>
               </div>
               <div class="widget-table-wrap">
                 <table class="widget-table">
@@ -276,22 +314,26 @@ function formatDate(dateStr) {
                     <tr>
                       <th>Equipment</th>
                       <th>Purpose</th>
+                      <th>Status</th>
                       <th>Due Date</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="req in userBorrowedRequests" :key="req.id">
+                    <tr v-for="req in myActiveRequests" :key="req.id">
                       <td>{{ req.equipment?.name }}</td>
                       <td><span class="purpose-span">{{ req.purpose }}</span></td>
+                      <td><span :class="'status-chip ' + req.status.toLowerCase()">{{ req.status }}</span></td>
                       <td>{{ formatDate(req.dueAt) }}</td>
                       <td class="action-cell">
-                        <button class="widget-btn return-btn" @click="activeTab = 'returns'">Return</button>
-                        <button class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
+                        <button class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> Edit</button>
+                        <button v-if="req.status === 'BORROWED'" class="widget-btn return-btn" @click="activeTab = 'returns'">Return</button>
+                        <button v-if="req.status === 'BORROWED' && req.purpose === 'RESEARCH'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
+                        <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> Custody</button>
                       </td>
                     </tr>
-                    <tr v-if="userBorrowedRequests.length === 0">
-                      <td colspan="4" class="empty-widget-text">You have no active borrowed equipment.</td>
+                    <tr v-if="myActiveRequests.length === 0">
+                      <td colspan="5" class="empty-widget-text">You have no active requests or borrows.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -305,7 +347,7 @@ function formatDate(dateStr) {
         </template>
         
         <template v-else-if="activeTab === 'borrow'">
-          <BorrowPanel :equipment="state.equipment" @borrow="$emit('borrow', $event)" />
+          <BorrowPanel :equipment="state.equipment" :is-student="isStudent" @borrow="$emit('borrow', $event)" />
         </template>
         
         <template v-else-if="activeTab === 'returns'">
@@ -325,6 +367,48 @@ function formatDate(dateStr) {
         </template>
       </section>
     </main>
+
+    <EditBorrowModal :request="editingRequest" @save="submitEdit" @close="editingRequest = null" />
+
+    <div v-if="custodyTarget" class="modal-overlay" @click.self="custodyTarget = null">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3><ScrollText :size="16" /> Chain of custody — {{ custodyTarget.equipment?.name }}</h3>
+          <button type="button" class="close-btn" @click="custodyTarget = null">&times;</button>
+        </header>
+        <div class="custody-body">
+          <ul class="custody-list">
+            <li v-for="(entry, i) in parseCustody(custodyTarget.custodyLog)" :key="i" class="custody-entry">
+              <div class="custody-entry-head">
+                <strong>{{ entry.action }}</strong>
+                <small>{{ formatDate(entry.at) }}</small>
+              </div>
+              <span class="custody-actor">{{ entry.actor }}</span>
+              <span v-if="entry.notes" class="custody-notes">{{ entry.notes }}</span>
+            </li>
+            <li v-if="parseCustody(custodyTarget.custodyLog).length === 0" class="custody-empty">
+              No custody entries yet.
+            </li>
+          </ul>
+          <form class="custody-form" @submit.prevent="submitCustody">
+            <label>
+              Action
+              <select v-model="custodyForm.action">
+                <option value="HANDOVER">Handover</option>
+                <option value="CHECKED_OUT">Checked out</option>
+                <option value="TRANSFER">Transfer</option>
+                <option value="INSPECTED">Inspected</option>
+              </select>
+            </label>
+            <label>
+              Notes
+              <textarea v-model="custodyForm.notes" rows="2" placeholder="Who holds it now / condition..."></textarea>
+            </label>
+            <button type="submit" class="btn-confirm">Add custody entry</button>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -397,4 +481,189 @@ function formatDate(dateStr) {
 .text-danger { color: #d9182f; }
 .text-warning { color: #b45309; }
 .border-bottom-0 { border-bottom: 0; }
+
+.edit-btn { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.edit-btn:hover { background: #4338ca; color: white; }
+.custody-btn { background: #f3e8ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.custody-btn:hover { background: #7c3aed; color: white; }
+
+.notif-wrap {
+  position: relative;
+}
+.notif-menu {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  width: 320px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e6e6ee;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  z-index: 200;
+}
+.notif-head {
+  padding: 12px 16px;
+  font-weight: 800;
+  font-size: 13px;
+  border-bottom: 1px solid #eeeeef;
+  color: #3e3e4a;
+}
+.notif-empty {
+  padding: 18px 16px;
+  font-size: 12px;
+  color: #727285;
+  font-style: italic;
+}
+.notif-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f2f2f6;
+}
+.notif-item strong {
+  font-size: 12px;
+  color: #1f2937;
+}
+.notif-item span {
+  font-size: 11px;
+  color: #555562;
+}
+.notif-item small {
+  font-size: 10px;
+  color: #9aa0a6;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-card {
+  background: #ffffff;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f7f5ff;
+  border-bottom: 1px solid #eeeeef;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #3e3e4a;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.close-btn {
+  background: transparent;
+  border: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: #a7a7b4;
+  cursor: pointer;
+  padding: 0;
+}
+.custody-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+.custody-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.custody-entry {
+  background: #faf8ff;
+  border: 1px solid #ece8fb;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.custody-entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.custody-entry-head strong {
+  font-size: 12px;
+  color: #5b21b6;
+}
+.custody-entry-head small {
+  font-size: 10px;
+  color: #9aa0a6;
+}
+.custody-actor {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3e3e4a;
+}
+.custody-notes {
+  font-size: 11px;
+  color: #555562;
+}
+.custody-empty {
+  font-size: 12px;
+  color: #727285;
+  font-style: italic;
+}
+.custody-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid #eeeeef;
+  padding-top: 14px;
+}
+.custody-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #474753;
+}
+.custody-form select,
+.custody-form textarea {
+  border: 1px solid #d8d8e4;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  outline: none;
+}
+.btn-confirm {
+  background: #5f63ff;
+  color: #ffffff;
+  border: 0;
+  border-radius: 4px;
+  min-height: 38px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
 </style>

@@ -6,10 +6,24 @@ const props = defineProps({
   equipment: {
     type: Array,
     default: () => []
+  },
+  isStudent: {
+    type: Boolean,
+    default: false
   }
 });
 
 const emit = defineEmits(["borrow"]);
+
+const unitOptions = [
+  "COS20031.1",
+  "COS20007",
+  "COS30043",
+  "COS30049",
+  "INF20025",
+  "Research Project A",
+  "Open Day Event"
+];
 
 const availableEquipment = computed(() => {
   return props.equipment.filter((item) => item.status === "AVAILABLE" && !cart.some(c => c.id === item.id));
@@ -115,7 +129,10 @@ function submit() {
           </label>
           <label>
             Unit or Project
-            <input v-model="form.unitOrProject" type="text" placeholder="e.g. COS20031.1" />
+            <input v-model="form.unitOrProject" type="text" list="unit-options" placeholder="Type to select e.g. COS20031.1" />
+            <datalist id="unit-options">
+              <option v-for="unit in unitOptions" :key="unit" :value="unit" />
+            </datalist>
           </label>
         </div>
       </div>
@@ -214,6 +231,9 @@ function submit() {
         </div>
 
         <div style="margin-top: 10px;">
+          <p v-if="form.purpose === 'EVENT'" class="custody-hint">
+            Event borrowing starts a chain-of-custody log. Record the initial custodian below.
+          </p>
           <label>
             Handover notes / Event Custody Notes
             <textarea v-model="form.handoverNotes" rows="2" placeholder="Describe handover details..."></textarea>
@@ -222,7 +242,7 @@ function submit() {
       </div>
 
       <button type="button" class="submit-wizard-btn" :disabled="cart.length === 0" @click="submit">
-        Submit Borrow Request
+        {{ isStudent ? "Submit Request" : "Submit Borrow Request" }}
       </button>
     </div>
   </section>
@@ -355,5 +375,14 @@ function submit() {
 .submit-wizard-btn {
   width: 100%;
   margin-top: 10px;
+}
+.custody-hint {
+  font-size: 11px;
+  color: #7c3aed;
+  background: #f3e8ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 0 0 8px;
 }
 </style>

@@ -33,10 +33,10 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
-  googleLogin(idToken) {
+  googleLogin(accessToken) {
     return request("/api/auth/google", {
       method: "POST",
-      body: JSON.stringify({ idToken })
+      body: JSON.stringify({ accessToken })
     });
   },
   logout() {
@@ -104,5 +104,23 @@ export const api = {
       }
     });
     return request(`/api/borrow-history?${searchParams.toString()}`);
+  },
+  editRequest(id, payload) {
+    return request(`/api/borrow-requests/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+  },
+  custody(id, payload) {
+    return request(`/api/borrow-requests/${id}/custody`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+  schedule(equipmentId) {
+    return request(`/api/equipment/${equipmentId}/schedule`);
+  },
+  notifications(limit = 20) {
+    return request(`/api/notifications?limit=${limit}`);
   }
 };

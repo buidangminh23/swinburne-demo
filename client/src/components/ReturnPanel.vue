@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, watch } from "vue";
+import { ref, reactive, watch, computed } from "vue";
 import { CheckCircle2, AlertTriangle, Check, X } from "@lucide/vue";
 
 const props = defineProps({
@@ -13,6 +13,10 @@ const emit = defineEmits(["return"]);
 
 const selectedRequestId = ref("");
 
+const returnableRequests = computed(() =>
+  props.requests.filter((request) => request.status === "BORROWED")
+);
+
 const form = reactive({
   returnedQuantity: 1,
   isStatusOk: true,
@@ -21,7 +25,7 @@ const form = reactive({
 
 // Watch selected request to update default returned quantity
 watch(selectedRequestId, (newVal) => {
-  const req = props.requests.find(r => r.id === Number(newVal));
+  const req = returnableRequests.value.find(r => r.id === Number(newVal));
   if (req) {
     form.returnedQuantity = req.quantity ?? 1;
     form.isStatusOk = true;
@@ -56,7 +60,7 @@ function submit() {
       </div>
     </div>
 
-    <div v-if="requests.length === 0" class="return-list">
+    <div v-if="returnableRequests.length === 0" class="return-list">
       <p class="empty-state">No borrowed items pending return.</p>
     </div>
 
@@ -66,7 +70,7 @@ function submit() {
         Select Borrow Record:
         <select v-model="selectedRequestId" class="select-request-dropdown">
           <option value="">Choose item to return</option>
-          <option v-for="request in requests" :key="request.id" :value="request.id">
+          <option v-for="request in returnableRequests" :key="request.id" :value="request.id">
             {{ request.equipment?.assetCode }} - {{ request.equipment?.name }} ({{ request.lecturer?.name }})
           </option>
         </select>

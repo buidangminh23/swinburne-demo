@@ -14,7 +14,8 @@ const state = reactive({
   requests: [],
   borrowHistory: [],
   historyData: { data: [], total: 0, page: 1, limit: 10 },
-  sprints: []
+  sprints: [],
+  notifications: []
 });
 
 const isLoggedIn = computed(() => Boolean(session.value?.token));
@@ -24,17 +25,19 @@ async function loadPortal() {
   state.error = "";
   try {
     const user = session.value?.user;
-    const [summary, equipment, requests, sprints] = await Promise.all([
+    const [summary, equipment, requests, sprints, notifications] = await Promise.all([
       api.summary(),
       api.equipment(),
       api.borrowRequests(),
-      api.sprints()
+      api.sprints(),
+      api.notifications().catch(() => [])
     ]);
     state.summary = summary;
     state.equipment = equipment;
     state.requests = requests;
     state.sprints = sprints;
-    
+    state.notifications = notifications;
+
     const historyParams = user?.role === "STUDENT" ? { userId: user.id } : {};
     const histResult = await api.history(historyParams);
     state.borrowHistory = histResult.data || [];
@@ -49,8 +52,8 @@ async function loadPortal() {
 async function login(payload) {
   state.error = "";
   try {
-    const result = payload.idToken
-      ? await api.googleLogin(payload.idToken)
+    const result = payload.accessToken
+      ? await api.googleLogin(payload.accessToken)
       : await api.login(payload);
     session.value = result;
     localStorage.setItem("portal-session", JSON.stringify(result));
@@ -143,6 +146,30 @@ async function extendRequest({ id, payload }) {
   }
 }
 
+async function editBorrow({ id, payload }) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.editRequest(id, payload);
+    await loadPortal();
+    state.message = "Borrow request updated.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function logCustody({ id, payload }) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.custody(id, payload);
+    await loadPortal();
+    state.message = "Chain-of-custody entry recorded.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
 async function sendReminder(id) {
   state.message = "";
   state.error = "";
@@ -186,6 +213,8 @@ onMounted(() => {
     @approve="approveRequest"
     @deny="denyRequest"
     @extend="extendRequest"
+    @edit="editBorrow"
+    @custody="logCustody"
     @remind="sendReminder"
     @fetch-history="fetchHistory"
   />
