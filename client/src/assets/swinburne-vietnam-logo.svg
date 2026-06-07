@@ -1,25 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 170" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 170" role="img" aria-labelledby="title desc">
   <title id="title">Swinburne University of Technology Alliance with FPT Education</title>
   <desc id="desc">Swinburne University of Technology logo with Alliance with FPT Education lockup</desc>
-  <rect width="220" height="170" fill="#ffffff"/>
+  <rect width="240" height="170" fill="#ffffff"/>
+  
+  <!-- Top Swinburne Block -->
   <rect x="14" y="14" width="91" height="91" fill="#050505"/>
-  <rect x="105" y="14" width="91" height="91" fill="#ef2335"/>
+  <rect x="105" y="14" width="120" height="91" fill="#ef2335"/>
+  
+  <!-- Left Black Box Typography -->
   <text x="22" y="43" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="27" letter-spacing="-1.6">SWIN</text>
   <text x="22" y="70" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="27" letter-spacing="-1.6">BUR</text>
   <text x="48" y="97" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="27" letter-spacing="-1.6">NE</text>
   <text x="26" y="91" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="800">*</text>
   <text x="88" y="91" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="800">*</text>
-  <text x="126" y="52" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700">SWINBURNE</text>
-  <text x="122" y="66" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700">UNIVERSITY OF</text>
-  <text x="126" y="80" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700">TECHNOLOGY</text>
-  <text x="14" y="148" fill="#2755a3" font-family="Arial, Helvetica, sans-serif" font-size="11.7" font-weight="700">Alliance with</text>
-  <g transform="translate(94 124)">
-    <rect x="0" y="0" width="23" height="30" rx="5" fill="#f58220"/>
-    <rect x="18" y="0" width="23" height="30" rx="5" fill="#2f80c1"/>
-    <rect x="36" y="0" width="23" height="30" rx="5" fill="#31a852"/>
-    <text x="7" y="22" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="18" font-style="italic" font-weight="800">F</text>
-    <text x="25" y="22" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="18" font-style="italic" font-weight="800">P</text>
-    <text x="43" y="22" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="18" font-style="italic" font-weight="800">T</text>
+  
+  <!-- Right Red Box Typography (Left-aligned, exact case) -->
+  <text x="120" y="48" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700">Swinburne</text>
+  <text x="120" y="65" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="9.5" font-weight="700">UNIVERSITY OF</text>
+  <text x="120" y="81" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="9.5" font-weight="700">TECHNOLOGY</text>
+  
+  <!-- Bottom Alliance with FPT Education lockup -->
+  <text x="14" y="152" fill="#2755a3" font-family="Arial, Helvetica, sans-serif" font-size="11.7" font-weight="700">Alliance with</text>
+  
+  <!-- Official slanted FPT logo blocks -->
+  <g transform="translate(90 124)">
+    <path d="M5 0h24c7 0 12 5 12 12v32H17c-7 0-12-5-12-12z" fill="#f58220"/>
+    <path d="M25 0h24c7 0 12 5 12 12v32H37c-7 0-12-5-12-12z" fill="#2f80c1"/>
+    <path d="M45 0h24c7 0 12 5 12 12v32H57c-7 0-12-5-12-12z" fill="#31a852"/>
+    <text x="14" y="29" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="24" font-style="italic" font-weight="800">F</text>
+    <text x="35" y="29" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="24" font-style="italic" font-weight="800">P</text>
+    <text x="56" y="29" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="24" font-style="italic" font-weight="800">T</text>
   </g>
-  <text x="158" y="148" fill="#2755a3" font-family="Arial, Helvetica, sans-serif" font-size="11.7" font-weight="700">Education</text>
+  
+  <text x="178" y="152" fill="#2755a3" font-family="Arial, Helvetica, sans-serif" font-size="11.7" font-weight="700">Education</text>
 </svg>

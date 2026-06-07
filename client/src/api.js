@@ -47,8 +47,11 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
-  confirmReturn(id) {
-    return request(`/api/borrow-requests/${id}/return`, { method: "POST" });
+  confirmReturn(id, payload = {}) {
+    return request(`/api/borrow-requests/${id}/return`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
   },
   updateStatus(id, payload) {
     return request(`/api/equipment/${id}/status`, {
@@ -58,5 +61,35 @@ export const api = {
   },
   sprints() {
     return request("/api/sprints");
+  },
+  approve(id, userId) {
+    return request(`/api/borrow-requests/${id}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ userId })
+    });
+  },
+  deny(id, userId) {
+    return request(`/api/borrow-requests/${id}/deny`, {
+      method: "POST",
+      body: JSON.stringify({ userId })
+    });
+  },
+  extend(id, payload = {}) {
+    return request(`/api/borrow-requests/${id}/extend`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+  remind(id) {
+    return request(`/api/borrow-requests/${id}/remind`, { method: "POST" });
+  },
+  history(params = {}) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== "") {
+        searchParams.append(key, val);
+      }
+    });
+    return request(`/api/borrow-history?${searchParams.toString()}`);
   }
 };

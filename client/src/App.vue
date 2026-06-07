@@ -13,6 +13,7 @@ const state = reactive({
   equipment: [],
   requests: [],
   borrowHistory: [],
+  historyData: { data: [], total: 0, page: 1, limit: 10 },
   sprints: []
 });
 
@@ -33,7 +34,11 @@ async function loadPortal() {
     state.equipment = equipment;
     state.requests = requests;
     state.sprints = sprints;
-    state.borrowHistory = user?.role === "STUDENT" ? await api.borrowHistory(user.id) : [];
+    
+    const historyParams = user?.role === "STUDENT" ? { userId: user.id } : {};
+    const histResult = await api.history(historyParams);
+    state.borrowHistory = histResult.data || [];
+    state.historyData = histResult;
   } catch (error) {
     state.error = error.message;
   } finally {
@@ -61,19 +66,21 @@ async function borrowEquipment(payload) {
   try {
     await api.borrow({ ...payload, lecturerId: session.value.user.id });
     await loadPortal();
-    state.message = "Borrow request recorded and equipment marked as borrowed.";
+    state.message = session.value.user.role === "STUDENT"
+      ? "Borrow request submitted successfully for approval."
+      : "Borrow request recorded and equipment marked as borrowed.";
   } catch (error) {
     state.error = error.message;
   }
 }
 
-async function confirmReturn(id) {
+async function confirmReturn({ id, payload }) {
   state.message = "";
   state.error = "";
   try {
-    await api.confirmReturn(id);
+    await api.confirmReturn(id, payload);
     await loadPortal();
-    state.message = "Return confirmed and equipment is available again.";
+    state.message = "Return confirmed and equipment status updated.";
   } catch (error) {
     state.error = error.message;
   }
@@ -94,6 +101,65 @@ async function updateStatus(payload) {
   }
 }
 
+async function approveRequest(id) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.approve(id, session.value.user.id);
+    await loadPortal();
+    state.message = "Request approved successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function denyRequest(id) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.deny(id, session.value.user.id);
+    await loadPortal();
+    state.message = "Request denied successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function extendRequest({ id, payload }) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.extend(id, payload);
+    await loadPortal();
+    state.message = "Borrow extension granted successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function sendReminder(id) {
+  state.message = "";
+  state.error = "";
+  try {
+    const res = await api.remind(id);
+    state.message = res.message;
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function fetchHistory(params) {
+  state.loading = true;
+  try {
+    const res = await api.history(params);
+    state.historyData = res;
+  } catch (error) {
+    state.error = error.message;
+  } finally {
+    state.loading = false;
+  }
+}
+
 onMounted(() => {
   if (isLoggedIn.value) {
     loadPortal();
@@ -111,5 +177,10 @@ onMounted(() => {
     @borrow="borrowEquipment"
     @return="confirmReturn"
     @status="updateStatus"
+    @approve="approveRequest"
+    @deny="denyRequest"
+    @extend="extendRequest"
+    @remind="sendReminder"
+    @fetch-history="fetchHistory"
   />
 </template>

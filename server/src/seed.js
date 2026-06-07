@@ -5,32 +5,52 @@ const prisma = new PrismaClient();
 
 async function main() {
   const lecturer = await prisma.user.upsert({
-    where: { email: "lecturer@swin.edu.au" },
+    where: { email: "buidangminh23@gmail.com" },
     update: {},
     create: {
-      name: "Dr Minh Nguyen",
-      email: "lecturer@swin.edu.au",
+      name: "Minh Bùi Đăng",
+      email: "buidangminh23@gmail.com",
       role: "LECTURER"
     }
   });
 
   await prisma.user.upsert({
-    where: { email: "support@swin.edu.au" },
+    where: { email: "taolaminhanh1@gmail.com" },
     update: {},
     create: {
-      name: "Support Desk",
-      email: "support@swin.edu.au",
+      name: "minh anh",
+      email: "taolaminhanh1@gmail.com",
       role: "SUPPORT"
     }
   });
 
   const student = await prisma.user.upsert({
-    where: { email: "student@swin.edu.au" },
+    where: { email: "buidangminh.lh@gmail.com" },
     update: {},
     create: {
-      name: "Bui Dang Minh",
-      email: "student@swin.edu.au",
+      name: "Đăng Minh Bùi",
+      email: "buidangminh.lh@gmail.com",
       role: "STUDENT"
+    }
+  });
+
+  await prisma.user.upsert({
+    where: { email: "hiheho911@gmail.com" },
+    update: {},
+    create: {
+      name: "hihi",
+      email: "hiheho911@gmail.com",
+      role: "EVENT_STAFF"
+    }
+  });
+
+  await prisma.user.upsert({
+    where: { email: "dindungwork@gmail.com" },
+    update: {},
+    create: {
+      name: "Đinh Dũng",
+      email: "dindungwork@gmail.com",
+      role: "ADMIN"
     }
   });
 
