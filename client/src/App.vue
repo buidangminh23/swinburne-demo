@@ -48,10 +48,16 @@ async function loadPortal() {
 
 async function login(payload) {
   state.error = "";
-  const result = await api.login(payload);
-  session.value = result;
-  localStorage.setItem("portal-session", JSON.stringify(result));
-  await loadPortal();
+  try {
+    const result = payload.idToken
+      ? await api.googleLogin(payload.idToken)
+      : await api.login(payload);
+    session.value = result;
+    localStorage.setItem("portal-session", JSON.stringify(result));
+    await loadPortal();
+  } catch (error) {
+    state.error = error.message;
+  }
 }
 
 async function logout() {

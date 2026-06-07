@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, watch } from "vue";
+import { ref, reactive, watch, onMounted } from "vue";
 import swinburneLogo from "../assets/swinburne-vietnam-logo.svg";
 import avatarDangMinh from "../assets/avatar-dang-minh.png";
 import avatarDinhDung from "../assets/avatar-dinh-dung.png";
@@ -38,6 +38,15 @@ const accounts = [
 
 const loginError = ref("");
 
+onMounted(() => {
+  // Dynamically load Google Identity Services client script
+  const script = document.createElement("script");
+  script.src = "https://accounts.google.com/gsi/client";
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+});
+
 // Watch selectedLocation to automatically hide validation error when choice is made
 watch(selectedLocation, (newVal) => {
   if (newVal) {
@@ -48,8 +57,46 @@ watch(selectedLocation, (newVal) => {
 function handleGoogleClick() {
   if (!selectedLocation.value) {
     showError.value = true;
+    return;
+  }
+  
+  showError.value = false;
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  if (clientId && window.google) {
+    busy.value = true;
+    try {
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: "openid email profile",
+        callback: async (response) => {
+          if (response.error) {
+            busy.value = false;
+            loginError.value = "Đăng nhập Google thất bại: " + response.error;
+            step.value = "google";
+            return;
+          }
+          
+          try {
+            await emit("login", {
+              accessToken: response.access_token
+            });
+          } catch (err) {
+            loginError.value = err.message;
+            step.value = "google";
+          } finally {
+            busy.value = false;
+          }
+        }
+      });
+      tokenClient.requestAccessToken({ prompt: "select_account" });
+    } catch (e) {
+      console.error("Google OAuth client init failed", e);
+      busy.value = false;
+      step.value = "google";
+    }
   } else {
-    showError.value = false;
+    // Fallback to simulated account chooser (Step 2)
     step.value = "google";
   }
 }

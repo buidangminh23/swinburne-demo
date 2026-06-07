@@ -1,9 +1,16 @@
 async function request(path, options = {}) {
+  const session = JSON.parse(localStorage.getItem("portal-session") || "null");
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers ?? {})
+  };
+  
+  if (session?.token) {
+    headers["Authorization"] = `Bearer ${session.token}`;
+  }
+
   const response = await fetch(path, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers ?? {})
-    },
+    headers,
     ...options
   });
 
@@ -24,6 +31,12 @@ export const api = {
     return request("/api/auth/login", {
       method: "POST",
       body: JSON.stringify(payload)
+    });
+  },
+  googleLogin(idToken) {
+    return request("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ idToken })
     });
   },
   logout() {

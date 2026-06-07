@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import jwt from "jsonwebtoken";
 import { createRepository } from "./repository.js";
 
 const app = express();
@@ -15,6 +16,8 @@ const serverDir = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.resolve(serverDir, "../../client/dist");
 const hasClientBuild = fs.existsSync(path.join(clientDist, "index.html"));
 
+const jwtSecret = process.env.JWT_SECRET || "fallback-swinburne-secret-key-998877";
+
 app.use(cors({ origin: clientOrigin }));
 app.use(express.json());
 
@@ -23,7 +26,7 @@ if (hasClientBuild) {
 }
 
 const loginSchema = z.object({
-  email: z.email(),
+  email: z.string().email(),
   password: z.string().min(1)
 });
 
@@ -56,6 +59,45 @@ function route(handler) {
   };
 }
 
+// Google OAuth verification helper
+async function verifyGoogleToken(accessToken) {
+  const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+  if (!response.ok) {
+    const err = new Error("Xác thực tài khoản Google thất bại.");
+    err.status = 401;
+    throw err;
+  }
+  const info = await response.json();
+  if (!info.email) {
+    const err = new Error("Không thể truy xuất email từ Google.");
+    err.status = 400;
+    throw err;
+  }
+  return info.email;
+}
+
+// JWT verification middleware
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Yêu cầu mã xác thực đăng nhập để thực hiện tác vụ này." });
+  }
+
+  try {
+    const user = jwt.verify(token, jwtSecret);
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại." });
+  }
+}
+
+// ==========================================
+// PUBLIC API ROUTES
+// ==========================================
+
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, store: process.env.DATABASE_URL ? "mysql-prisma" : "demo" });
 });
@@ -68,18 +110,62 @@ app.get("/", (req, res) => {
   res.redirect(302, clientOrigin);
 });
 
+// Developer/Demo credentials login (Simulated chooser fallback)
 app.post(
   "/api/auth/login",
   route(async (req, res) => {
     const payload = loginSchema.parse(req.body);
     const result = await repository.login(payload.email);
-    res.json(result);
+    
+    // Sign a real secure JWT token containing the user details
+    const token = jwt.sign(
+      { id: result.user.id, email: result.user.email, role: result.user.role },
+      jwtSecret,
+      { expiresIn: "7d" }
+    );
+    
+    res.json({
+      user: result.user,
+      token
+    });
+  })
+);
+
+// Real Google OAuth 2.0 login
+app.post(
+  "/api/auth/google",
+  route(async (req, res) => {
+    const { accessToken } = req.body;
+    if (!accessToken) {
+      return res.status(400).json({ message: "Yêu cầu cung cấp Google access token." });
+    }
+    
+    // Validate the Google Access Token and extract email
+    const email = await verifyGoogleToken(accessToken);
+    const result = await repository.login(email);
+    
+    // Sign secure JWT token
+    const token = jwt.sign(
+      { id: result.user.id, email: result.user.email, role: result.user.role },
+      jwtSecret,
+      { expiresIn: "7d" }
+    );
+    
+    res.json({
+      user: result.user,
+      token
+    });
   })
 );
 
 app.post("/api/auth/logout", (req, res) => {
   res.status(204).end();
 });
+
+// ==========================================
+// PROTECTED API ROUTES (Require valid JWT)
+// ==========================================
+app.use("/api", authenticateToken);
 
 app.get(
   "/api/summary",
@@ -186,6 +272,7 @@ app.get(
   })
 );
 
+// Fallback for spa routing
 app.get(/^\/(?!api\/).*/, (req, res) => {
   if (hasClientBuild) {
     res.sendFile(path.join(clientDist, "index.html"));
@@ -196,10 +283,10 @@ app.get(/^\/(?!api\/).*/, (req, res) => {
 
 app.use((error, req, res, next) => {
   if (error instanceof z.ZodError) {
-    res.status(400).json({ message: "Invalid request", issues: error.issues });
+    res.status(400).json({ message: "Yêu cầu không hợp lệ", issues: error.issues });
     return;
   }
-  res.status(error.status ?? 500).json({ message: error.message ?? "Unexpected server error" });
+  res.status(error.status ?? 500).json({ message: error.message ?? "Lỗi máy chủ ngoài dự kiến" });
 });
 
 app.listen(port, () => {
