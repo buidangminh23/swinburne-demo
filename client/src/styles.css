@@ -152,19 +152,20 @@ textarea:focus {
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
-  height: 80px;
-  justify-content: space-between;
-  padding: 12px 20px 12px 24px;
+  height: 96px;
+  justify-content: center;
+  padding: 12px 20px;
+  position: relative;
 }
 
 .swin-logo {
   background: #ffffff;
-  border-radius: 4px;
+  border-radius: 6px;
   display: block;
   flex-shrink: 0;
-  height: 48px;
+  height: 60px;
   width: auto;
-  padding: 4px 8px;
+  padding: 4px 12px;
 }
 
 .collapse-button {
@@ -173,6 +174,10 @@ textarea:focus {
   min-height: 28px;
   padding: 0;
   width: 28px;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .sidebar-nav {
