@@ -5,56 +5,58 @@ const users = [
   { id: 2, name: "minh anh", email: "taolaminhanh1@gmail.com", role: "SUPPORT" },
   { id: 3, name: "Đinh Dũng", email: "dindungwork@gmail.com", role: "ADMIN" },
   { id: 4, name: "Đăng Minh Bùi", email: "buidangminh.lh@gmail.com", role: "STUDENT" },
-  { id: 5, name: "hihi", email: "hiheho911@gmail.com", role: "EVENT_STAFF" }
+  { id: 5, name: "hihi", email: "hiheho911@gmail.com", role: "EVENT_STAFF" },
+  { id: 6, name: "Linh Nguyễn Hồng", email: "linhnt89@fpt.edu.vn", role: "LECTURER" },
+  { id: 7, name: "Linh Nguyễn Hồng", email: "linhnt89@fe.edu.vn", role: "SUPPORT" }
 ];
 
 const equipment = [
   {
     id: 1,
-    assetCode: "SW-EQ-1001",
+    assetCode: "Logitech-LRC-001",
     name: "Logitech Rally Camera Kit",
     category: "Video",
-    location: "ATC 625",
+    location: "HN-ATC-625",
     status: "AVAILABLE",
     conditionNotes: "Ready for classroom recording",
     updatedAt: new Date("2026-05-27T08:30:00.000Z").toISOString()
   },
   {
     id: 2,
-    assetCode: "SW-EQ-1002",
+    assetCode: "Kensington-WPC-002",
     name: "Wireless Presentation Clicker",
     category: "Teaching",
-    location: "Library Desk",
+    location: "HN-LIB-DESK",
     status: "BORROWED",
-    conditionNotes: "Borrowed for tutorial room EN402",
+    conditionNotes: "Borrowed for tutorial room HN-ATC-625",
     updatedAt: new Date("2026-05-27T09:10:00.000Z").toISOString()
   },
   {
     id: 3,
-    assetCode: "SW-EQ-1003",
+    assetCode: "Epson-PPR-003",
     name: "Portable Projector",
     category: "Display",
-    location: "Room BA701",
+    location: "HN-BA-701",
     status: "MAINTENANCE",
     conditionNotes: "Lamp replacement required",
     updatedAt: new Date("2026-05-26T17:15:00.000Z").toISOString()
   },
   {
     id: 4,
-    assetCode: "SW-EQ-1004",
+    assetCode: "Elgato-HCA-004",
     name: "HDMI Capture Adapter",
     category: "Video",
-    location: "ATC 628",
+    location: "HN-ATC-628",
     status: "AVAILABLE",
     conditionNotes: "Checked by support staff",
     updatedAt: new Date("2026-05-27T07:45:00.000Z").toISOString()
   },
   {
     id: 5,
-    assetCode: "SW-EQ-1005",
+    assetCode: "Sennheiser-LMS-005",
     name: "Lapel Microphone Set",
     category: "Audio",
-    location: "Media Counter",
+    location: "HN-MED-DESK",
     status: "AVAILABLE",
     conditionNotes: "Batteries replaced",
     updatedAt: new Date("2026-05-27T10:20:00.000Z").toISOString()
@@ -563,12 +565,16 @@ class DemoRepository {
       (accumulator, item) => ({ ...accumulator, [item.status]: (accumulator[item.status] ?? 0) + 1 }),
       {}
     );
+    const pendingRequests = borrowRequests.filter((r) => r.status === "REQUESTED").length;
+    const currentBorrowing = borrowRequests.filter((r) => r.status === "BORROWED").length;
     return {
       totalEquipment: equipment.length,
       available: counts.AVAILABLE ?? 0,
       borrowed: counts.BORROWED ?? 0,
       maintenance: counts.MAINTENANCE ?? 0,
       activeRequests: borrowRequests.filter((request) => !["RETURNED", "CANCELLED"].includes(request.status)).length,
+      pendingRequests,
+      currentBorrowing,
       nextMeeting: "29/5 Sprint 1 demo"
     };
   }
@@ -979,12 +985,14 @@ class PrismaRepository {
   }
 
   async summary() {
-    const [totalEquipment, available, borrowed, maintenance, activeRequests] = await Promise.all([
+    const [totalEquipment, available, borrowed, maintenance, activeRequests, pendingRequests, currentBorrowing] = await Promise.all([
       this.prisma.equipment.count(),
       this.prisma.equipment.count({ where: { status: "AVAILABLE" } }),
       this.prisma.equipment.count({ where: { status: "BORROWED" } }),
       this.prisma.equipment.count({ where: { status: "MAINTENANCE" } }),
-      this.prisma.borrowRequest.count({ where: { status: { notIn: ["RETURNED", "CANCELLED"] } } })
+      this.prisma.borrowRequest.count({ where: { status: { notIn: ["RETURNED", "CANCELLED"] } } }),
+      this.prisma.borrowRequest.count({ where: { status: "REQUESTED" } }),
+      this.prisma.borrowRequest.count({ where: { status: "BORROWED" } })
     ]);
     return {
       totalEquipment,
@@ -992,6 +1000,8 @@ class PrismaRepository {
       borrowed,
       maintenance,
       activeRequests,
+      pendingRequests,
+      currentBorrowing,
       nextMeeting: "29/5 Sprint 1 demo"
     };
   }

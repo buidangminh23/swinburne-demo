@@ -33,7 +33,9 @@ const accounts = [
   { name: "minh anh", email: "taolaminhanh1@gmail.com", isDemo: true, color: "#d84315" },
   { name: "cặc cặc", email: "cacc80077@gmail.com", isDemo: false, color: "#00796b" },
   { name: "Minh", email: "buidangminhcontentcreator@gmail.com", isDemo: false, color: "#c62828" },
-  { name: "Đinh Dũng", email: "dindungwork@gmail.com", isDemo: true, photo: avatarDinhDung }
+  { name: "Đinh Dũng", email: "dindungwork@gmail.com", isDemo: true, photo: avatarDinhDung },
+  { name: "Linh Nguyễn Hồng", email: "linhnt89@fpt.edu.vn", isDemo: true, color: "#0f766e" },
+  { name: "Linh Nguyễn Hồng", email: "linhnt89@fe.edu.vn", isDemo: true, color: "#4338ca" }
 ];
 
 const loginError = ref("");

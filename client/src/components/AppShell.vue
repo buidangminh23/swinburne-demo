@@ -13,7 +13,8 @@ import {
   ScrollText,
   UserRound,
   Settings2,
-  ShieldCheck
+  ShieldCheck,
+  HelpCircle
 } from "@lucide/vue";
 import BorrowPanel from "./BorrowPanel.vue";
 import EditBorrowModal from "./EditBorrowModal.vue";
@@ -24,6 +25,8 @@ import SummaryCards from "./SummaryCards.vue";
 import HistoryLog from "./HistoryLog.vue";
 import SchedulesView from "./SchedulesView.vue";
 import swinburneLogo from "../assets/swinburne-vietnam-logo.svg";
+import FAQView from "./FAQView.vue";
+import RequestListView from "./RequestListView.vue";
 
 const props = defineProps({
   session: {
@@ -126,12 +129,13 @@ function formatDate(dateStr) {
       <nav class="sidebar-nav" aria-label="Portal navigation">
         <a :class="{ active: activeTab === 'dashboard' }" href="#" @click.prevent="activeTab = 'dashboard'"><Home :size="18" /> Dashboard</a>
         <span class="nav-group">Custom</span>
-        <a :class="{ active: activeTab === 'equipment' }" href="#" @click.prevent="activeTab = 'equipment'"><Boxes :size="18" /> Equipment</a>
+        <a :class="{ active: activeTab === 'equipment' }" href="#" @click.prevent="activeTab = 'equipment'"><Boxes :size="18" /> All Requests</a>
         <a :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="activeTab = 'borrow'"><ClipboardList :size="18" /> Borrow Equipment</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="activeTab = 'history'"><History :size="18" /> History Log</a>
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="activeTab = 'schedules'"><CalendarDays :size="18" /> Schedules</a>
         <a :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> Confirm Return</a>
         <a :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> Update Status</a>
+        <a :class="{ active: activeTab === 'faq' }" href="#" @click.prevent="activeTab = 'faq'"><HelpCircle :size="18" /> FAQ</a>
       </nav>
     </aside>
 
@@ -188,20 +192,7 @@ function formatDate(dateStr) {
       </section>
 
       <section class="portal-main">
-        <div class="profile-panel">
-          <div>
-            <div class="profile-title">
-              <h1>{{ session.user.name }}</h1>
-              <ShieldCheck :size="20" />
-            </div>
-            <div class="profile-meta">
-              <span>{{ displayEmail }}</span>
-              <span>Role: <strong>{{ displayRole }}</strong></span>
-              <span>29/5 Sprint 1 demo</span>
-            </div>
-          </div>
-          <SummaryCards :summary="state.summary" />
-        </div>
+
 
         <div v-if="state.message" class="notice success">{{ state.message }}</div>
         <div v-if="state.error" class="notice error">{{ state.error }}</div>
@@ -343,7 +334,16 @@ function formatDate(dateStr) {
         </template>
         
         <template v-else-if="activeTab === 'equipment'">
-          <EquipmentTable :equipment="state.equipment" />
+          <RequestListView 
+            :requests="state.requests" 
+            :session="session"
+            @approve="$emit('approve', $event)"
+            @deny="$emit('deny', $event)"
+            @extend="$emit('extend', $event)"
+            @edit="editingRequest = $event"
+            @custody="openCustody"
+            @remind="$emit('remind', $event)"
+          />
         </template>
         
         <template v-else-if="activeTab === 'borrow'">
@@ -364,6 +364,10 @@ function formatDate(dateStr) {
         
         <template v-else-if="activeTab === 'status'">
           <StatusPanel :equipment="state.equipment" @status="$emit('status', $event)" />
+        </template>
+
+        <template v-else-if="activeTab === 'faq'">
+          <FAQView />
         </template>
       </section>
     </main>

@@ -152,18 +152,19 @@ textarea:focus {
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
-  height: 152px;
+  height: 80px;
   justify-content: space-between;
-  padding: 12px 20px 12px 34px;
+  padding: 12px 20px 12px 24px;
 }
 
 .swin-logo {
   background: #ffffff;
-  border-radius: 2px;
+  border-radius: 4px;
   display: block;
   flex-shrink: 0;
-  height: auto;
-  width: 162px;
+  height: 48px;
+  width: auto;
+  padding: 4px 8px;
 }
 
 .collapse-button {
@@ -449,7 +450,7 @@ textarea:focus {
   display: grid;
   gap: 20px;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   padding-top: 30px;
 }
 
@@ -775,12 +776,14 @@ tbody tr:hover {
   }
 
   .sidebar-logo {
-    height: 98px;
+    height: 64px;
     padding: 8px 14px;
   }
 
   .swin-logo {
-    width: 106px;
+    height: 36px;
+    width: auto;
+    padding: 2px 4px;
   }
 
   .sidebar-nav {
