@@ -150,9 +150,15 @@ http://localhost:4000
 
 Demo login:
 
-- Lecturer: `lecturer@swin.edu.au`
-- Student: `student@swin.edu.au`
-- Password: nhập gì cũng được trong demo mode
+| Email | Tên | Role |
+|-------|-----|------|
+| `buidangminh23@gmail.com` | Minh Bùi Đăng | LECTURER |
+| `taolaminhanh1@gmail.com` | minh anh | SUPPORT |
+| `buidangminh.lh@gmail.com` | Đăng Minh Bùi | STUDENT |
+| `hiheho911@gmail.com` | hihi | EVENT_STAFF |
+| `dindungwork@gmail.com` | Đinh Dũng | ADMIN |
+
+> Password: nhập gì cũng được trong demo mode (server chỉ kiểm tra email).
 
 ## MySQL + Prisma
 
@@ -179,11 +185,12 @@ npm run build
 
 Test thủ công:
 
-1. Login bằng `lecturer@swin.edu.au`.
+1. Login bằng `buidangminh23@gmail.com` (LECTURER).
 2. Borrow một thiết bị available.
 3. Confirm return thiết bị đang borrowed.
 4. Update status một thiết bị sang Maintenance.
 5. Logout.
-6. Login bằng `student@swin.edu.au`.
+6. Login bằng `buidangminh.lh@gmail.com` (STUDENT).
 7. Kiểm tra sidebar/profile dropdown có Borrow History.
 8. Kiểm tra lecturer không thấy Borrow History.
+9. Login bằng `dindungwork@gmail.com` (ADMIN) để kiểm tra toàn quyền.
