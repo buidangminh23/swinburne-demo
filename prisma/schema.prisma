@@ -8,10 +8,19 @@ datasource db {
 }
 
 enum UserRole {
+  STUDENT
   LECTURER
   SUPPORT
   ADMIN
   OPERATIONS
+  EVENT_STAFF
+}
+
+enum BorrowPurpose {
+  CLASSROOM
+  LAB
+  RESEARCH
+  EVENT
 }
 
 enum EquipmentStatus {
@@ -51,17 +60,28 @@ model Equipment {
 }
 
 model BorrowRequest {
-  id            Int          @id @default(autoincrement())
-  equipmentId   Int
-  lecturerId    Int
-  classroom     String
-  dueAt         DateTime
-  returnedAt    DateTime?
-  status        BorrowStatus @default(REQUESTED)
-  handoverNotes String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  equipment     Equipment    @relation(fields: [equipmentId], references: [id])
-  lecturer      User         @relation(fields: [lecturerId], references: [id])
+  id               Int           @id @default(autoincrement())
+  equipmentId      Int
+  lecturerId       Int
+  classroom        String?
+  dueAt            DateTime
+  returnedAt       DateTime?
+  status           BorrowStatus  @default(REQUESTED)
+  handoverNotes    String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  purpose          BorrowPurpose @default(CLASSROOM)
+  program          String?
+  unitOrProject    String?
+  quantity         Int           @default(1)
+  returnedQuantity Int?
+  isStatusOk       Boolean?
+  damageReport     String?
+  startDate        DateTime?
+  recurrence       String?
+  approvedById     Int?
+  deniedById       Int?
+  custodyLog       String?
+  equipment        Equipment     @relation(fields: [equipmentId], references: [id])
+  lecturer         User          @relation(fields: [lecturerId], references: [id])
 }
-

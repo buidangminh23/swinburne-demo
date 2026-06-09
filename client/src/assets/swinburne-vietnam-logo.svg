@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 170" role="img" aria-labelledby="title desc" text-rendering="geometricPrecision">
+  <title id="title">Swinburne University of Technology Alliance with FPT Education</title>
+  <desc id="desc">Swinburne University of Technology logo with Alliance with FPT Education lockup</desc>
+  <style>
+    text {
+      text-rendering: geometricPrecision;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
+  <rect width="240" height="170" fill="#ffffff"/>
+  
+  <!-- Top Swinburne Block -->
+  <rect x="14" y="14" width="91" height="91" fill="#050505"/>
+  <rect x="105" y="14" width="120" height="91" fill="#ef2335"/>
+  
+  <!-- Left Black Box Typography -->
+  <text x="22" y="43" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="27" letter-spacing="-1.6">SWIN</text>
+  <text x="22" y="70" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="27" letter-spacing="-1.6">BUR</text>
+  <text x="48" y="97" fill="#ffffff" font-family="Georgia, Times New Roman, serif" font-size="27" letter-spacing="-1.6">NE</text>
+  <text x="26" y="91" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="800">*</text>
+  <text x="88" y="91" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="800">*</text>
+  
+  <!-- Right Red Box Typography (Left-aligned, exact case) -->
+  <text x="120" y="48" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700">Swinburne</text>
+  <text x="120" y="65" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="9.5" font-weight="700">UNIVERSITY OF</text>
+  <text x="120" y="81" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="9.5" font-weight="700">TECHNOLOGY</text>
+  
+  <!-- Bottom Alliance with FPT Education lockup -->
+  <text x="14" y="152" fill="#2755a3" font-family="Arial, Helvetica, sans-serif" font-size="11.7" font-weight="700">Alliance with</text>
+  
+  <!-- Compact official slanted FPT logo blocks to prevent text overlap -->
+  <g transform="translate(101, 122) skewX(-15)">
+    <!-- Blue Block (F) -->
+    <path d="M 6,5 L 20,5 L 20,33 A 6,6 0 0 1 14,39 L 0,39 L 0,11 A 6,6 0 0 1 6,5 Z" fill="#0066b2"/>
+    <!-- Orange Block (P) -->
+    <path d="M 29,0 L 43,0 L 43,38 A 6,6 0 0 1 37,44 L 23,44 L 23,6 A 6,6 0 0 1 29,0 Z" fill="#f37021"/>
+    <!-- Green Block (T) -->
+    <path d="M 52,5 L 66,5 L 66,33 A 6,6 0 0 1 60,39 L 46,39 L 46,11 A 6,6 0 0 1 52,5 Z" fill="#00a651"/>
+    
+    <!-- White Letters F, P, T -->
+    <text x="10" y="30" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="900" text-anchor="middle">F</text>
+    <text x="33" y="32" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="900" text-anchor="middle">P</text>
+    <text x="56" y="30" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="900" text-anchor="middle">T</text>
+    
+    <!-- Registered trademark symbol ® -->
+    <text x="69" y="37" fill="#0066b2" font-family="Arial, Helvetica, sans-serif" font-size="6" font-weight="700">®</text>
+  </g>
+  
+  <text x="174" y="152" fill="#2755a3" font-family="Arial, Helvetica, sans-serif" font-size="11.7" font-weight="700">Education</text>
+</svg>

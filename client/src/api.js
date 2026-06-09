@@ -1,9 +1,16 @@
 async function request(path, options = {}) {
+  const session = JSON.parse(localStorage.getItem("portal-session") || "null");
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers ?? {})
+  };
+  
+  if (session?.token) {
+    headers["Authorization"] = `Bearer ${session.token}`;
+  }
+
   const response = await fetch(path, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers ?? {})
-    },
+    headers,
     ...options
   });
 
@@ -26,6 +33,12 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+  googleLogin(accessToken) {
+    return request("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ accessToken })
+    });
+  },
   logout() {
     return request("/api/auth/logout", { method: "POST" });
   },
@@ -38,14 +51,20 @@ export const api = {
   borrowRequests() {
     return request("/api/borrow-requests");
   },
+  borrowHistory(userId) {
+    return request(`/api/users/${userId}/borrow-history`);
+  },
   borrow(payload) {
     return request("/api/borrow-requests", {
       method: "POST",
       body: JSON.stringify(payload)
     });
   },
-  confirmReturn(id) {
-    return request(`/api/borrow-requests/${id}/return`, { method: "POST" });
+  confirmReturn(id, payload = {}) {
+    return request(`/api/borrow-requests/${id}/return`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
   },
   updateStatus(id, payload) {
     return request(`/api/equipment/${id}/status`, {
@@ -55,6 +74,53 @@ export const api = {
   },
   sprints() {
     return request("/api/sprints");
+  },
+  approve(id, userId) {
+    return request(`/api/borrow-requests/${id}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ userId })
+    });
+  },
+  deny(id, userId) {
+    return request(`/api/borrow-requests/${id}/deny`, {
+      method: "POST",
+      body: JSON.stringify({ userId })
+    });
+  },
+  extend(id, payload = {}) {
+    return request(`/api/borrow-requests/${id}/extend`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+  remind(id) {
+    return request(`/api/borrow-requests/${id}/remind`, { method: "POST" });
+  },
+  history(params = {}) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== "") {
+        searchParams.append(key, val);
+      }
+    });
+    return request(`/api/borrow-history?${searchParams.toString()}`);
+  },
+  editRequest(id, payload) {
+    return request(`/api/borrow-requests/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+  },
+  custody(id, payload) {
+    return request(`/api/borrow-requests/${id}/custody`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+  schedule(equipmentId) {
+    return request(`/api/equipment/${equipmentId}/schedule`);
+  },
+  notifications(limit = 20) {
+    return request(`/api/notifications?limit=${limit}`);
   }
 };
-
