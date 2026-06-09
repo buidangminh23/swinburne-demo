@@ -15,7 +15,8 @@ const state = reactive({
   borrowHistory: [],
   historyData: { data: [], total: 0, page: 1, limit: 10 },
   sprints: [],
-  notifications: []
+  notifications: [],
+  users: []
 });
 
 const isLoggedIn = computed(() => Boolean(session.value?.token));
@@ -37,6 +38,12 @@ async function loadPortal() {
     state.requests = requests;
     state.sprints = sprints;
     state.notifications = notifications;
+
+    if (user?.role === "ADMIN") {
+      state.users = await api.users().catch(() => []);
+    } else {
+      state.users = [];
+    }
 
     const historyParams = user?.role === "STUDENT" ? { userId: user.id } : {};
     const histResult = await api.history(historyParams);
@@ -181,6 +188,42 @@ async function sendReminder(id) {
   }
 }
 
+async function addEquipment(payload) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.addEquipment(payload);
+    await loadPortal();
+    state.message = "Equipment added successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function editEquipment({ id, payload }) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.editEquipment(id, payload);
+    await loadPortal();
+    state.message = "Equipment updated successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function updateUserRole({ id, role }) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.updateUserRole(id, role);
+    await loadPortal();
+    state.message = "User role updated successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
 async function fetchHistory(params) {
   state.loading = true;
   try {
@@ -217,5 +260,8 @@ onMounted(() => {
     @custody="logCustody"
     @remind="sendReminder"
     @fetch-history="fetchHistory"
+    @add-equipment="addEquipment"
+    @edit-equipment="editEquipment"
+    @update-user-role="updateUserRole"
   />
 </template>

@@ -582,6 +582,53 @@ class DemoRepository {
   async sprintPlan() {
     return sprintPlan;
   }
+
+  async listAllUsers() {
+    return users;
+  }
+
+  async updateUserRole(id, role) {
+    const user = users.find((u) => u.id === id);
+    if (!user) {
+      const error = new Error("User not found");
+      error.status = 404;
+      throw error;
+    }
+    user.role = role;
+    return user;
+  }
+
+  async createEquipment(input) {
+    const newId = nextId(equipment);
+    const item = {
+      id: newId,
+      assetCode: input.assetCode,
+      name: input.name,
+      category: input.category,
+      location: input.location,
+      status: input.status ?? "AVAILABLE",
+      conditionNotes: input.conditionNotes ?? "",
+      updatedAt: new Date().toISOString()
+    };
+    equipment.push(item);
+    return item;
+  }
+
+  async updateEquipment(id, input) {
+    const item = equipment.find((candidate) => candidate.id === id);
+    if (!item) {
+      const error = new Error("Equipment not found");
+      error.status = 404;
+      throw error;
+    }
+    item.name = input.name ?? item.name;
+    item.category = input.category ?? item.category;
+    item.location = input.location ?? item.location;
+    item.status = input.status ?? item.status;
+    item.conditionNotes = input.conditionNotes !== undefined ? input.conditionNotes : item.conditionNotes;
+    item.updatedAt = new Date().toISOString();
+    return item;
+  }
 }
 
 class PrismaRepository {
@@ -1008,6 +1055,45 @@ class PrismaRepository {
 
   async sprintPlan() {
     return sprintPlan;
+  }
+
+  async listAllUsers() {
+    return this.prisma.user.findMany({
+      orderBy: { name: "asc" }
+    });
+  }
+
+  async updateUserRole(id, role) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { role }
+    });
+  }
+
+  async createEquipment(input) {
+    return this.prisma.equipment.create({
+      data: {
+        assetCode: input.assetCode,
+        name: input.name,
+        category: input.category,
+        location: input.location,
+        status: input.status ?? "AVAILABLE",
+        conditionNotes: input.conditionNotes ?? ""
+      }
+    });
+  }
+
+  async updateEquipment(id, input) {
+    return this.prisma.equipment.update({
+      where: { id },
+      data: {
+        name: input.name,
+        category: input.category,
+        location: input.location,
+        status: input.status,
+        conditionNotes: input.conditionNotes
+      }
+    });
   }
 }
 

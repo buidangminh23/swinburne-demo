@@ -68,6 +68,26 @@ const statusSchema = z.object({
   conditionNotes: z.string().min(2).max(240)
 });
 
+const equipmentSchema = z.object({
+  assetCode: z.string().min(3).max(50),
+  name: z.string().min(2).max(100),
+  category: z.string().min(2).max(50),
+  location: z.string().min(2).max(50),
+  status: z.enum(["AVAILABLE", "BORROWED", "MAINTENANCE", "RETIRED"]).optional(),
+  conditionNotes: z.string().max(240).optional().nullable()
+});
+
+const userRoleSchema = z.object({
+  role: z.enum(["STUDENT", "LECTURER", "SUPPORT", "ADMIN", "OPERATIONS", "EVENT_STAFF"])
+});
+
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== "ADMIN") {
+    return res.status(403).json({ message: "Chức năng này chỉ dành cho quản trị viên (ADMIN)." });
+  }
+  next();
+}
+
 function route(handler) {
   return async (req, res, next) => {
     try {
@@ -343,6 +363,25 @@ app.post("/api/borrow-requests/:id/return", loadOwnRequest, route(async (req, re
 app.patch("/api/equipment/:id/status", requireStaff, route(async (req, res) => {
   const payload = statusSchema.parse(req.body);
   res.json(await repository.updateEquipmentStatus(Number(req.params.id), payload));
+}));
+
+app.get("/api/users", requireAdmin, route(async (req, res) => {
+  res.json(await repository.listAllUsers());
+}));
+
+app.put("/api/users/:id/role", requireAdmin, route(async (req, res) => {
+  const payload = userRoleSchema.parse(req.body);
+  res.json(await repository.updateUserRole(Number(req.params.id), payload.role));
+}));
+
+app.post("/api/equipment", requireAdmin, route(async (req, res) => {
+  const payload = equipmentSchema.parse(req.body);
+  res.status(201).json(await repository.createEquipment(payload));
+}));
+
+app.put("/api/equipment/:id", requireAdmin, route(async (req, res) => {
+  const payload = equipmentSchema.parse(req.body);
+  res.json(await repository.updateEquipment(Number(req.params.id), payload));
 }));
 
 app.get("/api/sprints", route(async (req, res) => {

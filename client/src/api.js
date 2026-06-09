@@ -122,5 +122,26 @@ export const api = {
   },
   notifications(limit = 20) {
     return request(`/api/notifications?limit=${limit}`);
+  },
+  users() {
+    return request("/api/users");
+  },
+  updateUserRole(id, role) {
+    return request(`/api/users/${id}/role`, {
+      method: "PUT",
+      body: JSON.stringify({ role })
+    });
+  },
+  addEquipment(payload) {
+    return request("/api/equipment", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+  editEquipment(id, payload) {
+    return request(`/api/equipment/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
   }
 };
