@@ -122,9 +122,6 @@ function formatDate(dateStr) {
     <aside class="sidebar">
       <div class="sidebar-logo">
         <img class="swin-logo" :src="swinburneLogo" alt="Swinburne University of Technology Alliance with FPT Education" />
-        <button class="collapse-button" aria-label="Collapse sidebar">
-          <ChevronLeft :size="18" />
-        </button>
       </div>
       <nav class="sidebar-nav" aria-label="Portal navigation">
         <a :class="{ active: activeTab === 'dashboard' }" href="#" @click.prevent="activeTab = 'dashboard'"><Home :size="18" /> Dashboard</a>
