@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from "vue";
-import { UserRound, Mail, Shield, ShieldCheck, UserCheck, Search, ShieldAlert } from "@lucide/vue";
+import { UserRound, Mail, Shield, ShieldCheck, UserCheck, ShieldAlert, Check, X } from "@lucide/vue";
 
 const props = defineProps({
   users: { type: Array, default: () => [] },
@@ -9,7 +9,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update-user-role"]);
 
-// ── Search & Filter State ─────────────────────────────────────
+// ── Search & Filter ─────────────────────────────────────────────
 const search = ref("");
 const filterRole = ref("ALL");
 
@@ -28,6 +28,51 @@ const filteredUsers = computed(() => {
   return list;
 });
 
+// ── Pending role map: userId → pending role string ─────────────
+// Using ref<Map> so .value reassignment triggers reactivity
+const pendingMap = ref(new Map());
+
+function hasPending(userId) {
+  return pendingMap.value.has(userId);
+}
+
+function getPending(userId, fallback) {
+  return pendingMap.value.has(userId) ? pendingMap.value.get(userId) : fallback;
+}
+
+function stageRole(user, event) {
+  const val = event.target.value;
+  const next = new Map(pendingMap.value); // clone → forces reactive update
+  if (val === user.role) {
+    next.delete(user.id);
+  } else {
+    next.set(user.id, val);
+  }
+  pendingMap.value = next;
+}
+
+function applyRole(user) {
+  if (user.id === props.currentUser?.id) {
+    alert("Bạn không thể tự thay đổi vai trò của chính mình!");
+    cancelRole(user);
+    return;
+  }
+  const newRole = pendingMap.value.get(user.id);
+  if (newRole) {
+    emit("update-user-role", { id: user.id, role: newRole });
+    const next = new Map(pendingMap.value);
+    next.delete(user.id);
+    pendingMap.value = next;
+  }
+}
+
+function cancelRole(user) {
+  const next = new Map(pendingMap.value);
+  next.delete(user.id);
+  pendingMap.value = next;
+}
+
+// ── Lookup tables ───────────────────────────────────────────────
 const roleLabels = {
   ADMIN: "Admin",
   SUPPORT: "Support Desk",
@@ -45,16 +90,6 @@ const roleIcons = {
   EVENT_STAFF: Shield,
   OPERATIONS: Shield
 };
-
-function changeRole(user, event) {
-  const newRole = event.target.value;
-  if (user.id === props.currentUser?.id) {
-    alert("Bạn không thể tự thay đổi vai trò của chính mình!");
-    event.target.value = user.role; // Reset dropdown
-    return;
-  }
-  emit("update-user-role", { id: user.id, role: newRole });
-}
 </script>
 
 <template>
@@ -80,7 +115,7 @@ function changeRole(user, event) {
       </div>
     </div>
 
-    <!-- Users Table/Grid -->
+    <!-- Users Table -->
     <div class="users-panel panel">
       <div class="table-wrap">
         <table class="users-table">
@@ -93,10 +128,17 @@ function changeRole(user, event) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in filteredUsers" :key="user.id" :class="{ 'self-row': user.id === currentUser?.id }">
+            <tr
+              v-for="user in filteredUsers"
+              :key="user.id"
+              :class="{ 'self-row': user.id === currentUser?.id }"
+            >
               <td>
                 <div class="user-info-cell">
-                  <div class="avatar-circle" :style="{ backgroundColor: user.role === 'ADMIN' ? '#ef2335' : user.role === 'SUPPORT' ? '#3b82f6' : '#6b7280' }">
+                  <div
+                    class="avatar-circle"
+                    :style="{ backgroundColor: user.role === 'ADMIN' ? '#ef2335' : user.role === 'SUPPORT' ? '#3b82f6' : '#6b7280' }"
+                  >
                     {{ user.name.trim().split(/\s+/).at(-1).charAt(0).toUpperCase() }}
                   </div>
                   <div>
@@ -115,9 +157,38 @@ function changeRole(user, event) {
                 </span>
               </td>
               <td class="actions-cell">
-                <select :value="user.role" :disabled="user.id === currentUser?.id" @change="changeRole(user, $event)" class="role-select">
-                  <option v-for="(label, role) in roleLabels" :key="role" :value="role">{{ label }}</option>
-                </select>
+                <div class="role-edit-group">
+                  <select
+                    :value="getPending(user.id, user.role)"
+                    :disabled="user.id === currentUser?.id"
+                    :class="['role-select', { 'role-select--dirty': hasPending(user.id) }]"
+                    @change="stageRole(user, $event)"
+                  >
+                    <option
+                      v-for="(label, role) in roleLabels"
+                      :key="role"
+                      :value="role"
+                    >{{ label }}</option>
+                  </select>
+
+                  <button
+                    v-show="hasPending(user.id)"
+                    class="btn-apply"
+                    title="Lưu thay đổi"
+                    @click="applyRole(user)"
+                  >
+                    <Check :size="14" />
+                  </button>
+
+                  <button
+                    v-show="hasPending(user.id)"
+                    class="btn-cancel"
+                    title="Huỷ"
+                    @click="cancelRole(user)"
+                  >
+                    <X :size="14" />
+                  </button>
+                </div>
               </td>
             </tr>
             <tr v-if="filteredUsers.length === 0">
@@ -152,7 +223,7 @@ function changeRole(user, event) {
 
 .self-row { background: #fcfdfe; }
 .user-info-cell { display: flex; align-items: center; gap: 12px; }
-.avatar-circle { width: 32px; height: 32px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+.avatar-circle { width: 32px; height: 32px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
 .user-name { font-weight: 700; color: #3e3e4a; }
 .self-badge { background: #eef2ff; color: #4338ca; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; margin-left: 8px; border: 1px solid #c7d2fe; }
 
@@ -166,9 +237,39 @@ function changeRole(user, event) {
 .role-badge.event_staff { background: #fdf2f8; color: #be185d; }
 .role-badge.operations { background: #fff7ed; color: #c2410c; }
 
-.role-select { height: 32px; padding: 0 8px; font-size: 12px; font-weight: 700; border: 1px solid #d8d8e4; border-radius: 4px; outline: none; background: #fff; cursor: pointer; }
+.actions-cell { min-width: 220px; }
+.role-edit-group { display: flex; align-items: center; gap: 6px; }
+
+.role-select {
+  height: 32px; padding: 0 8px; font-size: 12px; font-weight: 700;
+  border: 1.5px solid #d8d8e4; border-radius: 4px; outline: none;
+  background: #fff; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
 .role-select:focus { border-color: #ef2335; }
-.role-select:disabled { opacity: 0.6; cursor: not-allowed; }
+.role-select:disabled { opacity: 0.55; cursor: not-allowed; }
+.role-select--dirty {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 3px rgba(245,158,11,.18);
+}
+
+.btn-apply {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: none; border-radius: 5px;
+  background: #dcfce7; color: #16a34a; cursor: pointer;
+  transition: background .15s, transform .1s;
+  flex-shrink: 0;
+}
+.btn-apply:hover { background: #bbf7d0; transform: scale(1.08); }
+
+.btn-cancel {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: none; border-radius: 5px;
+  background: #fee2e2; color: #dc2626; cursor: pointer;
+  transition: background .15s, transform .1s;
+  flex-shrink: 0;
+}
+.btn-cancel:hover { background: #fecaca; transform: scale(1.08); }
 
 .empty-cell { text-align: center; padding: 40px; color: #9ca3af; font-style: italic; }
 </style>
