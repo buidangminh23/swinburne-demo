@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch, onMounted } from "vue";
+import { reactive, watch, onMounted, computed } from "vue";
 import { Search, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight } from "@lucide/vue";
 
 const props = defineProps({
@@ -46,6 +46,12 @@ function nextPage() {
   }
 }
 
+function changePage(p) {
+  if (p !== "...") {
+    filters.page = p;
+  }
+}
+
 function formatDateTime(dateStr) {
   if (!dateStr) return "-";
   const date = new Date(dateStr);
@@ -62,6 +68,35 @@ function formatDateTime(dateStr) {
 function statusClass(status) {
   return `status-chip ${status.toLowerCase()}`;
 }
+
+const totalPages = computed(() => Math.ceil(props.historyData.total / filters.limit) || 1);
+
+const visiblePages = computed(() => {
+  const total = totalPages.value;
+  const current = filters.page;
+  const pages = [];
+  
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+  } else {
+    pages.push(1);
+    if (current > 3) {
+      pages.push("...");
+    }
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) {
+      pages.push("...");
+    }
+    pages.push(total);
+  }
+  return pages;
+});
 
 onMounted(() => {
   if (props.session.user.role === "STUDENT") {
@@ -198,11 +233,22 @@ onMounted(() => {
         >
           <ChevronLeft :size="16" /> Previous
         </button>
-        <span class="page-indicator">Page {{ filters.page }} of {{ Math.ceil(historyData.total / filters.limit) || 1 }}</span>
+        <div class="page-numbers">
+          <button 
+            v-for="(p, idx) in visiblePages" 
+            :key="idx" 
+            type="button" 
+            :class="['page-num-btn', { active: p === filters.page, ellipsis: p === '...' }]"
+            :disabled="p === '...'"
+            @click="changePage(p)"
+          >
+            {{ p }}
+          </button>
+        </div>
         <button 
           type="button" 
           class="pagination-btn"
-          :disabled="filters.page >= Math.ceil(historyData.total / filters.limit)"
+          :disabled="filters.page >= totalPages"
           @click="nextPage"
         >
           Next <ChevronRight :size="16" />
@@ -316,9 +362,38 @@ onMounted(() => {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.page-indicator {
-  font-size: 13px;
-  font-weight: 600;
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.page-num-btn {
+  background: #ffffff;
+  border: 1px solid #d8d8e4;
   color: #3e3e4a;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0 6px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+.page-num-btn:hover:not(:disabled):not(.ellipsis) {
+  background: #fafafa;
+  border-color: #b5b5c9;
+}
+.page-num-btn.active {
+  background: #5f63ff;
+  border-color: #5f63ff;
+  color: #ffffff;
+}
+.page-num-btn.ellipsis {
+  border: 0;
+  background: transparent;
+  cursor: default;
 }
 </style>
