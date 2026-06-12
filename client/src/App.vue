@@ -80,7 +80,8 @@ async function borrowEquipment(payload) {
   state.message = "";
   state.error = "";
   try {
-    await api.borrow({ ...payload, lecturerId: session.value.user.id });
+    const body = Array.isArray(payload) ? payload : [payload];
+    await api.borrow(body);
     await loadPortal();
     state.message = session.value.user.role === "STUDENT"
       ? "Borrow request submitted successfully for approval."
