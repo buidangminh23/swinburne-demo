@@ -119,6 +119,7 @@ onMounted(() => {
       <div class="filter-group">
         <select v-model="filters.sortBy" class="filter-select">
           <option value="createdAt">Date Created</option>
+          <option value="startDate">Start Date</option>
           <option value="dueAt">Due Date</option>
           <option value="returnedAt">Returned Date</option>
         </select>
