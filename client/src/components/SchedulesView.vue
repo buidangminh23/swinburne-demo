@@ -42,6 +42,14 @@ const loading = ref(false);
 const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const slotHours = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
 
+const showWorkingHoursOnly = ref(true);
+const filteredSlotHours = computed(() => {
+  if (showWorkingHoursOnly.value) {
+    return [8, 10, 12, 14, 16, 18, 20, 22];
+  }
+  return slotHours;
+});
+
 function startOfWeek(offset) {
   const now = new Date();
   const day = now.getDay();
@@ -174,6 +182,37 @@ function fmtHour(hour) {
 function fmtDay(date) {
   return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
+
+function isToday(date) {
+  const today = new Date();
+  return date.getDate() === today.getDate() &&
+         date.getMonth() === today.getMonth() &&
+         date.getFullYear() === today.getFullYear();
+}
+
+function isCurrentSlot(date, hour) {
+  if (!isToday(date)) return false;
+  const currentHour = new Date().getHours();
+  return currentHour >= hour && currentHour < hour + 2;
+}
+
+const activeBookingNow = computed(() => {
+  if (!bookings.value.length) return null;
+  const now = new Date();
+  return bookings.value.find(b => {
+    const start = new Date(b.start);
+    const end = new Date(b.end);
+    return now >= start && now <= end;
+  });
+});
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
+}
 </script>
 
 <template>
@@ -199,14 +238,24 @@ function fmtDay(date) {
         <button type="button" class="week-btn" @click="weekOffset--"><ChevronLeft :size="16" /></button>
         <span class="week-label">{{ weekLabel }}</span>
         <button type="button" class="week-btn" @click="weekOffset++"><ChevronRight :size="16" /></button>
+        
+        <label class="toggle-hours-label">
+          <input v-model="showWorkingHoursOnly" type="checkbox" />
+          <span>Working Hours (08:00 - 22:00)</span>
+        </label>
       </div>
 
       <div v-if="selectedItem" class="item-status-summary">
-        <span class="status-indicator">
-          Current Status:
-          <span :class="'status-chip ' + selectedItem.status.toLowerCase()">{{ selectedItem.status }}</span>
-        </span>
-        <span class="location-indicator">Location: <strong>{{ selectedItem.location }}</strong></span>
+        <div class="status-meta">
+          <span class="status-indicator">
+            Current Status:
+            <span :class="'status-chip ' + selectedItem.status.toLowerCase()">{{ selectedItem.status }}</span>
+          </span>
+          <span class="location-indicator">Location: <strong>{{ selectedItem.location }}</strong></span>
+        </div>
+        <div v-if="activeBookingNow" class="active-booking-details">
+          Currently borrowed by <strong>{{ activeBookingNow.borrower }}</strong> ({{ activeBookingNow.purpose }}) until {{ formatDateTime(activeBookingNow.end) }}
+        </div>
       </div>
     </div>
 
@@ -220,12 +269,13 @@ function fmtDay(date) {
     <div class="grid-wrap">
       <div class="schedule-grid">
         <div class="grid-header-cell empty"></div>
-        <div v-for="(date, index) in weekDays" :key="index" class="grid-header-cell">
+        <div v-for="(date, index) in weekDays" :key="index" :class="['grid-header-cell', { today: isToday(date) }]">
           <span class="day-name">{{ dayNames[index] }}</span>
           <span class="day-date">{{ fmtDay(date) }}</span>
+          <span v-if="isToday(date)" class="today-badge">Today</span>
         </div>
 
-        <template v-for="hour in slotHours" :key="hour">
+        <template v-for="hour in filteredSlotHours" :key="hour">
           <div class="grid-time-cell">
             <Clock :size="12" />
             <span>{{ fmtHour(hour) }}</span>
@@ -233,7 +283,15 @@ function fmtDay(date) {
           <div
             v-for="(date, index) in weekDays"
             :key="index + '-' + hour"
-            :class="['schedule-cell', cellStatus(date, hour).toLowerCase(), { clickable: cellStatus(date, hour) === 'AVAILABLE' }]"
+            :class="[
+              'schedule-cell', 
+              cellStatus(date, hour).toLowerCase(), 
+              { 
+                clickable: cellStatus(date, hour) === 'AVAILABLE',
+                'today-column': isToday(date),
+                'current-slot': isCurrentSlot(date, hour)
+              }
+            ]"
             :title="bookingFor(date, hour) ? `Booked by ${bookingFor(date, hour).borrower || 'user'} (${bookingFor(date, hour).purpose})` : ''"
             @click="openBooking(date, hour)"
           >
@@ -539,5 +597,68 @@ function fmtDay(date) {
 .btn-confirm:disabled {
   opacity: 0.7;
   cursor: wait;
+}
+
+.toggle-hours-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #727285;
+  margin-left: 14px;
+}
+.toggle-hours-label input {
+  cursor: pointer;
+}
+.item-status-summary {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.status-meta {
+  display: flex;
+  gap: 18px;
+}
+.active-booking-details {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c66b00;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  padding: 6px 12px;
+  border-radius: 4px;
+  width: 100%;
+}
+.grid-header-cell.today {
+  background: #e0e7ff;
+  border-bottom: 2px solid #5f63ff;
+  position: relative;
+}
+.today-badge {
+  font-size: 9px;
+  font-weight: 800;
+  background: #5f63ff;
+  color: #ffffff;
+  padding: 1px 4px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.schedule-cell.today-column {
+  background: #fdfdff;
+}
+.schedule-cell.today-column.available {
+  background: #ecfdf5;
+}
+.schedule-cell.today-column.available.clickable:hover {
+  background: #d1fae5;
+}
+.schedule-cell.current-slot {
+  box-shadow: inset 0 0 0 2px #5f63ff;
+  position: relative;
+  z-index: 1;
 }
 </style>
