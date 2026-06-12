@@ -12,6 +12,16 @@ const unitOptions = [
   "Open Day Event"
 ];
 
+const classroomOptions = [
+  "ATC 625",
+  "ATC 628",
+  "BA 701",
+  "LIB DESK",
+  "MED DESK",
+  "EN402",
+  "EN403"
+];
+
 const props = defineProps({
   request: {
     type: Object,
@@ -48,7 +58,7 @@ watch(
     form.purpose = request.purpose ?? "CLASSROOM";
     form.program = request.program ?? "";
     form.unitOrProject = request.unitOrProject ?? "";
-    form.classroom = request.classroom ?? "";
+    form.classroom = request.classroom ?? "ATC 625";
     form.dueAt = toLocalInput(request.dueAt);
     form.startDate = toLocalInput(request.startDate);
     form.recurrence = request.recurrence ?? "NONE";
@@ -102,7 +112,9 @@ function submit() {
 
         <label v-if="form.purpose === 'CLASSROOM'">
           Classroom
-          <input v-model="form.classroom" type="text" />
+          <select v-model="form.classroom">
+            <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
+          </select>
         </label>
         <div class="form-row">
           <label>

@@ -13,6 +13,16 @@ const unitOptions = [
   "Open Day Event"
 ];
 
+const classroomOptions = [
+  "ATC 625",
+  "ATC 628",
+  "BA 701",
+  "LIB DESK",
+  "MED DESK",
+  "EN402",
+  "EN403"
+];
+
 const props = defineProps({
   equipment: {
     type: Array,
@@ -121,7 +131,7 @@ function cellStatus(dayDate, hour) {
 const isModalOpen = ref(false);
 const submitting = ref(false);
 const bookingForm = reactive({
-  classroom: "EN402",
+  classroom: "ATC 625",
   purpose: "CLASSROOM",
   program: "Swinburne",
   unitOrProject: "COS20031.1",
@@ -249,7 +259,9 @@ function fmtDay(date) {
           </div>
           <label>
             Classroom:
-            <input v-model="bookingForm.classroom" type="text" required placeholder="e.g. EN402" />
+            <select v-model="bookingForm.classroom">
+              <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
+            </select>
           </label>
           <label>
             Purpose:

@@ -29,6 +29,16 @@ const unitOptions = [
   "Open Day Event"
 ];
 
+const classroomOptions = [
+  "ATC 625",
+  "ATC 628",
+  "BA 701",
+  "LIB DESK",
+  "MED DESK",
+  "EN402",
+  "EN403"
+];
+
 const availableEquipment = computed(() => {
   return props.equipment.filter((item) => item.status === "AVAILABLE" && !cart.some(c => c.id === item.id));
 });
@@ -207,7 +217,9 @@ function submit() {
           <div class="form-grid">
             <label>
               Classroom
-              <input v-model="form.classroom" type="text" />
+              <select v-model="form.classroom">
+                <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
+              </select>
             </label>
             <label>
               Recurrence
