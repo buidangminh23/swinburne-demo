@@ -147,7 +147,7 @@ async function confirmBooking() {
       classroom: bookingForm.classroom,
       purpose: bookingForm.purpose,
       program: bookingForm.program,
-      unitOrProject: bookingForm.unitOrProject,
+      unitOrProject: null,
       startDate: bookingForm.start,
       dueAt: bookingForm.end
     });
@@ -268,12 +268,7 @@ function fmtDay(date) {
               <option value="FPT">FPT</option>
             </select>
           </label>
-          <label>
-            Unit or Project Name:
-            <select v-model="bookingForm.unitOrProject">
-              <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
-            </select>
-          </label>
+
           <div class="modal-actions">
             <button type="button" class="btn-cancel" @click="isModalOpen = false">Cancel</button>
             <button type="submit" class="btn-confirm" :disabled="submitting">

@@ -91,7 +91,7 @@ function submit() {
     handoverNotes: form.handoverNotes,
     purpose: form.purpose,
     program: form.program,
-    unitOrProject: props.userRole === "EVENT_STAFF" ? null : form.unitOrProject,
+    unitOrProject: null,
     quantity: item.quantity,
     startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null
@@ -137,12 +137,7 @@ function submit() {
               <option value="EVENT">Event Support</option>
             </select>
           </label>
-          <label v-if="userRole !== 'EVENT_STAFF'">
-            Unit or Project
-            <select v-model="form.unitOrProject">
-              <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
-            </select>
-          </label>
+
         </div>
       </div>
 

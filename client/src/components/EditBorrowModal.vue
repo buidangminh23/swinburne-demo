@@ -62,7 +62,7 @@ function submit() {
   const payload = {
     purpose: form.purpose,
     program: form.program || null,
-    unitOrProject: form.unitOrProject || null,
+    unitOrProject: null,
     classroom: form.classroom || null,
     dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : undefined,
     quantity: Number(form.quantity) || 1,
@@ -99,12 +99,7 @@ function submit() {
             <option value="FPT">FPT</option>
           </select>
         </label>
-        <label>
-          Unit or Project
-          <select v-model="form.unitOrProject">
-            <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
-          </select>
-        </label>
+
         <label v-if="form.purpose === 'CLASSROOM'">
           Classroom
           <input v-model="form.classroom" type="text" />
