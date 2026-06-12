@@ -28,21 +28,29 @@ const filteredUsers = computed(() => {
   return list;
 });
 
-// ── Pending role map: userId → pending role string ─────────────
-// Using ref<Map> so .value reassignment triggers reactivity
+// ── Pending role & lecturer map ───────────────────────────────────
 const pendingMap = ref(new Map());
+const pendingLecturerMap = ref(new Map());
+
+const lecturers = computed(() => {
+  return props.users.filter(u => u.role === "LECTURER");
+});
 
 function hasPending(userId) {
-  return pendingMap.value.has(userId);
+  return pendingMap.value.has(userId) || pendingLecturerMap.value.has(userId);
 }
 
 function getPending(userId, fallback) {
   return pendingMap.value.has(userId) ? pendingMap.value.get(userId) : fallback;
 }
 
+function getPendingLecturer(userId, fallback) {
+  return pendingLecturerMap.value.has(userId) ? pendingLecturerMap.value.get(userId) : fallback;
+}
+
 function stageRole(user, event) {
   const val = event.target.value;
-  const next = new Map(pendingMap.value); // clone → forces reactive update
+  const next = new Map(pendingMap.value);
   if (val === user.role) {
     next.delete(user.id);
   } else {
@@ -51,25 +59,45 @@ function stageRole(user, event) {
   pendingMap.value = next;
 }
 
+function stageLecturer(user, event) {
+  const val = event.target.value ? Number(event.target.value) : null;
+  const next = new Map(pendingLecturerMap.value);
+  if (val === user.lecturerId) {
+    next.delete(user.id);
+  } else {
+    next.set(user.id, val);
+  }
+  pendingLecturerMap.value = next;
+}
+
 function applyRole(user) {
   if (user.id === props.currentUser?.id) {
     alert("Bạn không thể tự thay đổi vai trò của chính mình!");
     cancelRole(user);
     return;
   }
-  const newRole = pendingMap.value.get(user.id);
-  if (newRole) {
-    emit("update-user-role", { id: user.id, role: newRole });
-    const next = new Map(pendingMap.value);
-    next.delete(user.id);
-    pendingMap.value = next;
-  }
+  const newRole = pendingMap.value.get(user.id) || user.role;
+  const newLecturerId = pendingLecturerMap.value.has(user.id) ? pendingLecturerMap.value.get(user.id) : user.lecturerId;
+  
+  emit("update-user-role", { id: user.id, role: newRole, lecturerId: newLecturerId });
+  
+  const next = new Map(pendingMap.value);
+  next.delete(user.id);
+  pendingMap.value = next;
+  
+  const nextLec = new Map(pendingLecturerMap.value);
+  nextLec.delete(user.id);
+  pendingLecturerMap.value = nextLec;
 }
 
 function cancelRole(user) {
   const next = new Map(pendingMap.value);
   next.delete(user.id);
   pendingMap.value = next;
+  
+  const nextLec = new Map(pendingLecturerMap.value);
+  nextLec.delete(user.id);
+  pendingLecturerMap.value = nextLec;
 }
 
 // ── Lookup tables ───────────────────────────────────────────────
@@ -124,6 +152,7 @@ const roleIcons = {
               <th>User Details</th>
               <th>Email Address</th>
               <th>Current Role</th>
+              <th>Managing Lecturer</th>
               <th class="actions-head">Change Permission</th>
             </tr>
           </thead>
@@ -155,6 +184,19 @@ const roleIcons = {
                   <component :is="roleIcons[user.role]" :size="12" />
                   {{ roleLabels[user.role] || user.role }}
                 </span>
+              </td>
+              <td>
+                <div v-if="user.role === 'STUDENT'" class="lecturer-select-wrap">
+                  <select
+                    :value="getPendingLecturer(user.id, user.lecturerId)"
+                    @change="stageLecturer(user, $event)"
+                    :class="['lecturer-select', { 'role-select--dirty': pendingLecturerMap.has(user.id) }]"
+                  >
+                    <option :value="null">Unassigned</option>
+                    <option v-for="l in lecturers" :key="l.id" :value="l.id">{{ l.name }}</option>
+                  </select>
+                </div>
+                <span v-else class="text-muted">-</span>
               </td>
               <td class="actions-cell">
                 <div class="role-edit-group">
@@ -192,7 +234,7 @@ const roleIcons = {
               </td>
             </tr>
             <tr v-if="filteredUsers.length === 0">
-              <td colspan="4" class="empty-cell">No users found matching your filters.</td>
+              <td colspan="5" class="empty-cell">No users found matching your filters.</td>
             </tr>
           </tbody>
         </table>
@@ -240,13 +282,15 @@ const roleIcons = {
 .actions-cell { min-width: 220px; }
 .role-edit-group { display: flex; align-items: center; gap: 6px; }
 
-.role-select {
+.role-select,
+.lecturer-select {
   height: 32px; padding: 0 8px; font-size: 12px; font-weight: 700;
   border: 1.5px solid #d8d8e4; border-radius: 4px; outline: none;
   background: #fff; cursor: pointer;
   transition: border-color .15s, box-shadow .15s;
 }
-.role-select:focus { border-color: #ef2335; }
+.role-select:focus,
+.lecturer-select:focus { border-color: #ef2335; }
 .role-select:disabled { opacity: 0.55; cursor: not-allowed; }
 .role-select--dirty {
   border-color: #f59e0b !important;

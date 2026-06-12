@@ -100,18 +100,33 @@ const avatarLetter = computed(() => props.session.user.name.trim().split(/\s+/).
 
 // Dashboard computed lists
 const pendingRequests = computed(() => {
-  return props.state.requests.filter(r => r.status === "REQUESTED");
+  let list = props.state.requests.filter(r => r.status === "REQUESTED");
+  if (props.session.user.role === "LECTURER") {
+    const lecturerId = props.session.user.id;
+    list = list.filter(r => r.lecturer?.lecturerId === lecturerId);
+  }
+  return list;
 });
 
 const overdueRequests = computed(() => {
   const now = new Date();
-  return props.state.requests.filter(r => r.status === "BORROWED" && new Date(r.dueAt) < now);
+  let list = props.state.requests.filter(r => r.status === "BORROWED" && new Date(r.dueAt) < now);
+  if (props.session.user.role === "LECTURER") {
+    const lecturerId = props.session.user.id;
+    list = list.filter(r => r.lecturerId === lecturerId || r.lecturer?.lecturerId === lecturerId);
+  }
+  return list;
 });
 
 const nearDueRequests = computed(() => {
   const now = new Date();
   const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  return props.state.requests.filter(r => r.status === "BORROWED" && new Date(r.dueAt) > now && new Date(r.dueAt) < limit);
+  let list = props.state.requests.filter(r => r.status === "BORROWED" && new Date(r.dueAt) > now && new Date(r.dueAt) < limit);
+  if (props.session.user.role === "LECTURER") {
+    const lecturerId = props.session.user.id;
+    list = list.filter(r => r.lecturerId === lecturerId || r.lecturer?.lecturerId === lecturerId);
+  }
+  return list;
 });
 
 const myActiveRequests = computed(() => {

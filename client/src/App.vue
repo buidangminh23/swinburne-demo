@@ -212,13 +212,13 @@ async function editEquipment({ id, payload }) {
   }
 }
 
-async function updateUserRole({ id, role }) {
+async function updateUserRole({ id, role, lecturerId }) {
   state.message = "";
   state.error = "";
   try {
-    await api.updateUserRole(id, role);
+    await api.updateUserRole(id, role, lecturerId);
     await loadPortal();
-    state.message = "User role updated successfully.";
+    state.message = "User updated successfully.";
   } catch (error) {
     state.error = error.message;
   }

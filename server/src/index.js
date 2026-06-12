@@ -78,7 +78,8 @@ const equipmentSchema = z.object({
 });
 
 const userRoleSchema = z.object({
-  role: z.enum(["STUDENT", "LECTURER", "SUPPORT", "ADMIN", "OPERATIONS", "EVENT_STAFF"])
+  role: z.enum(["STUDENT", "LECTURER", "SUPPORT", "ADMIN", "OPERATIONS", "EVENT_STAFF"]),
+  lecturerId: z.number().int().nullable().optional()
 });
 
 function requireAdmin(req, res, next) {
@@ -154,6 +155,9 @@ app.post(
   "/api/auth/login",
   route(async (req, res) => {
     const payload = loginSchema.parse(req.body);
+    if (!payload.email.toLowerCase().endsWith("@fpt.edu.vn")) {
+      return res.status(400).json({ message: "Chỉ cho phép đăng nhập bằng tài khoản FPT (@fpt.edu.vn)" });
+    }
     const result = await repository.login(payload.email);
     
     // Sign a real secure JWT token containing the user details
@@ -181,6 +185,9 @@ app.post(
     
     // Validate the Google Access Token and extract email
     const email = await verifyGoogleToken(accessToken);
+    if (!email.toLowerCase().endsWith("@fpt.edu.vn")) {
+      return res.status(400).json({ message: "Chỉ cho phép đăng nhập bằng tài khoản FPT (@fpt.edu.vn)" });
+    }
     const result = await repository.login(email);
     
     // Sign secure JWT token
@@ -371,7 +378,7 @@ app.get("/api/users", requireAdmin, route(async (req, res) => {
 
 app.put("/api/users/:id/role", requireAdmin, route(async (req, res) => {
   const payload = userRoleSchema.parse(req.body);
-  res.json(await repository.updateUserRole(Number(req.params.id), payload.role));
+  res.json(await repository.updateUserRole(Number(req.params.id), payload.role, payload.lecturerId));
 }));
 
 app.post("/api/equipment", requireAdmin, route(async (req, res) => {

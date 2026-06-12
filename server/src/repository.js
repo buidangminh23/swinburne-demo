@@ -1,13 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 
 const users = [
-  { id: 1, name: "Minh Bùi Đăng", email: "buidangminh23@gmail.com", role: "LECTURER" },
-  { id: 2, name: "minh anh", email: "taolaminhanh1@gmail.com", role: "SUPPORT" },
-  { id: 3, name: "Đinh Dũng", email: "dindungwork@gmail.com", role: "ADMIN" },
-  { id: 4, name: "Đăng Minh Bùi", email: "buidangminh.lh@gmail.com", role: "STUDENT" },
-  { id: 5, name: "hihi", email: "hiheho911@gmail.com", role: "EVENT_STAFF" },
-  { id: 6, name: "Linh Nguyễn Hồng", email: "linhnt89@fpt.edu.vn", role: "LECTURER" },
-  { id: 7, name: "Linh Nguyễn Hồng", email: "linhnt89@fe.edu.vn", role: "SUPPORT" }
+  { id: 1, name: "LECTURER", email: "buidangminh23@fpt.edu.vn", role: "LECTURER" },
+  { id: 2, name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT" },
+  { id: 3, name: "ADMIN", email: "dindungwork@fpt.edu.vn", role: "ADMIN" },
+  { id: 4, name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", lecturerId: 1 },
+  { id: 5, name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF" },
+  { id: 6, name: "LECTURER", email: "linhnt89@fpt.edu.vn", role: "LECTURER" },
+  { id: 7, name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT" }
 ];
 
 const equipment = [
@@ -205,12 +205,16 @@ function buildEditData(input, { toDate }) {
 
 class DemoRepository {
   async login(email) {
-    const user = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
-    if (!user) {
+    const candidate = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
+    if (!candidate) {
       const error = new Error("Invalid login");
       error.status = 401;
       throw error;
     }
+    const user = {
+      ...candidate,
+      lecturer: candidate.lecturerId ? users.find(l => l.id === candidate.lecturerId) : null
+    };
     return { user, token: `demo-token-${user.id}` };
   }
 
@@ -448,7 +452,16 @@ class DemoRepository {
     }
     
     if (query.status) {
-      list = list.filter(r => r.status === query.status);
+      if (query.status === "OVERDUE") {
+        const now = new Date();
+        list = list.filter(r => r.status === "BORROWED" && new Date(r.dueAt) < now);
+      } else if (query.status === "NEAR_DUE") {
+        const now = new Date();
+        const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        list = list.filter(r => r.status === "BORROWED" && new Date(r.dueAt) > now && new Date(r.dueAt) < limit);
+      } else {
+        list = list.filter(r => r.status === query.status);
+      }
     }
 
     if (query.purpose) {
@@ -584,10 +597,13 @@ class DemoRepository {
   }
 
   async listAllUsers() {
-    return users;
+    return users.map(u => ({
+      ...u,
+      lecturer: u.lecturerId ? users.find(l => l.id === u.lecturerId) : null
+    }));
   }
 
-  async updateUserRole(id, role) {
+  async updateUserRole(id, role, lecturerId = undefined) {
     const user = users.find((u) => u.id === id);
     if (!user) {
       const error = new Error("User not found");
@@ -595,7 +611,13 @@ class DemoRepository {
       throw error;
     }
     user.role = role;
-    return user;
+    if (lecturerId !== undefined) {
+      user.lecturerId = lecturerId;
+    }
+    return {
+      ...user,
+      lecturer: user.lecturerId ? users.find(l => l.id === user.lecturerId) : null
+    };
   }
 
   async createEquipment(input) {
@@ -637,7 +659,10 @@ class PrismaRepository {
   }
 
   async login(email) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: { lecturer: true }
+    });
     if (!user) {
       const error = new Error("Invalid login");
       error.status = 401;
@@ -917,7 +942,18 @@ class PrismaRepository {
       where.lecturerId = Number(query.userId);
     }
     if (query.status) {
-      where.status = query.status;
+      if (query.status === "OVERDUE") {
+        where.status = "BORROWED";
+        where.dueAt = { lt: new Date() };
+      } else if (query.status === "NEAR_DUE") {
+        where.status = "BORROWED";
+        where.dueAt = {
+          gt: new Date(),
+          lt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+        };
+      } else {
+        where.status = query.status;
+      }
     }
     if (query.purpose) {
       where.purpose = query.purpose;
@@ -1059,14 +1095,20 @@ class PrismaRepository {
 
   async listAllUsers() {
     return this.prisma.user.findMany({
-      orderBy: { name: "asc" }
+      orderBy: { name: "asc" },
+      include: { lecturer: true }
     });
   }
 
-  async updateUserRole(id, role) {
+  async updateUserRole(id, role, lecturerId = undefined) {
+    const data = { role };
+    if (lecturerId !== undefined) {
+      data.lecturerId = lecturerId;
+    }
     return this.prisma.user.update({
       where: { id },
-      data: { role }
+      data,
+      include: { lecturer: true }
     });
   }
 

@@ -99,6 +99,8 @@ onMounted(() => {
           <option value="REQUESTED">Requested</option>
           <option value="APPROVED">Approved</option>
           <option value="BORROWED">Borrowed</option>
+          <option value="NEAR_DUE">Near Due Date</option>
+          <option value="OVERDUE">Overdue</option>
           <option value="RETURNED">Returned</option>
           <option value="CANCELLED">Cancelled</option>
         </select>

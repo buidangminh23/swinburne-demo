@@ -3,6 +3,16 @@ import { ref, reactive, computed, watch, onMounted } from "vue";
 import { Calendar, Clock, ChevronLeft, ChevronRight } from "@lucide/vue";
 import { api } from "../api";
 
+const unitOptions = [
+  "COS20031.1",
+  "COS20007",
+  "COS30043",
+  "COS30049",
+  "INF20025",
+  "Research Project A",
+  "Open Day Event"
+];
+
 const props = defineProps({
   equipment: {
     type: Array,
@@ -256,7 +266,9 @@ function fmtDay(date) {
           </label>
           <label>
             Unit or Project Name:
-            <input v-model="bookingForm.unitOrProject" type="text" placeholder="e.g. COS30043" />
+            <select v-model="bookingForm.unitOrProject">
+              <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
+            </select>
           </label>
           <div class="modal-actions">
             <button type="button" class="btn-cancel" @click="isModalOpen = false">Cancel</button>

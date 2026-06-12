@@ -2,6 +2,16 @@
 import { reactive, watch } from "vue";
 import { Pencil } from "@lucide/vue";
 
+const unitOptions = [
+  "COS20031.1",
+  "COS20007",
+  "COS30043",
+  "COS30049",
+  "INF20025",
+  "Research Project A",
+  "Open Day Event"
+];
+
 const props = defineProps({
   request: {
     type: Object,
@@ -87,7 +97,9 @@ function submit() {
         </label>
         <label>
           Unit or Project
-          <input v-model="form.unitOrProject" type="text" />
+          <select v-model="form.unitOrProject">
+            <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
+          </select>
         </label>
         <label v-if="form.purpose === 'CLASSROOM'">
           Classroom

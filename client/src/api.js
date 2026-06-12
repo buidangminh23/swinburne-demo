@@ -126,10 +126,10 @@ export const api = {
   users() {
     return request("/api/users");
   },
-  updateUserRole(id, role) {
+  updateUserRole(id, role, lecturerId = null) {
     return request(`/api/users/${id}/role`, {
       method: "PUT",
-      body: JSON.stringify({ role })
+      body: JSON.stringify({ role, lecturerId })
     });
   },
   addEquipment(payload) {

@@ -129,10 +129,9 @@ function submit() {
           </label>
           <label>
             Unit or Project
-            <input v-model="form.unitOrProject" type="text" list="unit-options" placeholder="Type to select e.g. COS20031.1" />
-            <datalist id="unit-options">
-              <option v-for="unit in unitOptions" :key="unit" :value="unit" />
-            </datalist>
+            <select v-model="form.unitOrProject">
+              <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
+            </select>
           </label>
         </div>
       </div>

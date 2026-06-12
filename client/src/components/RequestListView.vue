@@ -91,6 +91,15 @@ const filteredRequests = computed(() => {
     list = list.filter(r => r.purpose === purposeFilter.value);
   }
 
+  // If user is LECTURER: only show their own requests and requests of their managed students
+  if (props.session.user.role === "LECTURER") {
+    const lecturerId = props.session.user.id;
+    list = list.filter(r => 
+      r.lecturerId === lecturerId || 
+      r.lecturer?.lecturerId === lecturerId
+    );
+  }
+
   // Priority Sorting
   list.sort((a, b) => {
     const scoreA = getPriorityScore(a);
@@ -246,7 +255,7 @@ function isNearDue(req) {
             <td class="action-cell">
               <div class="actions-wrapper">
                 <!-- Approval Actions (Support/Admin/Lecturers for students) -->
-                <template v-if="req.status === 'REQUESTED' && !isStudent">
+                <template v-if="req.status === 'REQUESTED' && (!isStudent && (isSupportOrAdmin || req.lecturer?.lecturerId === session.user.id))">
                   <button 
                     class="action-btn approve" 
                     @click="emit('approve', req.id)"

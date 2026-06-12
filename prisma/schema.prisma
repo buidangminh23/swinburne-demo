@@ -39,12 +39,15 @@ enum BorrowStatus {
 }
 
 model User {
-  id        Int             @id @default(autoincrement())
-  name      String
-  email     String          @unique
-  role      UserRole
-  createdAt DateTime        @default(now())
-  requests  BorrowRequest[]
+  id          Int             @id @default(autoincrement())
+  name        String
+  email       String          @unique
+  role        UserRole
+  createdAt   DateTime        @default(now())
+  requests    BorrowRequest[]
+  lecturerId  Int?
+  lecturer    User?           @relation("LecturerStudents", fields: [lecturerId], references: [id])
+  students    User[]          @relation("LecturerStudents")
 }
 
 model Equipment {

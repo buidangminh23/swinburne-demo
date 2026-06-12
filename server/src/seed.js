@@ -5,51 +5,52 @@ const prisma = new PrismaClient();
 
 async function main() {
   const lecturer = await prisma.user.upsert({
-    where: { email: "buidangminh23@gmail.com" },
+    where: { email: "buidangminh23@fpt.edu.vn" },
     update: {},
     create: {
-      name: "Minh Bùi Đăng",
-      email: "buidangminh23@gmail.com",
+      name: "LECTURER",
+      email: "buidangminh23@fpt.edu.vn",
       role: "LECTURER"
     }
   });
 
   await prisma.user.upsert({
-    where: { email: "taolaminhanh1@gmail.com" },
+    where: { email: "taolaminhanh1@fpt.edu.vn" },
     update: {},
     create: {
-      name: "minh anh",
-      email: "taolaminhanh1@gmail.com",
+      name: "SUPPORT",
+      email: "taolaminhanh1@fpt.edu.vn",
       role: "SUPPORT"
     }
   });
 
   const student = await prisma.user.upsert({
-    where: { email: "buidangminh.lh@gmail.com" },
-    update: {},
+    where: { email: "buidangminh.lh@fpt.edu.vn" },
+    update: { lecturerId: lecturer.id },
     create: {
-      name: "Đăng Minh Bùi",
-      email: "buidangminh.lh@gmail.com",
-      role: "STUDENT"
+      name: "STUDENT",
+      email: "buidangminh.lh@fpt.edu.vn",
+      role: "STUDENT",
+      lecturerId: lecturer.id
     }
   });
 
   await prisma.user.upsert({
-    where: { email: "hiheho911@gmail.com" },
+    where: { email: "hiheho911@fpt.edu.vn" },
     update: {},
     create: {
-      name: "hihi",
-      email: "hiheho911@gmail.com",
+      name: "EVENT_STAFF",
+      email: "hiheho911@fpt.edu.vn",
       role: "EVENT_STAFF"
     }
   });
 
   await prisma.user.upsert({
-    where: { email: "dindungwork@gmail.com" },
+    where: { email: "dindungwork@fpt.edu.vn" },
     update: {},
     create: {
-      name: "Đinh Dũng",
-      email: "dindungwork@gmail.com",
+      name: "ADMIN",
+      email: "dindungwork@fpt.edu.vn",
       role: "ADMIN"
     }
   });
@@ -58,18 +59,18 @@ async function main() {
     where: { email: "linhnt89@fpt.edu.vn" },
     update: {},
     create: {
-      name: "Linh Nguyễn Hồng",
+      name: "LECTURER",
       email: "linhnt89@fpt.edu.vn",
       role: "LECTURER"
     }
   });
 
   await prisma.user.upsert({
-    where: { email: "linhnt89@fe.edu.vn" },
+    where: { email: "linhnt89_fe@fpt.edu.vn" },
     update: {},
     create: {
-      name: "Linh Nguyễn Hồng",
-      email: "linhnt89@fe.edu.vn",
+      name: "SUPPORT",
+      email: "linhnt89_fe@fpt.edu.vn",
       role: "SUPPORT"
     }
   });
