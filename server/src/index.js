@@ -84,7 +84,7 @@ const userRoleSchema = z.object({
 
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== "ADMIN") {
-    return res.status(403).json({ message: "Chức năng này chỉ dành cho quản trị viên (ADMIN)." });
+    return res.status(403).json({ message: "This function is only for administrators (ADMIN)." });
   }
   next();
 }
@@ -103,13 +103,13 @@ function route(handler) {
 async function verifyGoogleToken(accessToken) {
   const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
   if (!response.ok) {
-    const err = new Error("Xác thực tài khoản Google thất bại.");
+    const err = new Error("Google account verification failed.");
     err.status = 401;
     throw err;
   }
   const info = await response.json();
   if (!info.email) {
-    const err = new Error("Không thể truy xuất email từ Google.");
+    const err = new Error("Unable to retrieve email from Google.");
     err.status = 400;
     throw err;
   }
@@ -122,7 +122,7 @@ function authenticateToken(req, res, next) {
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ message: "Yêu cầu mã xác thực đăng nhập để thực hiện tác vụ này." });
+    return res.status(401).json({ message: "Authentication token is required to perform this action." });
   }
 
   try {
@@ -130,7 +130,7 @@ function authenticateToken(req, res, next) {
     req.user = user;
     next();
   } catch (error) {
-    return res.status(403).json({ message: "Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại." });
+    return res.status(403).json({ message: "Session has expired or is invalid. Please log in again." });
   }
 }
 
@@ -156,7 +156,7 @@ app.post(
   route(async (req, res) => {
     const payload = loginSchema.parse(req.body);
     if (!payload.email.toLowerCase().endsWith("@fpt.edu.vn")) {
-      return res.status(400).json({ message: "Chỉ cho phép đăng nhập bằng tài khoản FPT (@fpt.edu.vn)" });
+      return res.status(400).json({ message: "Only FPT accounts (@fpt.edu.vn) are allowed to log in." });
     }
     const result = await repository.login(payload.email);
     
@@ -180,13 +180,13 @@ app.post(
   route(async (req, res) => {
     const { accessToken } = req.body;
     if (!accessToken) {
-      return res.status(400).json({ message: "Yêu cầu cung cấp Google access token." });
+      return res.status(400).json({ message: "Google access token is required." });
     }
     
     // Validate the Google Access Token and extract email
     const email = await verifyGoogleToken(accessToken);
     if (!email.toLowerCase().endsWith("@fpt.edu.vn")) {
-      return res.status(400).json({ message: "Chỉ cho phép đăng nhập bằng tài khoản FPT (@fpt.edu.vn)" });
+      return res.status(400).json({ message: "Only FPT accounts (@fpt.edu.vn) are allowed to log in." });
     }
     const result = await repository.login(email);
     
@@ -215,7 +215,7 @@ app.use("/api", authenticateToken);
 
 function requireStaff(req, res, next) {
   if (!req.user || req.user.role === "STUDENT") {
-    return res.status(403).json({ message: "Chức năng này chỉ dành cho cán bộ/giảng viên." });
+    return res.status(403).json({ message: "This function is only for staff/lecturers." });
   }
   next();
 }
@@ -225,10 +225,10 @@ function loadOwnRequest(req, res, next) {
     .then(async () => {
       const request = await repository.getRequest(Number(req.params.id));
       if (!request) {
-        return res.status(404).json({ message: "Không tìm thấy yêu cầu mượn." });
+        return res.status(404).json({ message: "Borrow request not found." });
       }
       if (req.user.role === "STUDENT" && request.lecturerId !== req.user.id) {
-        return res.status(403).json({ message: "Bạn chỉ có thể thao tác trên yêu cầu của chính mình." });
+        return res.status(403).json({ message: "You can only modify your own requests." });
       }
       req.borrowRequest = request;
       next();
@@ -276,7 +276,7 @@ app.get("/api/notifications", route(async (req, res) => {
 app.get("/api/users/:id/borrow-history", route(async (req, res) => {
   const targetId = Number(req.params.id);
   if (req.user.role === "STUDENT" && targetId !== req.user.id) {
-    return res.status(403).json({ message: "Bạn chỉ có thể xem lịch sử của chính mình." });
+    return res.status(403).json({ message: "You can only view your own history." });
   }
   res.json(await repository.listBorrowHistory(targetId));
 }));
@@ -341,7 +341,7 @@ app.post("/api/borrow-requests/:id/custody", loadOwnRequest, route(async (req, r
 app.post("/api/borrow-requests/:id/remind", requireStaff, route(async (req, res) => {
   const request = await repository.getRequest(Number(req.params.id));
   if (!request) {
-    return res.status(404).json({ message: "Không tìm thấy yêu cầu mượn." });
+    return res.status(404).json({ message: "Borrow request not found." });
   }
   await sendNotification({
     to: request.lecturer?.email,
@@ -406,10 +406,10 @@ app.get(/^\/(?!api\/).*/, (req, res) => {
 
 app.use((error, req, res, next) => {
   if (error instanceof z.ZodError) {
-    res.status(400).json({ message: "Yêu cầu không hợp lệ", issues: error.issues });
+    res.status(400).json({ message: "Invalid request", issues: error.issues });
     return;
   }
-  res.status(error.status ?? 500).json({ message: error.message ?? "Lỗi máy chủ ngoài dự kiến" });
+  res.status(error.status ?? 500).json({ message: error.message ?? "Unexpected server error" });
 });
 
 app.listen(port, () => {

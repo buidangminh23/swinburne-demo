@@ -72,7 +72,7 @@ function stageLecturer(user, event) {
 
 function applyRole(user) {
   if (user.id === props.currentUser?.id) {
-    alert("Bạn không thể tự thay đổi vai trò của chính mình!");
+    alert("You cannot change your own role!");
     cancelRole(user);
     return;
   }
@@ -216,7 +216,7 @@ const roleIcons = {
                   <button
                     v-show="hasPending(user.id)"
                     class="btn-apply"
-                    title="Lưu thay đổi"
+                    title="Save changes"
                     @click="applyRole(user)"
                   >
                     <Check :size="14" />
@@ -225,7 +225,7 @@ const roleIcons = {
                   <button
                     v-show="hasPending(user.id)"
                     class="btn-cancel"
-                    title="Huỷ"
+                    title="Cancel"
                     @click="cancelRole(user)"
                   >
                     <X :size="14" />

@@ -19,10 +19,10 @@ const showError = ref(false);
 const busy = ref(false);
 
 const locations = [
-  { value: "HN", label: "Swinburne Hà Nội" },
+  { value: "HN", label: "Swinburne Hanoi" },
   { value: "HO", label: "Swinburne HO" },
   { value: "HCM", label: "Swinburne HCM" },
-  { value: "DN", label: "Swinburne ĐN" },
+  { value: "DN", label: "Swinburne Da Nang" },
   { value: "CT", label: "Swinburne CT" }
 ];
 
@@ -31,7 +31,7 @@ const accounts = [
   { name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", isDemo: true, photo: avatarDangMinh },
   { name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", isDemo: true, color: "#3f51b5" },
   { name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", isDemo: true, color: "#d84315" },
-  { name: "cặc cặc", email: "cacc80077@fpt.edu.vn", isDemo: false, color: "#00796b" },
+  { name: "Test Account", email: "cacc80077@fpt.edu.vn", isDemo: false, color: "#00796b" },
   { name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", isDemo: false, color: "#c62828" },
   { name: "ADMIN", email: "dindungwork@fpt.edu.vn", isDemo: true, photo: avatarDinhDung },
   { name: "LECTURER", email: "linhnt89@fpt.edu.vn", isDemo: true, color: "#0f766e" },
@@ -74,7 +74,7 @@ function handleGoogleClick() {
         callback: async (response) => {
           if (response.error) {
             busy.value = false;
-            loginError.value = "Đăng nhập Google thất bại: " + response.error;
+            loginError.value = "Google sign-in failed: " + response.error;
             step.value = "google";
             return;
           }
@@ -105,7 +105,7 @@ function handleGoogleClick() {
 
 async function selectAccount(account) {
   if (!account.isDemo) {
-    loginError.value = "Tài khoản này chưa được cấp quyền truy cập hệ thống Swinburne Equipment Portal.";
+    loginError.value = "This account has not been granted access to Swinburne Equipment Portal.";
     return;
   }
   
@@ -178,20 +178,20 @@ function getInitial(name) {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
           </svg>
-          <span>Đăng nhập bằng Google</span>
+          <span>Sign in with Google</span>
         </div>
       </header>
 
       <div class="google-body">
         <!-- Left column -->
         <div class="google-left-col">
-          <button type="button" class="back-arrow-btn" :disabled="busy" @click="step = 'location'; selectedLocation = '';" title="Thay đổi phân hiệu">
+          <button type="button" class="back-arrow-btn" :disabled="busy" @click="step = 'location'; selectedLocation = '';" title="Change location">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
               <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
             </svg>
           </button>
-          <h1>Chọn tài khoản</h1>
-          <p>Tiếp tục tới <span class="accent-link">swin.edu.vn</span></p>
+          <h1>Choose an account</h1>
+          <p>to continue to <span class="accent-link">swin.edu.vn</span></p>
         </div>
 
         <!-- Right column -->
@@ -226,7 +226,7 @@ function getInitial(name) {
                 </svg>
               </div>
               <div class="account-details">
-                <span class="account-name">Sử dụng một tài khoản khác</span>
+                <span class="account-name">Use another account</span>
               </div>
             </button>
           </div>
@@ -240,15 +240,15 @@ function getInitial(name) {
       <footer class="google-footer">
         <div class="footer-content">
           <span class="language-dropdown-text">
-            Tiếng Việt
+            English
             <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" class="dropdown-caret">
               <path d="M7 10l5 5 5-5z" />
             </svg>
           </span>
           <div class="footer-links">
-            <a href="#" class="footer-link">Trợ giúp</a>
-            <a href="#" class="footer-link">Quyền riêng tư</a>
-            <a href="#" class="footer-link">Điều khoản</a>
+            <a href="#" class="footer-link">Help</a>
+            <a href="#" class="footer-link">Privacy</a>
+            <a href="#" class="footer-link">Terms</a>
           </div>
         </div>
       </footer>
