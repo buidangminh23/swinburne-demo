@@ -125,6 +125,12 @@ function isNearDue(req) {
   const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
   return req.status === "BORROWED" && due > now && due < limit;
 }
+
+function getDisplayStatus(req) {
+  if (isOverdue(req)) return "OVERDUE";
+  if (isNearDue(req)) return "NEAR_DUE";
+  return req.status;
+}
 </script>
 
 <template>
@@ -194,11 +200,9 @@ function isNearDue(req) {
             <!-- Status Badge -->
             <td class="status-cell">
               <div class="status-indicator-wrap">
-                <span :class="'status-chip ' + req.status.toLowerCase()">
-                  {{ req.status }}
+                <span :class="'status-chip ' + getDisplayStatus(req).toLowerCase().replace('_', '-')">
+                  {{ getDisplayStatus(req).replace('_', ' ') }}
                 </span>
-                <span v-if="isOverdue(req)" class="badge-tag overdue">⚠️ OVERDUE</span>
-                <span v-else-if="isNearDue(req)" class="badge-tag neardue">🕒 NEAR DUE</span>
               </div>
             </td>
 

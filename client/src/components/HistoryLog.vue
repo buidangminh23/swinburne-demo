@@ -65,8 +65,23 @@ function formatDateTime(dateStr) {
   return `${hours}:${minutes} ${day}/${month}/${year}`;
 }
 
+function getDisplayStatus(request) {
+  if (request.status === "BORROWED") {
+    const now = new Date();
+    const due = new Date(request.dueAt);
+    if (due < now) {
+      return "OVERDUE";
+    }
+    const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    if (due < limit) {
+      return "NEAR_DUE";
+    }
+  }
+  return request.status;
+}
+
 function statusClass(status) {
-  return `status-chip ${status.toLowerCase()}`;
+  return `status-chip ${status.toLowerCase().replace('_', '-')}`;
 }
 
 const totalPages = computed(() => Math.ceil(props.historyData.total / filters.limit) || 1);
@@ -213,7 +228,7 @@ onMounted(() => {
             <td>{{ formatDateTime(request.dueAt) }}</td>
             <td>{{ request.returnedAt ? formatDateTime(request.returnedAt) : "-" }}</td>
             <td>
-              <span :class="statusClass(request.status)">{{ request.status }}</span>
+              <span :class="statusClass(getDisplayStatus(request))">{{ getDisplayStatus(request).replace('_', ' ') }}</span>
             </td>
           </tr>
           <tr v-if="historyData.data.length === 0">

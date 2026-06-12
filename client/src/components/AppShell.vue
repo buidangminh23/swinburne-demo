@@ -134,6 +134,21 @@ function formatDate(dateStr) {
   const pad = (n) => String(n).padStart(2, '0');
   return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
+
+function getDisplayStatus(req) {
+  if (req.status === "BORROWED") {
+    const now = new Date();
+    const due = new Date(req.dueAt);
+    if (due < now) {
+      return "OVERDUE";
+    }
+    const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    if (due < limit) {
+      return "NEAR_DUE";
+    }
+  }
+  return req.status;
+}
 </script>
 
 <template>
@@ -342,7 +357,7 @@ function formatDate(dateStr) {
                     <tr v-for="req in myActiveRequests" :key="req.id">
                       <td>{{ req.equipment?.name }}</td>
                       <td><span class="purpose-span">{{ req.purpose }}</span></td>
-                      <td><span :class="'status-chip ' + req.status.toLowerCase()">{{ req.status }}</span></td>
+                      <td><span :class="'status-chip ' + getDisplayStatus(req).toLowerCase().replace('_', '-')">{{ getDisplayStatus(req).replace('_', ' ') }}</span></td>
                       <td>
                         <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">From: {{ formatDate(req.startDate) }}</small>
                         <span>To: {{ formatDate(req.dueAt) }}</span>
