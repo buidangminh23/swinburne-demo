@@ -2,14 +2,14 @@
 import { reactive, watch } from "vue";
 import { Pencil } from "@lucide/vue";
 
-const unitOptions = [
-  "COS20031.1",
-  "COS20007",
-  "COS30043",
-  "COS30049",
-  "INF20025",
-  "Research Project A",
-  "Open Day Event"
+const reasonOptions = [
+  "Teaching",
+  "Student Presentation",
+  "Exam/Quiz",
+  "Seminar/Workshop",
+  "Lab Session",
+  "Club Activity",
+  "Other"
 ];
 
 const classroomOptions = [
@@ -57,7 +57,7 @@ watch(
     if (!request) return;
     form.purpose = request.purpose ?? "CLASSROOM";
     form.program = request.program ?? "";
-    form.unitOrProject = request.unitOrProject || "COS20031.1";
+    form.unitOrProject = request.unitOrProject || "Teaching";
     form.classroom = request.classroom ?? "ATC 625";
     form.dueAt = toLocalInput(request.dueAt);
     form.startDate = toLocalInput(request.startDate);
@@ -118,9 +118,9 @@ function submit() {
         </label>
 
         <label v-if="form.purpose === 'CLASSROOM'">
-          Unit or Project (Purpose of Use)
+          Reason of Use
           <select v-model="form.unitOrProject">
-            <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
+            <option v-for="r in reasonOptions" :key="r" :value="r">{{ r }}</option>
           </select>
         </label>
         <div class="form-row">

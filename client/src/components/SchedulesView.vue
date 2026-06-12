@@ -3,14 +3,14 @@ import { ref, reactive, computed, watch, onMounted } from "vue";
 import { Calendar, Clock, ChevronLeft, ChevronRight } from "@lucide/vue";
 import { api } from "../api";
 
-const unitOptions = [
-  "COS20031.1",
-  "COS20007",
-  "COS30043",
-  "COS30049",
-  "INF20025",
-  "Research Project A",
-  "Open Day Event"
+const reasonOptions = [
+  "Teaching",
+  "Student Presentation",
+  "Exam/Quiz",
+  "Seminar/Workshop",
+  "Lab Session",
+  "Club Activity",
+  "Other"
 ];
 
 const classroomOptions = [
@@ -134,7 +134,7 @@ const bookingForm = reactive({
   classroom: "ATC 625",
   purpose: "CLASSROOM",
   program: "Swinburne",
-  unitOrProject: "COS20031.1",
+  unitOrProject: "Teaching",
   start: null,
   end: null,
   label: ""
@@ -273,9 +273,9 @@ function fmtDay(date) {
             </select>
           </label>
           <label v-if="bookingForm.purpose === 'CLASSROOM'">
-            Unit or Project (Purpose of Use):
+            Reason of Use:
             <select v-model="bookingForm.unitOrProject">
-              <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
+              <option v-for="r in reasonOptions" :key="r" :value="r">{{ r }}</option>
             </select>
           </label>
           <label>

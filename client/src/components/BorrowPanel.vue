@@ -19,14 +19,14 @@ const props = defineProps({
 
 const emit = defineEmits(["borrow"]);
 
-const unitOptions = [
-  "COS20031.1",
-  "COS20007",
-  "COS30043",
-  "COS30049",
-  "INF20025",
-  "Research Project A",
-  "Open Day Event"
+const reasonOptions = [
+  "Teaching",
+  "Student Presentation",
+  "Exam/Quiz",
+  "Seminar/Workshop",
+  "Lab Session",
+  "Club Activity",
+  "Other"
 ];
 
 const classroomOptions = [
@@ -46,7 +46,7 @@ const availableEquipment = computed(() => {
 const form = reactive({
   program: "Swinburne",
   purpose: "CLASSROOM",
-  unitOrProject: "COS20031.1",
+  unitOrProject: "Teaching",
   classroom: "ATC 625",
   startDate: new Date().toISOString().slice(0, 16),
   dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16), // 3 hours from now
@@ -150,9 +150,9 @@ function submit() {
         </div>
         <div v-if="form.purpose === 'CLASSROOM'" style="margin-top: 12px;">
           <label>
-            Unit or Project (Purpose of Use)
+            Reason of Use
             <select v-model="form.unitOrProject">
-              <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
+              <option v-for="r in reasonOptions" :key="r" :value="r">{{ r }}</option>
             </select>
           </label>
         </div>
