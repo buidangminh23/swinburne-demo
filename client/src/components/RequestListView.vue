@@ -33,6 +33,7 @@ const purposeFilter = ref("ALL");
 
 const isStudent = computed(() => props.session.user.role === "STUDENT");
 const isSupportOrAdmin = computed(() => ["SUPPORT", "ADMIN"].includes(props.session.user.role));
+const canApproveOrDeny = computed(() => ["SUPPORT", "ADMIN", "LECTURER"].includes(props.session.user.role));
 
 function getPriorityScore(req) {
   const now = new Date();
@@ -91,14 +92,7 @@ const filteredRequests = computed(() => {
     list = list.filter(r => r.purpose === purposeFilter.value);
   }
 
-  // If user is LECTURER: only show their own requests and requests of their managed students
-  if (props.session.user.role === "LECTURER") {
-    const lecturerId = props.session.user.id;
-    list = list.filter(r => 
-      r.lecturerId === lecturerId || 
-      r.lecturer?.lecturerId === lecturerId
-    );
-  }
+
 
   // Priority Sorting
   list.sort((a, b) => {
@@ -255,8 +249,8 @@ function isNearDue(req) {
             <!-- Actions Column -->
             <td class="action-cell">
               <div class="actions-wrapper">
-                <!-- Approval Actions (Support/Admin/Lecturers for students) -->
-                <template v-if="req.status === 'REQUESTED' && (!isStudent && (isSupportOrAdmin || req.lecturer?.lecturerId === session.user.id))">
+                 <!-- Approval Actions (Support/Admin/Lecturers) -->
+                <template v-if="req.status === 'REQUESTED' && canApproveOrDeny">
                   <button 
                     class="action-btn approve" 
                     @click="emit('approve', req.id)"
