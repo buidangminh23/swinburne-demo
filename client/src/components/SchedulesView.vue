@@ -235,9 +235,9 @@ function formatDateTime(dateStr) {
       </label>
 
       <div class="week-nav">
-        <button type="button" class="week-btn" @click="weekOffset--">&lt;</button>
+        <button type="button" class="week-btn" @click="weekOffset--">&#8249;</button>
         <span class="week-label">{{ weekLabel }}</span>
-        <button type="button" class="week-btn" @click="weekOffset++">&gt;</button>
+        <button type="button" class="week-btn" @click="weekOffset++">&#8250;</button>
         
         <label class="toggle-hours-label">
           <input v-model="showWorkingHoursOnly" type="checkbox" />
@@ -381,22 +381,25 @@ function formatDateTime(dateStr) {
 .week-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid #d8d8e4;
+  border: 1px solid #d1d5db;
   background: #ffffff;
   border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #3e3e4a;
-  font-size: 16px;
-  font-weight: 700;
+  color: #4b5563;
+  font-size: 22px;
+  font-weight: 300;
   line-height: 1;
+  padding-bottom: 2px;
   transition: all 0.2s ease;
 }
 .week-btn:hover {
   background: #fafafa;
-  border-color: #b5b5c9;
+  border-color: #5f63ff;
+  color: #5f63ff;
+  box-shadow: 0 2px 8px rgba(95, 99, 255, 0.15);
 }
 .week-label {
   font-size: 13px;
