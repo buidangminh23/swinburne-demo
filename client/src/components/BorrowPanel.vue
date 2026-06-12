@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, onMounted } from "vue";
 import { ClipboardPlus, Trash2, Plus, Minus, ShoppingCart } from "@lucide/vue";
 
 const props = defineProps({
@@ -10,6 +10,10 @@ const props = defineProps({
   isStudent: {
     type: Boolean,
     default: false
+  },
+  userRole: {
+    type: String,
+    default: ""
   }
 });
 
@@ -38,6 +42,13 @@ const form = reactive({
   dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16), // 3 hours from now
   recurrence: "NONE",
   handoverNotes: "Collected for classroom session"
+});
+
+onMounted(() => {
+  if (props.userRole === "EVENT_STAFF") {
+    form.purpose = "EVENT";
+    form.handoverNotes = "Collected for event support";
+  }
 });
 
 const search = ref("");
@@ -80,7 +91,7 @@ function submit() {
     handoverNotes: form.handoverNotes,
     purpose: form.purpose,
     program: form.program,
-    unitOrProject: form.unitOrProject,
+    unitOrProject: props.userRole === "EVENT_STAFF" ? null : form.unitOrProject,
     quantity: item.quantity,
     startDate: form.purpose === "RESEARCH" ? new Date(form.startDate).toISOString() : null,
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null
@@ -127,7 +138,7 @@ function submit() {
               <option value="EVENT">Event Support</option>
             </select>
           </label>
-          <label>
+          <label v-if="userRole !== 'EVENT_STAFF'">
             Unit or Project
             <select v-model="form.unitOrProject">
               <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>

@@ -374,7 +374,7 @@ function formatDate(dateStr) {
         </template>
         
         <template v-else-if="activeTab === 'borrow'">
-          <BorrowPanel :equipment="state.equipment" :is-student="isStudent" @borrow="$emit('borrow', $event)" />
+          <BorrowPanel :equipment="state.equipment" :is-student="isStudent" :user-role="session.user.role" @borrow="$emit('borrow', $event)" />
         </template>
         
         <template v-else-if="activeTab === 'returns'">
