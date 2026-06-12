@@ -281,7 +281,10 @@ function formatDate(dateStr) {
                     <tr v-for="req in overdueRequests" :key="req.id">
                       <td>{{ req.lecturer?.name }}</td>
                       <td>{{ req.equipment?.name }}</td>
-                      <td class="overdue-text">{{ formatDate(req.dueAt) }}</td>
+                      <td class="overdue-text">
+                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px; font-weight: normal;">From: {{ formatDate(req.startDate) }}</small>
+                        <span>To: {{ formatDate(req.dueAt) }}</span>
+                      </td>
                       <td>
                         <button class="widget-btn remind-btn" @click="$emit('remind', req.id)">Email Reminder</button>
                       </td>
@@ -310,7 +313,10 @@ function formatDate(dateStr) {
                     <tr v-for="req in nearDueRequests" :key="req.id">
                       <td>{{ req.lecturer?.name }}</td>
                       <td>{{ req.equipment?.name }}</td>
-                      <td class="warning-text">{{ formatDate(req.dueAt) }}</td>
+                      <td class="warning-text">
+                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px; font-weight: normal;">From: {{ formatDate(req.startDate) }}</small>
+                        <span>To: {{ formatDate(req.dueAt) }}</span>
+                      </td>
                       <td class="action-cell">
                         <button v-if="req.purpose === 'RESEARCH'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
                         <button class="widget-btn remind-btn" @click="$emit('remind', req.id)">Send Reminder</button>
@@ -342,7 +348,10 @@ function formatDate(dateStr) {
                       <td>{{ req.equipment?.name }}</td>
                       <td><span class="purpose-span">{{ req.purpose }}</span></td>
                       <td><span :class="'status-chip ' + req.status.toLowerCase()">{{ req.status }}</span></td>
-                      <td>{{ formatDate(req.dueAt) }}</td>
+                      <td>
+                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">From: {{ formatDate(req.startDate) }}</small>
+                        <span>To: {{ formatDate(req.dueAt) }}</span>
+                      </td>
                       <td class="action-cell">
                         <button class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> Edit</button>
                         <button v-if="req.status === 'BORROWED'" class="widget-btn return-btn" @click="activeTab = 'returns'">Return</button>

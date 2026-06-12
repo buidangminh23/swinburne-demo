@@ -67,7 +67,7 @@ function submit() {
     dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : undefined,
     quantity: Number(form.quantity) || 1,
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null,
-    startDate: form.purpose === "RESEARCH" && form.startDate ? new Date(form.startDate).toISOString() : null,
+    startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
     handoverNotes: form.handoverNotes || null
   };
   emit("save", { id: props.request.id, payload });
@@ -109,14 +109,16 @@ function submit() {
           Classroom
           <input v-model="form.classroom" type="text" />
         </label>
-        <label v-if="form.purpose === 'RESEARCH'">
-          Start Date
-          <input v-model="form.startDate" type="datetime-local" />
-        </label>
-        <label>
-          Due
-          <input v-model="form.dueAt" type="datetime-local" />
-        </label>
+        <div class="form-row">
+          <label>
+            From
+            <input v-model="form.startDate" type="datetime-local" />
+          </label>
+          <label>
+            To
+            <input v-model="form.dueAt" type="datetime-local" />
+          </label>
+        </div>
         <label v-if="form.purpose === 'CLASSROOM'">
           Recurrence
           <select v-model="form.recurrence">
@@ -212,6 +214,11 @@ function submit() {
   padding: 8px 10px;
   font-size: 13px;
   outline: none;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 .modal-actions {
   display: flex;

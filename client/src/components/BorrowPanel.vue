@@ -93,7 +93,7 @@ function submit() {
     program: form.program,
     unitOrProject: props.userRole === "EVENT_STAFF" ? null : form.unitOrProject,
     quantity: item.quantity,
-    startDate: form.purpose === "RESEARCH" ? new Date(form.startDate).toISOString() : null,
+    startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null
   }));
 
@@ -197,6 +197,17 @@ function submit() {
       <div class="wizard-section">
         <h3 class="section-title">3. Schedule & Notes</h3>
         
+        <div class="form-grid" style="margin-bottom: 12px;">
+          <label>
+            From
+            <input v-model="form.startDate" type="datetime-local" />
+          </label>
+          <label>
+            To
+            <input v-model="form.dueAt" type="datetime-local" />
+          </label>
+        </div>
+
         <div v-if="form.purpose === 'CLASSROOM'" class="classroom-fields">
           <div class="form-grid">
             <label>
@@ -209,32 +220,6 @@ function submit() {
                 <option value="NONE">Single Session</option>
                 <option value="WEEKLY">Repeat Weekly (Within Semester)</option>
               </select>
-            </label>
-            <label>
-              Due Time
-              <input v-model="form.dueAt" type="datetime-local" />
-            </label>
-          </div>
-        </div>
-
-        <div v-else-if="form.purpose === 'RESEARCH'" class="research-fields">
-          <div class="form-grid">
-            <label>
-              Start Date
-              <input v-model="form.startDate" type="datetime-local" />
-            </label>
-            <label>
-              Until (End Date)
-              <input v-model="form.dueAt" type="datetime-local" />
-            </label>
-          </div>
-        </div>
-
-        <div v-else class="event-fields">
-          <div class="form-grid">
-            <label>
-              Due Time
-              <input v-model="form.dueAt" type="datetime-local" />
             </label>
           </div>
         </div>

@@ -246,7 +246,8 @@ function isNearDue(req) {
             <!-- Due Date -->
             <td>
               <div class="due-cell" :class="{ 'overdue-text': isOverdue(req), 'warning-text': isNearDue(req) }">
-                <span>{{ formatDate(req.dueAt) }}</span>
+                <span v-if="req.startDate" style="color: #727285; font-size: 11px;">From: {{ formatDate(req.startDate) }}</span>
+                <span>To: {{ formatDate(req.dueAt) }}</span>
                 <span v-if="req.returnedAt" class="returned-sub">Returned: {{ formatDate(req.returnedAt) }}</span>
               </div>
             </td>
