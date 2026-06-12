@@ -330,6 +330,12 @@ function fmtDay(date) {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #3e3e4a;
+  transition: all 0.2s ease;
+}
+.week-btn:hover {
+  background: #fafafa;
+  border-color: #b5b5c9;
 }
 .week-label {
   font-size: 13px;
