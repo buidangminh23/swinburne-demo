@@ -159,7 +159,7 @@ function formatDate(dateStr) {
         <a v-if="isAdmin || isSupport || isLecturer" :class="{ active: activeTab === 'equipment' }" href="#" @click.prevent="activeTab = 'equipment'"><Boxes :size="18" /> All Requests</a>
         <a v-if="!isAdmin" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="activeTab = 'borrow'"><ClipboardList :size="18" /> Borrow Equipment</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="activeTab = 'history'"><History :size="18" /> History Log</a>
-        <a v-if="isLecturer || isEventStaff" :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="activeTab = 'schedules'"><CalendarDays :size="18" /> Schedules</a>
+        <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="activeTab = 'schedules'"><CalendarDays :size="18" /> Schedules</a>
         <a v-if="isSupport" :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> Confirm Return</a>
         <a v-if="isAdmin || isSupport" :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> Update Status</a>
         <a :class="{ active: activeTab === 'faq' }" href="#" @click.prevent="activeTab = 'faq'"><HelpCircle :size="18" /> FAQ</a>
