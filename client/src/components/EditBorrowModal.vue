@@ -118,7 +118,10 @@ function submit() {
           Recurrence
           <select v-model="form.recurrence">
             <option value="NONE">Single Session</option>
+            <option value="DAILY">Repeat Daily</option>
             <option value="WEEKLY">Repeat Weekly (Within Semester)</option>
+            <option value="BIWEEKLY">Repeat Bi-weekly</option>
+            <option value="MONTHLY">Repeat Monthly</option>
           </select>
         </label>
         <label>
