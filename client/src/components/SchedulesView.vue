@@ -123,7 +123,7 @@ const submitting = ref(false);
 const bookingForm = reactive({
   classroom: "EN402",
   purpose: "CLASSROOM",
-  program: "Bachelor of Computer Science",
+  program: "Swinburne",
   unitOrProject: "COS20031.1",
   start: null,
   end: null,
@@ -261,8 +261,12 @@ function fmtDay(date) {
             </select>
           </label>
           <label>
-            Program:
-            <input v-model="bookingForm.program" type="text" placeholder="e.g. Bachelor of Computer Science" />
+            University:
+            <select v-model="bookingForm.program">
+              <option value="Swinburne">Swinburne</option>
+              <option value="Asia">Asia</option>
+              <option value="FPT">FPT</option>
+            </select>
           </label>
           <label>
             Unit or Project Name:

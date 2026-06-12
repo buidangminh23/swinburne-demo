@@ -145,7 +145,7 @@ onMounted(() => {
             <th>User</th>
             <th>Equipment</th>
             <th>Purpose</th>
-            <th>Classroom / Program</th>
+            <th>Classroom / University</th>
             <th>Borrowed At</th>
             <th>Due At</th>
             <th>Returned At</th>

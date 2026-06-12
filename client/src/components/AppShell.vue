@@ -238,7 +238,7 @@ function formatDate(dateStr) {
                     <tr>
                       <th>Requester</th>
                       <th>Equipment</th>
-                      <th>Program / Purpose</th>
+                      <th>University / Purpose</th>
                       <th>Classroom</th>
                       <th>Actions</th>
                     </tr>

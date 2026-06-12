@@ -92,8 +92,12 @@ function submit() {
           </select>
         </label>
         <label>
-          Program
-          <input v-model="form.program" type="text" />
+          University
+          <select v-model="form.program">
+            <option value="Swinburne">Swinburne</option>
+            <option value="Asia">Asia</option>
+            <option value="FPT">FPT</option>
+          </select>
         </label>
         <label>
           Unit or Project

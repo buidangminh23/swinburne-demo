@@ -34,7 +34,7 @@ const availableEquipment = computed(() => {
 });
 
 const form = reactive({
-  program: "Bachelor of Computer Science",
+  program: "Swinburne",
   purpose: "CLASSROOM",
   unitOrProject: "COS20031.1",
   classroom: "ATC 625",
@@ -118,15 +118,14 @@ function submit() {
     <div class="stacked-form">
       <!-- Section 1: Details -->
       <div class="wizard-section">
-        <h3 class="section-title">1. Program & Purpose</h3>
+        <h3 class="section-title">1. University & Purpose</h3>
         <div class="form-grid">
           <label>
-            Program
+            University
             <select v-model="form.program">
-              <option value="Bachelor of Computer Science">Bachelor of Computer Science</option>
-              <option value="Bachelor of Information Technology">Bachelor of Information Technology</option>
-              <option value="Data Science Specialisation">Data Science Specialisation</option>
-              <option value="Research Program">Research Program</option>
+              <option value="Swinburne">Swinburne</option>
+              <option value="Asia">Asia</option>
+              <option value="FPT">FPT</option>
             </select>
           </label>
           <label>
