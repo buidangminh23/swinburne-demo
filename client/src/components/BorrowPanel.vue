@@ -147,7 +147,14 @@ function submit() {
               <option value="EVENT">Event Support</option>
             </select>
           </label>
-
+        </div>
+        <div v-if="form.purpose === 'CLASSROOM'" style="margin-top: 12px;">
+          <label>
+            Unit or Project (Purpose of Use)
+            <select v-model="form.unitOrProject">
+              <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
+            </select>
+          </label>
         </div>
       </div>
 
@@ -229,14 +236,6 @@ function submit() {
                 <option value="WEEKLY">Repeat Weekly (Within Semester)</option>
                 <option value="BIWEEKLY">Repeat Bi-weekly</option>
                 <option value="MONTHLY">Repeat Monthly</option>
-              </select>
-            </label>
-          </div>
-          <div style="margin-top: 10px;">
-            <label>
-              Unit or Project (Purpose of Use)
-              <select v-model="form.unitOrProject">
-                <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
               </select>
             </label>
           </div>
