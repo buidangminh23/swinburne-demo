@@ -50,6 +50,22 @@ const filteredSlotHours = computed(() => {
   return slotHours;
 });
 
+const statusFilters = reactive({
+  available: true,
+  reserved: true,
+  maintenance: true,
+  past: true
+});
+
+function filteredCellStatusClass(date, hour) {
+  const status = cellStatus(date, hour);
+  if (status === 'AVAILABLE' && !statusFilters.available) return 'hidden-status';
+  if (status === 'RESERVED' && !statusFilters.reserved) return 'hidden-status';
+  if (status === 'MAINTENANCE' && !statusFilters.maintenance) return 'hidden-status';
+  if (status === 'PAST' && !statusFilters.past) return 'hidden-status';
+  return status.toLowerCase();
+}
+
 function startOfWeek(offset) {
   const now = new Date();
   const day = now.getDay();
@@ -157,6 +173,12 @@ function openBooking(dayDate, hour) {
   isModalOpen.value = true;
 }
 
+function handleCellClick(date, hour) {
+  if (cellStatus(date, hour) === 'AVAILABLE' && statusFilters.available) {
+    openBooking(date, hour);
+  }
+}
+
 async function confirmBooking() {
   submitting.value = true;
   try {
@@ -260,10 +282,26 @@ function formatDateTime(dateStr) {
     </div>
 
     <div class="calendar-legend">
-      <div class="legend-item"><span class="legend-color available"></span> Available (Click to book)</div>
-      <div class="legend-item"><span class="legend-color reserved"></span> Reserved / Borrowed</div>
-      <div class="legend-item"><span class="legend-color maintenance"></span> Out of service</div>
-      <div class="legend-item"><span class="legend-color past"></span> Past</div>
+      <label class="legend-item filter-checkbox">
+        <input v-model="statusFilters.available" type="checkbox" />
+        <span class="legend-color available"></span> 
+        <span>Available (Click to book)</span>
+      </label>
+      <label class="legend-item filter-checkbox">
+        <input v-model="statusFilters.reserved" type="checkbox" />
+        <span class="legend-color reserved"></span> 
+        <span>Reserved / Borrowed</span>
+      </label>
+      <label class="legend-item filter-checkbox">
+        <input v-model="statusFilters.maintenance" type="checkbox" />
+        <span class="legend-color maintenance"></span> 
+        <span>Out of service</span>
+      </label>
+      <label class="legend-item filter-checkbox">
+        <input v-model="statusFilters.past" type="checkbox" />
+        <span class="legend-color past"></span> 
+        <span>Past</span>
+      </label>
     </div>
 
     <div class="grid-wrap">
@@ -285,20 +323,28 @@ function formatDateTime(dateStr) {
             :key="index + '-' + hour"
             :class="[
               'schedule-cell', 
-              cellStatus(date, hour).toLowerCase(), 
+              filteredCellStatusClass(date, hour), 
               { 
-                clickable: cellStatus(date, hour) === 'AVAILABLE',
+                clickable: cellStatus(date, hour) === 'AVAILABLE' && statusFilters.available,
                 'today-column': isToday(date),
                 'current-slot': isCurrentSlot(date, hour)
               }
             ]"
             :title="bookingFor(date, hour) ? `Booked by ${bookingFor(date, hour).borrower || 'user'} (${bookingFor(date, hour).purpose})` : ''"
-            @click="openBooking(date, hour)"
+            @click="handleCellClick(date, hour)"
           >
-            <span v-if="cellStatus(date, hour) === 'AVAILABLE'" class="cell-text available-text">Open</span>
-            <span v-else-if="cellStatus(date, hour) === 'RESERVED'" class="cell-text reserved-text">Booked</span>
-            <span v-else-if="cellStatus(date, hour) === 'MAINTENANCE'" class="cell-text maintenance-text">Out</span>
-            <span v-else class="cell-text past-text">—</span>
+            <span v-if="cellStatus(date, hour) === 'AVAILABLE'" class="cell-text available-text">
+              {{ statusFilters.available ? 'Open' : '' }}
+            </span>
+            <span v-else-if="cellStatus(date, hour) === 'RESERVED'" class="cell-text reserved-text">
+              {{ statusFilters.reserved ? 'Booked' : '' }}
+            </span>
+            <span v-else-if="cellStatus(date, hour) === 'MAINTENANCE'" class="cell-text maintenance-text">
+              {{ statusFilters.maintenance ? 'Out' : '' }}
+            </span>
+            <span v-else class="cell-text past-text">
+              {{ statusFilters.past ? '—' : '' }}
+            </span>
           </div>
         </template>
       </div>
@@ -666,5 +712,30 @@ function formatDateTime(dateStr) {
   box-shadow: inset 0 0 0 2px #5f63ff;
   position: relative;
   z-index: 1;
+}
+
+.legend-item.filter-checkbox {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+.legend-item.filter-checkbox:hover {
+  background: #f1f1f5;
+}
+.legend-item.filter-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+.schedule-cell.hidden-status {
+  background: #ffffff;
+  color: #eeeeef;
+  cursor: not-allowed;
 }
 </style>
