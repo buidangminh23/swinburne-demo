@@ -178,6 +178,7 @@ onMounted(() => {
       <table>
         <thead>
           <tr>
+            <th style="width: 60px;">No.</th>
             <th>User</th>
             <th>Equipment</th>
             <th>Purpose</th>
@@ -189,7 +190,10 @@ onMounted(() => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="request in historyData.data" :key="request.id">
+          <tr v-for="(request, index) in historyData.data" :key="request.id">
+            <td style="color: #727285; font-weight: 600;">
+              {{ (filters.page - 1) * filters.limit + index + 1 }}
+            </td>
             <td>
               <strong>{{ request.lecturer?.name }}</strong>
               <span class="user-sub">{{ request.lecturer?.email }}</span>
@@ -213,7 +217,7 @@ onMounted(() => {
             </td>
           </tr>
           <tr v-if="historyData.data.length === 0">
-            <td colspan="8" class="empty-row-text">No borrow history records match filters.</td>
+            <td colspan="9" class="empty-row-text">No borrow history records match filters.</td>
           </tr>
         </tbody>
       </table>
