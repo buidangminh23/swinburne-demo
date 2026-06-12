@@ -57,7 +57,7 @@ watch(
     if (!request) return;
     form.purpose = request.purpose ?? "CLASSROOM";
     form.program = request.program ?? "";
-    form.unitOrProject = request.unitOrProject ?? "";
+    form.unitOrProject = request.unitOrProject || "COS20031.1";
     form.classroom = request.classroom ?? "ATC 625";
     form.dueAt = toLocalInput(request.dueAt);
     form.startDate = toLocalInput(request.startDate);
@@ -72,7 +72,7 @@ function submit() {
   const payload = {
     purpose: form.purpose,
     program: form.program || null,
-    unitOrProject: null,
+    unitOrProject: form.purpose === "CLASSROOM" ? form.unitOrProject : null,
     classroom: form.classroom || null,
     dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : undefined,
     quantity: Number(form.quantity) || 1,
@@ -114,6 +114,13 @@ function submit() {
           Classroom
           <select v-model="form.classroom">
             <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </label>
+
+        <label v-if="form.purpose === 'CLASSROOM'">
+          Unit or Project (Purpose of Use)
+          <select v-model="form.unitOrProject">
+            <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
           </select>
         </label>
         <div class="form-row">

@@ -101,7 +101,7 @@ function submit() {
     handoverNotes: form.handoverNotes,
     purpose: form.purpose,
     program: form.program,
-    unitOrProject: null,
+    unitOrProject: form.purpose === "CLASSROOM" ? form.unitOrProject : null,
     quantity: item.quantity,
     startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null
@@ -229,6 +229,14 @@ function submit() {
                 <option value="WEEKLY">Repeat Weekly (Within Semester)</option>
                 <option value="BIWEEKLY">Repeat Bi-weekly</option>
                 <option value="MONTHLY">Repeat Monthly</option>
+              </select>
+            </label>
+          </div>
+          <div style="margin-top: 10px;">
+            <label>
+              Unit or Project (Purpose of Use)
+              <select v-model="form.unitOrProject">
+                <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
               </select>
             </label>
           </div>

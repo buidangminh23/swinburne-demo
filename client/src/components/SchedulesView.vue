@@ -157,7 +157,7 @@ async function confirmBooking() {
       classroom: bookingForm.classroom,
       purpose: bookingForm.purpose,
       program: bookingForm.program,
-      unitOrProject: null,
+      unitOrProject: bookingForm.purpose === "CLASSROOM" ? bookingForm.unitOrProject : null,
       startDate: bookingForm.start,
       dueAt: bookingForm.end
     });
@@ -270,6 +270,12 @@ function fmtDay(date) {
               <option value="LAB">Lab Session</option>
               <option value="RESEARCH">Research Work</option>
               <option value="EVENT">Swinburne Event</option>
+            </select>
+          </label>
+          <label v-if="bookingForm.purpose === 'CLASSROOM'">
+            Unit or Project (Purpose of Use):
+            <select v-model="bookingForm.unitOrProject">
+              <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
             </select>
           </label>
           <label>
