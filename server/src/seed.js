@@ -172,6 +172,106 @@ async function main() {
       }
     });
   }
+
+  const pendingRequestsToSeed = [
+    {
+      equipmentCode: "Logitech-LRC-001",
+      email: "buidangminh23@fpt.edu.vn",
+      classroom: "ATC 625",
+      startDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      dueAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
+      status: "REQUESTED",
+      handoverNotes: "Need Rally camera for guest speaker recording",
+      purpose: "CLASSROOM",
+      program: "Bachelor of Computer Science",
+      unitOrProject: "Recording Seminar",
+      quantity: 1
+    },
+    {
+      equipmentCode: "VOV-GIA-006",
+      email: "buidangminh.lh@fpt.edu.vn",
+      classroom: "Vovinam Room",
+      startDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      dueAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
+      status: "REQUESTED",
+      handoverNotes: "Student training gear request",
+      purpose: "CLASSROOM",
+      program: "Swinburne",
+      unitOrProject: "Practice",
+      quantity: 3
+    },
+    {
+      equipmentCode: "Kensington-WPC-002",
+      email: "linhnt89@fpt.edu.vn",
+      classroom: "BA 701",
+      startDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      dueAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
+      status: "REQUESTED",
+      handoverNotes: "Clicker for student presentation session",
+      purpose: "CLASSROOM",
+      program: "Bachelor of Computer Science",
+      unitOrProject: "COS20031.1",
+      quantity: 1
+    },
+    {
+      equipmentCode: "Elgato-HCA-004",
+      email: "buidangminhcontentcreator@fpt.edu.vn",
+      classroom: "EN402",
+      startDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      dueAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
+      status: "REQUESTED",
+      handoverNotes: "Capture card for coding demo recording",
+      purpose: "CLASSROOM",
+      program: "Bachelor of Computer Science",
+      unitOrProject: "COS30008",
+      quantity: 1
+    },
+    {
+      equipmentCode: "VOV-GAN-007",
+      email: "buidangminh.lh@fpt.edu.vn",
+      classroom: "Vovinam Room",
+      startDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      dueAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000),
+      status: "REQUESTED",
+      handoverNotes: "Extra gloves for sparring session",
+      purpose: "CLASSROOM",
+      program: "Swinburne",
+      unitOrProject: "Practice",
+      quantity: 2
+    }
+  ];
+
+  for (const req of pendingRequestsToSeed) {
+    const eq = await prisma.equipment.findUnique({ where: { assetCode: req.equipmentCode } });
+    const user = await prisma.user.findUnique({ where: { email: req.email } });
+    if (eq && user) {
+      const exists = await prisma.borrowRequest.findFirst({
+        where: {
+          equipmentId: eq.id,
+          lecturerId: user.id,
+          status: "REQUESTED",
+          classroom: req.classroom
+        }
+      });
+      if (!exists) {
+        await prisma.borrowRequest.create({
+          data: {
+            equipmentId: eq.id,
+            lecturerId: user.id,
+            classroom: req.classroom,
+            startDate: req.startDate,
+            dueAt: req.dueAt,
+            status: req.status,
+            handoverNotes: req.handoverNotes,
+            purpose: req.purpose,
+            program: req.program,
+            unitOrProject: req.unitOrProject,
+            quantity: req.quantity
+          }
+        });
+      }
+    }
+  }
 }
 
 main()

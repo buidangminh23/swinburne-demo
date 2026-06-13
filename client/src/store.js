@@ -1,5 +1,3 @@
-import { PrismaClient } from "@prisma/client";
-
 const DAY = 24 * 60 * 60 * 1000;
 const fromNow = (ms) => new Date(Date.now() + ms).toISOString();
 const relativeDate = (days, hours) => {
@@ -30,7 +28,7 @@ function isImmediateStart(startDate) {
   return new Date(startDate).getTime() <= Date.now() + 60 * 1000;
 }
 
-const users = [
+const defaultUsers = [
   { id: 1, name: "LECTURER", email: "buidangminh23@fpt.edu.vn", role: "LECTURER" },
   { id: 2, name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT" },
   { id: 3, name: "ADMIN", email: "dindungwork@fpt.edu.vn", role: "ADMIN" },
@@ -44,7 +42,7 @@ const users = [
   { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS" }
 ];
 
-const equipment = [
+const defaultEquipment = [
   {
     id: 1,
     assetCode: "Logitech-LRC-001",
@@ -148,11 +146,11 @@ const equipment = [
 ];
 
 const STOCK_OVERRIDES = { 6: 10, 7: 8, 8: 6, 9: 5, 10: 4 };
-equipment.forEach((item) => {
+defaultEquipment.forEach((item) => {
   item.totalQuantity = STOCK_OVERRIDES[item.id] ?? 1;
 });
 
-const borrowRequests = [
+const defaultBorrowRequests = [
   // Equipment 1: Logitech Rally Camera Kit
   {
     id: 1,
@@ -490,6 +488,43 @@ const borrowRequests = [
   }
 ];
 
+const users = (() => {
+  try {
+    const saved = localStorage.getItem("swin-demo-users");
+    return saved ? JSON.parse(saved) : defaultUsers;
+  } catch {
+    return defaultUsers;
+  }
+})();
+
+const equipment = (() => {
+  try {
+    const saved = localStorage.getItem("swin-demo-equipment");
+    return saved ? JSON.parse(saved) : defaultEquipment;
+  } catch {
+    return defaultEquipment;
+  }
+})();
+
+const borrowRequests = (() => {
+  try {
+    const saved = localStorage.getItem("swin-demo-borrowRequests");
+    return saved ? JSON.parse(saved) : defaultBorrowRequests;
+  } catch {
+    return defaultBorrowRequests;
+  }
+})();
+
+function persistState() {
+  try {
+    localStorage.setItem("swin-demo-users", JSON.stringify(users));
+    localStorage.setItem("swin-demo-equipment", JSON.stringify(equipment));
+    localStorage.setItem("swin-demo-borrowRequests", JSON.stringify(borrowRequests));
+  } catch (e) {
+    console.error("Failed to persist state", e);
+  }
+}
+
 const sprintPlan = [
   {
     id: 1,
@@ -605,11 +640,31 @@ function demoAvailableUnits(equipmentId, window, excludeRequestId = null) {
 
 class DemoRepository {
   async login(email) {
-    const candidate = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
+    let candidate = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
     if (!candidate) {
-      const error = new Error("Invalid login");
-      error.status = 401;
-      throw error;
+      const newId = nextId(users);
+      let role = "ADMIN"; // Default to admin for convenience
+      const namePart = email.split("@")[0].toLowerCase();
+      if (namePart.includes("student") || namePart.includes("std")) {
+        role = "STUDENT";
+      } else if (namePart.includes("lecturer") || namePart.includes("lec") || namePart.includes("teacher")) {
+        role = "LECTURER";
+      } else if (namePart.includes("support")) {
+        role = "SUPPORT";
+      } else if (namePart.includes("operations") || namePart.includes("ops")) {
+        role = "OPERATIONS";
+      } else if (namePart.includes("staff")) {
+        role = "EVENT_STAFF";
+      }
+      
+      candidate = {
+        id: newId,
+        name: namePart.toUpperCase(),
+        email: email.toLowerCase(),
+        role: role
+      };
+      users.push(candidate);
+      persistState();
     }
     const user = {
       ...candidate,
@@ -712,6 +767,7 @@ class DemoRepository {
       custodyLog: JSON.stringify(custody)
     };
     borrowRequests.push(request);
+    persistState();
     return attachEquipment(request);
   }
 
@@ -750,7 +806,7 @@ class DemoRepository {
       notes: request.damageReport || ""
     });
     request.custodyLog = JSON.stringify(custody);
-
+    persistState();
     return attachEquipment(request);
   }
 
@@ -778,6 +834,7 @@ class DemoRepository {
       });
       request.custodyLog = JSON.stringify(log);
     }
+    persistState();
     return attachEquipment(request);
   }
 
@@ -791,6 +848,7 @@ class DemoRepository {
     item.status = input.status;
     item.conditionNotes = input.conditionNotes;
     item.updatedAt = new Date().toISOString();
+    persistState();
     return item;
   }
 
@@ -821,6 +879,7 @@ class DemoRepository {
     request.status = isImmediateStart(request.startDate) ? "BORROWED" : "RESERVED";
     request.approvedById = userId;
     request.updatedAt = new Date().toISOString();
+    persistState();
     return attachEquipment(request);
   }
 
@@ -839,6 +898,7 @@ class DemoRepository {
     request.status = "CANCELLED";
     request.deniedById = userId;
     request.updatedAt = new Date().toISOString();
+    persistState();
     return attachEquipment(request);
   }
 
@@ -863,6 +923,7 @@ class DemoRepository {
     const newDue = input.dueAt ? new Date(input.dueAt) : new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
     request.dueAt = newDue.toISOString();
     request.updatedAt = new Date().toISOString();
+    persistState();
     return attachEquipment(request);
   }
 
@@ -969,6 +1030,7 @@ class DemoRepository {
     const data = buildEditData(input, { toDate: (value) => new Date(value).toISOString() });
     Object.assign(request, data);
     request.updatedAt = new Date().toISOString();
+    persistState();
     return attachEquipment(request);
   }
 
@@ -988,6 +1050,7 @@ class DemoRepository {
     });
     request.custodyLog = JSON.stringify(log);
     request.updatedAt = new Date().toISOString();
+    persistState();
     return attachEquipment(request);
   }
 
@@ -1082,6 +1145,7 @@ class DemoRepository {
     if (lecturerId !== undefined) {
       user.lecturerId = lecturerId;
     }
+    persistState();
     return {
       ...user,
       lecturer: user.lecturerId ? users.find(l => l.id === user.lecturerId) : null
@@ -1102,6 +1166,7 @@ class DemoRepository {
       updatedAt: new Date().toISOString()
     };
     equipment.push(item);
+    persistState();
     return item;
   }
 
@@ -1119,621 +1184,9 @@ class DemoRepository {
     item.conditionNotes = input.conditionNotes !== undefined ? input.conditionNotes : item.conditionNotes;
     item.totalQuantity = input.totalQuantity ?? item.totalQuantity;
     item.updatedAt = new Date().toISOString();
+    persistState();
     return item;
   }
 }
 
-class PrismaRepository {
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
-
-  async _availableUnits(tx, equipmentId, window, excludeRequestId = null) {
-    const item = await tx.equipment.findUnique({ where: { id: equipmentId } });
-    if (!item) {
-      return { item: null, available: 0 };
-    }
-    if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
-      return { item, available: 0 };
-    }
-    const holds = await tx.borrowRequest.findMany({
-      where: {
-        equipmentId,
-        status: { in: HOLD_STATUSES },
-        ...(excludeRequestId ? { id: { not: excludeRequestId } } : {})
-      }
-    });
-    const occupied = holds
-      .filter((r) => rangesOverlap(r.startDate ?? r.createdAt, r.dueAt, window.start, window.end))
-      .reduce((sum, r) => sum + (r.quantity ?? 1), 0);
-    return { item, available: (item.totalQuantity ?? 1) - occupied };
-  }
-
-  async login(email) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: { lecturer: true }
-    });
-    if (!user) {
-      const error = new Error("Invalid login");
-      error.status = 401;
-      throw error;
-    }
-    return { user, token: `mysql-token-${user.id}` };
-  }
-
-  async listEquipment() {
-    const now = new Date();
-    const [items, activeHolds] = await Promise.all([
-      this.prisma.equipment.findMany({
-        include: {
-          requests: {
-            orderBy: { createdAt: "desc" },
-            take: 1
-          }
-        },
-        orderBy: { assetCode: "asc" }
-      }),
-      this.prisma.borrowRequest.findMany({ where: { status: { in: HOLD_STATUSES } } })
-    ]);
-    return items.map(item => {
-      const latestRequest = item.requests[0] || null;
-      const { requests, ...rest } = item;
-      const occupied = activeHolds
-        .filter((r) => r.equipmentId === item.id && rangesOverlap(r.startDate ?? r.createdAt, r.dueAt, now, now))
-        .reduce((sum, r) => sum + (r.quantity ?? 1), 0);
-      const availableNow = Math.max(0, (item.totalQuantity ?? 1) - occupied);
-      return {
-        ...rest,
-        totalQuantity: item.totalQuantity ?? 1,
-        availableNow,
-        displayStatus: computeDisplayStatus(item, availableNow),
-        latestRequest
-      };
-    });
-  }
-
-  async listActiveRequests() {
-    return this.prisma.borrowRequest.findMany({
-      where: { status: { notIn: ["RETURNED", "CANCELLED"] } },
-      include: { equipment: true, lecturer: true },
-      orderBy: { createdAt: "desc" }
-    });
-  }
-
-  async listBorrowHistory(userId) {
-    return this.prisma.borrowRequest.findMany({
-      where: { lecturerId: userId },
-      include: { equipment: true, lecturer: true },
-      orderBy: { createdAt: "desc" }
-    });
-  }
-
-  async borrowEquipment(input) {
-    return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({ where: { id: input.lecturerId } });
-
-      const item = await tx.equipment.findUnique({ where: { id: input.equipmentId } });
-      if (!item) {
-        const error = new Error("Equipment not found");
-        error.status = 404;
-        throw error;
-      }
-
-      if (["RETIRED", "MAINTENANCE"].includes(item.status)) {
-        const error = new Error(`Equipment is ${item.status.toLowerCase()} and cannot be booked`);
-        error.status = 409;
-        throw error;
-      }
-
-      const quantity = input.quantity ?? 1;
-      const start = input.startDate ? new Date(input.startDate) : new Date();
-      const end = new Date(input.dueAt);
-      if (end.getTime() <= start.getTime()) {
-        const error = new Error("Return time must be after the start time");
-        error.status = 400;
-        throw error;
-      }
-      const { available } = await this._availableUnits(tx, input.equipmentId, { start: start.toISOString(), end: end.toISOString() });
-      if (quantity > available) {
-        const error = new Error(`Only ${Math.max(0, available)} of ${item.totalQuantity ?? 1} unit(s) are free for that time window`);
-        error.status = 409;
-        throw error;
-      }
-
-      const status = "REQUESTED";
-      const purpose = input.purpose ?? "CLASSROOM";
-
-      const custody = [];
-      if (purpose === "EVENT") {
-        custody.push({
-          at: new Date().toISOString(),
-          action: "REQUESTED",
-          actor: user?.name ?? `User ${input.lecturerId}`,
-          notes: input.handoverNotes ?? ""
-        });
-      }
-
-      return tx.borrowRequest.create({
-        data: {
-          equipmentId: input.equipmentId,
-          lecturerId: input.lecturerId,
-          classroom: input.classroom ?? null,
-          dueAt: new Date(input.dueAt),
-          status,
-          handoverNotes: input.handoverNotes ?? "",
-          purpose,
-          program: input.program ?? null,
-          unitOrProject: input.unitOrProject ?? null,
-          quantity: input.quantity ?? 1,
-          startDate: input.startDate ? new Date(input.startDate) : null,
-          recurrence: input.recurrence ?? null,
-          custodyLog: JSON.stringify(custody)
-        },
-        include: { equipment: true, lecturer: true }
-      });
-    });
-  }
-
-  async confirmReturn(id, input = {}) {
-    return this.prisma.$transaction(async (tx) => {
-      const request = await tx.borrowRequest.findUnique({ where: { id }, include: { equipment: true } });
-      if (!request) {
-        const error = new Error("Borrow request not found");
-        error.status = 404;
-        throw error;
-      }
-      if (request.status !== "BORROWED") {
-        const error = new Error("Only borrowed equipment can be returned");
-        error.status = 409;
-        throw error;
-      }
-
-      const isStatusOk = input.isStatusOk !== false;
-      const damageReport = input.damageReport ?? "";
-      const returnedQuantity = input.returnedQuantity ?? request.quantity;
-
-      if (!isStatusOk) {
-        await tx.equipment.update({
-          where: { id: request.equipmentId },
-          data: {
-            status: "MAINTENANCE",
-            conditionNotes: `Returned damaged: ${damageReport}`
-          }
-        });
-      }
-
-      const custody = parseCustody(request.custodyLog);
-      custody.push({
-        at: new Date().toISOString(),
-        action: isStatusOk ? "RETURNED_OK" : "RETURNED_DAMAGED",
-        actor: input.actorName ?? "Staff",
-        notes: damageReport
-      });
-
-      return tx.borrowRequest.update({
-        where: { id },
-        data: {
-          status: "RETURNED",
-          returnedAt: new Date(),
-          returnedQuantity,
-          isStatusOk,
-          damageReport,
-          custodyLog: JSON.stringify(custody)
-        },
-        include: { equipment: true, lecturer: true }
-      });
-    });
-  }
-
-  async checkOut(id, input = {}) {
-    return this.prisma.$transaction(async (tx) => {
-      const request = await tx.borrowRequest.findUnique({ where: { id } });
-      if (!request) {
-        const error = new Error("Request not found");
-        error.status = 404;
-        throw error;
-      }
-      if (request.status !== "RESERVED") {
-        const error = new Error("Only reserved bookings can be checked out");
-        error.status = 409;
-        throw error;
-      }
-      const data = { status: "BORROWED" };
-      if (request.purpose === "EVENT") {
-        const log = parseCustody(request.custodyLog);
-        log.push({
-          at: new Date().toISOString(),
-          action: "CHECKED_OUT",
-          actor: input.actorName ?? "Staff",
-          notes: input.notes ?? ""
-        });
-        data.custodyLog = JSON.stringify(log);
-      }
-      return tx.borrowRequest.update({
-        where: { id },
-        data,
-        include: { equipment: true, lecturer: true }
-      });
-    });
-  }
-
-  async updateEquipmentStatus(id, input) {
-    return this.prisma.equipment.update({
-      where: { id },
-      data: {
-        status: input.status,
-        conditionNotes: input.conditionNotes
-      }
-    });
-  }
-
-  async approveRequest(id, userId) {
-    return this.prisma.$transaction(async (tx) => {
-      const request = await tx.borrowRequest.findUnique({ where: { id } });
-      if (!request) {
-        const error = new Error("Request not found");
-        error.status = 404;
-        throw error;
-      }
-      if (request.status !== "REQUESTED") {
-        const error = new Error("Only pending requests can be approved");
-        error.status = 409;
-        throw error;
-      }
-      const { item, available } = await this._availableUnits(
-        tx,
-        request.equipmentId,
-        { start: request.startDate ?? request.createdAt, end: request.dueAt },
-        request.id
-      );
-      if (!item) {
-        const error = new Error("Equipment not found");
-        error.status = 404;
-        throw error;
-      }
-      if ((request.quantity ?? 1) > available) {
-        const error = new Error(`Equipment is no longer free for that time window (only ${Math.max(0, available)} unit(s) left)`);
-        error.status = 409;
-        throw error;
-      }
-      return tx.borrowRequest.update({
-        where: { id },
-        data: {
-          status: isImmediateStart(request.startDate) ? "BORROWED" : "RESERVED",
-          approvedById: userId
-        },
-        include: { equipment: true, lecturer: true }
-      });
-    });
-  }
-
-  async denyRequest(id, userId) {
-    return this.prisma.$transaction(async (tx) => {
-      const request = await tx.borrowRequest.findUnique({ where: { id } });
-      if (!request) {
-        const error = new Error("Request not found");
-        error.status = 404;
-        throw error;
-      }
-      if (!["REQUESTED", "RESERVED", "BORROWED"].includes(request.status)) {
-        const error = new Error("Only pending, reserved or active requests can be cancelled");
-        error.status = 409;
-        throw error;
-      }
-      return tx.borrowRequest.update({
-        where: { id },
-        data: {
-          status: "CANCELLED",
-          deniedById: userId
-        },
-        include: { equipment: true, lecturer: true }
-      });
-    });
-  }
-
-  async extendRequest(id, input = {}) {
-    const request = await this.prisma.borrowRequest.findUnique({ where: { id } });
-    if (!request) {
-      const error = new Error("Request not found");
-      error.status = 404;
-      throw error;
-    }
-    if (request.status !== "BORROWED") {
-      const error = new Error("Only borrowed equipment can be extended");
-      error.status = 409;
-      throw error;
-    }
-    if (request.purpose !== "RESEARCH") {
-      const error = new Error("Extensions are only available for research borrowings");
-      error.status = 409;
-      throw error;
-    }
-    const currentDue = new Date(request.dueAt);
-    const newDue = input.dueAt ? new Date(input.dueAt) : new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return this.prisma.borrowRequest.update({
-      where: { id },
-      data: {
-        dueAt: newDue
-      },
-      include: { equipment: true, lecturer: true }
-    });
-  }
-
-  async listAllHistory(query = {}) {
-    const page = Number(query.page ?? 1);
-    const limit = Number(query.limit ?? 10);
-    const skip = (page - 1) * limit;
-
-    const where = {};
-    if (query.userId) {
-      where.lecturerId = Number(query.userId);
-    }
-    if (query.status) {
-      if (query.status === "OVERDUE") {
-        where.status = "BORROWED";
-        where.dueAt = { lt: new Date() };
-      } else if (query.status === "NEAR_DUE") {
-        where.status = "BORROWED";
-        where.dueAt = {
-          gt: new Date(),
-          lt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-        };
-      } else {
-        where.status = query.status;
-      }
-    }
-    if (query.purpose) {
-      if (query.purpose === "VOVINAM") {
-        where.classroom = "Vovinam Room";
-      } else {
-        where.purpose = query.purpose;
-      }
-    }
-    if (query.search) {
-      where.OR = [
-        { classroom: { contains: query.search } },
-        { unitOrProject: { contains: query.search } },
-        { equipment: { name: { contains: query.search } } },
-        { lecturer: { name: { contains: query.search } } }
-      ];
-    }
-
-    const sortBy = query.sortBy ?? "createdAt";
-    const sortOrder = query.sortOrder ?? "desc";
-    const isCustomSort = ["nearDue", "overdue"].includes(sortBy);
-
-    const [allData, total] = await Promise.all([
-      this.prisma.borrowRequest.findMany({
-        where,
-        include: { equipment: true, lecturer: true },
-        orderBy: isCustomSort ? undefined : { [sortBy]: sortOrder },
-        ...(isCustomSort ? {} : { skip, take: limit })
-      }),
-      this.prisma.borrowRequest.count({ where })
-    ]);
-
-    let data = allData;
-    if (isCustomSort) {
-      data.sort((left, right) => {
-        if (sortBy === "nearDue") {
-          const now = new Date();
-          const limitTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
-          const leftNear = left.status === "BORROWED" && new Date(left.dueAt) > now && new Date(left.dueAt) < limitTime ? 1 : 0;
-          const rightNear = right.status === "BORROWED" && new Date(right.dueAt) > now && new Date(right.dueAt) < limitTime ? 1 : 0;
-          if (leftNear !== rightNear) {
-            return sortOrder === "desc" ? rightNear - leftNear : leftNear - rightNear;
-          }
-          // Secondary sort: due date
-          const lVal = left.dueAt ? new Date(left.dueAt).getTime() : 0;
-          const rVal = right.dueAt ? new Date(right.dueAt).getTime() : 0;
-          return sortOrder === "desc" ? rVal - lVal : lVal - rVal;
-        }
-        if (sortBy === "overdue") {
-          const now = new Date();
-          const leftOver = left.status === "BORROWED" && new Date(left.dueAt) < now ? 1 : 0;
-          const rightOver = right.status === "BORROWED" && new Date(right.dueAt) < now ? 1 : 0;
-          if (leftOver !== rightOver) {
-            return sortOrder === "desc" ? rightOver - leftOver : leftOver - rightOver;
-          }
-          // Secondary sort: due date
-          const lVal = left.dueAt ? new Date(left.dueAt).getTime() : 0;
-          const rVal = right.dueAt ? new Date(right.dueAt).getTime() : 0;
-          return sortOrder === "desc" ? rVal - lVal : lVal - rVal;
-        }
-        return 0;
-      });
-      data = data.slice(skip, skip + limit);
-    }
-
-    return {
-      data,
-      total,
-      page,
-      limit
-    };
-  }
-
-  async editRequest(id, input = {}) {
-    const request = await this.prisma.borrowRequest.findUnique({ where: { id } });
-    if (!request) {
-      const error = new Error("Request not found");
-      error.status = 404;
-      throw error;
-    }
-    if (!["REQUESTED", "RESERVED", "BORROWED"].includes(request.status)) {
-      const error = new Error("Only pending, reserved or active borrowings can be edited");
-      error.status = 409;
-      throw error;
-    }
-    const data = buildEditData(input, { toDate: (value) => new Date(value) });
-    return this.prisma.borrowRequest.update({
-      where: { id },
-      data,
-      include: { equipment: true, lecturer: true }
-    });
-  }
-
-  async addCustody(id, entry = {}) {
-    const request = await this.prisma.borrowRequest.findUnique({ where: { id } });
-    if (!request) {
-      const error = new Error("Request not found");
-      error.status = 404;
-      throw error;
-    }
-    const log = parseCustody(request.custodyLog);
-    log.push({
-      at: new Date().toISOString(),
-      action: entry.action ?? "HANDOVER",
-      actor: entry.actor ?? "Unknown",
-      notes: entry.notes ?? ""
-    });
-    return this.prisma.borrowRequest.update({
-      where: { id },
-      data: { custodyLog: JSON.stringify(log) },
-      include: { equipment: true, lecturer: true }
-    });
-  }
-
-  async getEquipmentSchedule(equipmentId) {
-    const item = await this.prisma.equipment.findUnique({ where: { id: equipmentId } });
-    if (!item) {
-      const error = new Error("Equipment not found");
-      error.status = 404;
-      throw error;
-    }
-    const requests = await this.prisma.borrowRequest.findMany({
-      where: { equipmentId, status: { in: ["REQUESTED", "RESERVED", "BORROWED"] } },
-      include: { lecturer: true }
-    });
-    const bookings = requests.map((request) => ({
-      requestId: request.id,
-      status: request.status,
-      purpose: request.purpose,
-      start: request.startDate ?? request.createdAt,
-      end: request.dueAt,
-      borrower: request.lecturer?.name ?? null
-    }));
-    return { equipment: item, bookings };
-  }
-
-  async listStaff() {
-    return this.prisma.user.findMany({ where: { role: { not: "STUDENT" } } });
-  }
-
-  async getUser(id) {
-    return this.prisma.user.findUnique({ where: { id } });
-  }
-
-  async getRequest(id) {
-    return this.prisma.borrowRequest.findUnique({
-      where: { id },
-      include: { equipment: true, lecturer: true }
-    });
-  }
-
-  async summary() {
-    const now = new Date();
-    const [items, activeHolds, activeRequests, pendingRequests, reservations, currentBorrowing] = await Promise.all([
-      this.prisma.equipment.findMany(),
-      this.prisma.borrowRequest.findMany({ where: { status: { in: HOLD_STATUSES } } }),
-      this.prisma.borrowRequest.count({ where: { status: { notIn: ["RETURNED", "CANCELLED"] } } }),
-      this.prisma.borrowRequest.count({ where: { status: "REQUESTED" } }),
-      this.prisma.borrowRequest.count({ where: { status: "RESERVED" } }),
-      this.prisma.borrowRequest.count({ where: { status: "BORROWED" } })
-    ]);
-    let available = 0;
-    let fullyBooked = 0;
-    let maintenance = 0;
-    let totalUnits = 0;
-    let availableUnits = 0;
-    for (const item of items) {
-      totalUnits += item.totalQuantity ?? 1;
-      if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
-        maintenance += 1;
-        continue;
-      }
-      const occupied = activeHolds
-        .filter((r) => r.equipmentId === item.id && rangesOverlap(r.startDate ?? r.createdAt, r.dueAt, now, now))
-        .reduce((sum, r) => sum + (r.quantity ?? 1), 0);
-      const free = Math.max(0, (item.totalQuantity ?? 1) - occupied);
-      availableUnits += free;
-      if (free <= 0) {
-        fullyBooked += 1;
-      } else {
-        available += 1;
-      }
-    }
-    return {
-      totalEquipment: items.length,
-      totalUnits,
-      availableUnits,
-      available,
-      borrowed: fullyBooked,
-      maintenance,
-      activeRequests,
-      pendingRequests,
-      reservations,
-      currentBorrowing,
-      nextMeeting: "29/5 Sprint 1 demo"
-    };
-  }
-
-  async sprintPlan() {
-    return sprintPlan;
-  }
-
-  async listAllUsers() {
-    return this.prisma.user.findMany({
-      orderBy: { name: "asc" },
-      include: { lecturer: true }
-    });
-  }
-
-  async updateUserRole(id, role, lecturerId = undefined) {
-    const data = { role };
-    if (lecturerId !== undefined) {
-      data.lecturerId = lecturerId;
-    }
-    return this.prisma.user.update({
-      where: { id },
-      data,
-      include: { lecturer: true }
-    });
-  }
-
-  async createEquipment(input) {
-    return this.prisma.equipment.create({
-      data: {
-        assetCode: input.assetCode,
-        name: input.name,
-        category: input.category,
-        location: input.location,
-        status: input.status ?? "AVAILABLE",
-        conditionNotes: input.conditionNotes ?? "",
-        totalQuantity: input.totalQuantity ?? 1
-      }
-    });
-  }
-
-  async updateEquipment(id, input) {
-    return this.prisma.equipment.update({
-      where: { id },
-      data: {
-        name: input.name,
-        category: input.category,
-        location: input.location,
-        status: input.status,
-        conditionNotes: input.conditionNotes,
-        totalQuantity: input.totalQuantity
-      }
-    });
-  }
-}
-
-export function createRepository() {
-  if (process.env.DATABASE_URL && process.env.USE_DEMO_STORE !== "true") {
-    return new PrismaRepository();
-  }
-  return new DemoRepository();
-}
+export const store = new DemoRepository();
