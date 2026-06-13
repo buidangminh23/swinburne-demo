@@ -5,7 +5,8 @@ async function request(path, options = {}) {
     ...(options.headers ?? {})
   };
   
-  if (session?.token) {
+  const hadToken = Boolean(session?.token);
+  if (hadToken) {
     headers["Authorization"] = `Bearer ${session.token}`;
   }
 
@@ -15,6 +16,11 @@ async function request(path, options = {}) {
   });
 
   if (!response.ok) {
+    if (hadToken && response.status === 401) {
+      localStorage.removeItem("portal-session");
+      window.location.reload();
+      return null;
+    }
     const error = await response.json().catch(() => ({ message: "Request failed" }));
     throw new Error(error.message);
   }
@@ -92,6 +98,9 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     });
+  },
+  checkOut(id) {
+    return request(`/api/borrow-requests/${id}/check-out`, { method: "POST" });
   },
   remind(id) {
     return request(`/api/borrow-requests/${id}/remind`, { method: "POST" });

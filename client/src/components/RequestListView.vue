@@ -22,13 +22,17 @@ const props = defineProps({
   session: {
     type: Object,
     required: true
+  },
+  initialStatus: {
+    type: String,
+    default: "ALL"
   }
 });
 
-const emit = defineEmits(["approve", "deny", "extend", "edit", "custody", "remind"]);
+const emit = defineEmits(["approve", "deny", "extend", "edit", "custody", "remind", "check-out"]);
 
 const searchText = ref("");
-const statusFilter = ref("ALL");
+const statusFilter = ref(props.initialStatus || "ALL");
 const purposeFilter = ref("ALL");
 
 const isStudent = computed(() => props.session.user.role === "STUDENT");
@@ -38,6 +42,7 @@ const canApproveOrDeny = computed(() => ["SUPPORT", "ADMIN", "LECTURER"].include
 function getPriorityScore(req) {
   const now = new Date();
   if (req.status === "REQUESTED") return 1;
+  if (req.status === "RESERVED") return 4;
   if (req.status === "BORROWED") {
     const due = new Date(req.dueAt);
     if (due < now) return 2; // Overdue
@@ -82,6 +87,8 @@ const filteredRequests = computed(() => {
     if (statusFilter.value === "OVERDUE") {
       const now = new Date();
       list = list.filter(r => r.status === "BORROWED" && new Date(r.dueAt) < now);
+    } else if (statusFilter.value === "NEAR_DUE") {
+      list = list.filter(r => isNearDue(r));
     } else {
       list = list.filter(r => r.status === statusFilter.value);
     }
@@ -89,7 +96,11 @@ const filteredRequests = computed(() => {
 
   // Purpose Filter
   if (purposeFilter.value !== "ALL") {
-    list = list.filter(r => r.purpose === purposeFilter.value);
+    if (purposeFilter.value === "VOVINAM") {
+      list = list.filter(r => r.classroom === "Vovinam Room");
+    } else {
+      list = list.filter(r => r.purpose === purposeFilter.value);
+    }
   }
 
 
@@ -131,14 +142,17 @@ function getDisplayStatus(req) {
   if (isNearDue(req)) return "NEAR_DUE";
   return req.status;
 }
+
+import { makeTranslator } from "../translate";
+const t = makeTranslator(props.session?.user?.email);
 </script>
 
 <template>
   <section class="panel table-panel list-panel">
     <div class="panel-heading compact border-bottom-0 flex-column md-flex-row">
       <div class="panel-title-area">
-        <h2>All Requests & Borrows</h2>
-        <p>Prioritized request lifecycle view with advanced search and filters.</p>
+        <h2>{{ t('All Requests & Borrows') }}</h2>
+        <p>{{ t('Prioritized request lifecycle view with advanced search and filters.') }}</p>
       </div>
 
       <!-- Filters & Search Bar -->
@@ -148,27 +162,30 @@ function getDisplayStatus(req) {
           <input 
             v-model="searchText" 
             type="text" 
-            placeholder="Search by equipment, requester, location..." 
+            :placeholder="t('Search by equipment, requester, location...')" 
             class="search-input"
           />
         </div>
 
         <div class="filters-select-wrap">
           <select v-model="statusFilter" class="filter-select">
-            <option value="ALL">All Statuses</option>
-            <option value="REQUESTED">Pending Approval</option>
-            <option value="BORROWED">Borrowed</option>
-            <option value="OVERDUE">⚠️ Overdue</option>
-            <option value="RETURNED">Returned</option>
-            <option value="CANCELLED">Cancelled</option>
+            <option value="ALL">{{ t('All Statuses') }}</option>
+            <option value="REQUESTED">{{ t('Pending Approval') }}</option>
+            <option value="RESERVED">{{ t('Reserved') }}</option>
+            <option value="BORROWED">{{ t('Borrowed') }}</option>
+            <option value="NEAR_DUE">⏰ {{ t('Near Due Date') }}</option>
+            <option value="OVERDUE">⚠️ {{ t('OVERDUE') }}</option>
+            <option value="RETURNED">{{ t('Returned') }}</option>
+            <option value="CANCELLED">{{ t('Cancelled') }}</option>
           </select>
 
           <select v-model="purposeFilter" class="filter-select">
-            <option value="ALL">All Purposes</option>
-            <option value="CLASSROOM">Classroom</option>
-            <option value="LAB">Lab</option>
-            <option value="RESEARCH">Research</option>
-            <option value="EVENT">Event</option>
+            <option value="ALL">{{ t('All Purposes') }}</option>
+            <option value="CLASSROOM">{{ t('Classroom') }}</option>
+            <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
+            <option value="LAB">{{ t('Lab') }}</option>
+            <option value="RESEARCH">{{ t('Research') }}</option>
+            <option value="EVENT">{{ t('Event') }}</option>
           </select>
         </div>
       </div>
@@ -178,13 +195,13 @@ function getDisplayStatus(req) {
       <table class="requests-table">
         <thead>
           <tr>
-            <th>Priority & Status</th>
-            <th>Requester</th>
-            <th>Equipment</th>
-            <th>Purpose & Details</th>
-            <th>Classroom/Location</th>
-            <th>Due Date</th>
-            <th>Actions</th>
+            <th>{{ t('Priority & Status') }}</th>
+            <th>{{ t('Requester') }}</th>
+            <th>{{ t('Equipment') }}</th>
+            <th>{{ t('Purpose & Details') }}</th>
+            <th>{{ t('Classroom/Location') }}</th>
+            <th>{{ t('Due Date') }}</th>
+            <th>{{ t('Actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -201,7 +218,7 @@ function getDisplayStatus(req) {
             <td class="status-cell">
               <div class="status-indicator-wrap">
                 <span :class="'status-chip ' + getDisplayStatus(req).toLowerCase().replace('_', '-')">
-                  {{ getDisplayStatus(req).replace('_', ' ') }}
+                  {{ t(getDisplayStatus(req)).replace('_', ' ') }}
                 </span>
               </div>
             </td>
@@ -210,7 +227,7 @@ function getDisplayStatus(req) {
             <td>
               <div class="user-cell">
                 <strong class="user-name">{{ req.lecturer?.name }}</strong>
-                <span class="user-role-sub">{{ req.lecturer?.role }}</span>
+                <span class="user-role-sub">{{ t(req.lecturer?.role) }}</span>
                 <span class="user-email-sub">{{ req.lecturer?.email }}</span>
               </div>
             </td>
@@ -220,16 +237,16 @@ function getDisplayStatus(req) {
               <div class="equip-cell">
                 <strong class="equip-name">{{ req.equipment?.name }}</strong>
                 <span class="asset-code">{{ req.equipment?.assetCode }}</span>
-                <span class="qty-sub">Quantity: {{ req.quantity }}</span>
+                <span class="qty-sub">{{ t('Quantity: ') }}{{ req.quantity }}</span>
               </div>
             </td>
 
             <!-- Purpose & Details -->
             <td>
               <div class="details-cell">
-                <span class="purpose-tag" :class="req.purpose.toLowerCase()">{{ req.purpose }}</span>
+                <span class="purpose-tag" :class="req.purpose.toLowerCase()">{{ t(req.purpose) }}</span>
                 <span v-if="req.program" class="program-sub">{{ req.program }}</span>
-                <span v-if="req.unitOrProject" class="unit-sub">Unit: {{ req.unitOrProject }}</span>
+                <span v-if="req.unitOrProject" class="unit-sub">{{ t('Unit: ') }}{{ req.unitOrProject }}</span>
               </div>
             </td>
 
@@ -244,9 +261,9 @@ function getDisplayStatus(req) {
             <!-- Due Date -->
             <td>
               <div class="due-cell" :class="{ 'overdue-text': isOverdue(req), 'warning-text': isNearDue(req) }">
-                <span v-if="req.startDate" style="color: #727285; font-size: 11px;">From: {{ formatDate(req.startDate) }}</span>
-                <span>To: {{ formatDate(req.dueAt) }}</span>
-                <span v-if="req.returnedAt" class="returned-sub">Returned: {{ formatDate(req.returnedAt) }}</span>
+                <span v-if="req.startDate" style="color: #727285; font-size: 11px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</span>
+                <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
+                <span v-if="req.returnedAt" class="returned-sub">{{ t('Returned: ') }}{{ formatDate(req.returnedAt) }}</span>
               </div>
             </td>
 
@@ -258,16 +275,16 @@ function getDisplayStatus(req) {
                   <button 
                     class="action-btn approve" 
                     @click="emit('approve', req.id)"
-                    title="Approve request"
+                    :title="t('Approve')"
                   >
-                    Approve
+                    {{ t('Approve') }}
                   </button>
                   <button 
                     class="action-btn deny" 
                     @click="emit('deny', req.id)"
-                    title="Deny request"
+                    :title="t('Deny')"
                   >
-                    Deny
+                    {{ t('Deny') }}
                   </button>
                 </template>
 
@@ -276,9 +293,19 @@ function getDisplayStatus(req) {
                   v-if="['REQUESTED', 'BORROWED'].includes(req.status) && (session.user.id === req.lecturerId || isSupportOrAdmin)"
                   class="action-btn edit" 
                   @click="emit('edit', req)"
-                  title="Edit request details"
+                  :title="t('Edit')"
                 >
-                  <Pencil :size="12" /> Edit
+                  <Pencil :size="12" /> {{ t('Edit') }}
+                </button>
+
+                <!-- Check out a reserved booking -->
+                <button
+                  v-if="req.status === 'RESERVED' && !isStudent"
+                  class="action-btn approve"
+                  @click="emit('check-out', req.id)"
+                  :title="t('Check out reserved equipment')"
+                >
+                  {{ t('Check Out') }}
                 </button>
 
                 <!-- Extend action for RESEARCH purposes -->
@@ -286,9 +313,9 @@ function getDisplayStatus(req) {
                   v-if="req.status === 'BORROWED' && req.purpose === 'RESEARCH'"
                   class="action-btn extend"
                   @click="emit('extend', { id: req.id, payload: {} })"
-                  title="Extend borrowing by 7 days"
+                  :title="t('Extend borrowing by 7 days')"
                 >
-                  Extend 7d
+                  {{ t('Extend 7d') }}
                 </button>
 
                 <!-- Custody action for EVENT purposes -->
@@ -296,9 +323,9 @@ function getDisplayStatus(req) {
                   v-if="req.purpose === 'EVENT'"
                   class="action-btn custody"
                   @click="emit('custody', req)"
-                  title="View or update chain of custody"
+                  :title="t('View or update chain of custody')"
                 >
-                  <ScrollText :size="12" /> Custody
+                  <ScrollText :size="12" /> {{ t('Custody') }}
                 </button>
 
                 <!-- Reminder email action (Staff only, for overdue or near due) -->
@@ -306,16 +333,16 @@ function getDisplayStatus(req) {
                   v-if="req.status === 'BORROWED' && !isStudent && (isOverdue(req) || isNearDue(req))"
                   class="action-btn remind"
                   @click="emit('remind', req.id)"
-                  title="Send email reminder to borrower"
+                  :title="t('Send email reminder to borrower')"
                 >
-                  <Mail :size="12" /> Remind
+                  <Mail :size="12" /> {{ t('Remind') }}
                 </button>
               </div>
             </td>
           </tr>
           <tr v-if="filteredRequests.length === 0">
             <td colspan="7" class="empty-state-cell">
-              No requests matching your filters were found.
+              {{ t('No requests matching your filters were found.') }}
             </td>
           </tr>
         </tbody>

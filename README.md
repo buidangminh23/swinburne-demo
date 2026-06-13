@@ -148,17 +148,17 @@ Sau khi chạy `npm run build`, mở backend root cũng vào được web:
 http://localhost:4000
 ```
 
-Demo login:
+Demo login (click an account in the Google-style chooser — there is no password form):
 
-| Email | Tên | Role |
-|-------|-----|------|
-| `buidangminh23@gmail.com` | Minh Bùi Đăng | LECTURER |
-| `taolaminhanh1@gmail.com` | minh anh | SUPPORT |
-| `buidangminh.lh@gmail.com` | Đăng Minh Bùi | STUDENT |
-| `hiheho911@gmail.com` | hihi | EVENT_STAFF |
-| `dindungwork@gmail.com` | Đinh Dũng | ADMIN |
+| Email | Role |
+|-------|------|
+| `buidangminh23@fpt.edu.vn` | LECTURER |
+| `taolaminhanh1@fpt.edu.vn` | SUPPORT |
+| `buidangminh.lh@fpt.edu.vn` | STUDENT |
+| `hiheho911@fpt.edu.vn` | EVENT_STAFF |
+| `dindungwork@fpt.edu.vn` | ADMIN |
 
-> Password: nhập gì cũng được trong demo mode (server chỉ kiểm tra email).
+> The server only accepts `@fpt.edu.vn` accounts. In demo mode it just matches the email — there is no password check.
 
 ## MySQL + Prisma
 
@@ -175,6 +175,15 @@ Ví dụ:
 
 ```text
 DATABASE_URL=mysql://root:password@localhost:3306/swinburne_equipment
+```
+
+### Bảo mật / Auth env (thêm vào `.env`)
+
+```text
+# Long random string. If unset, the server uses a random ephemeral secret (sessions reset on restart).
+JWT_SECRET=
+# Only needed for "Sign in with Google" (/api/auth/google). Must match the client's VITE_GOOGLE_CLIENT_ID.
+GOOGLE_CLIENT_ID=
 ```
 
 ## Test Nhanh

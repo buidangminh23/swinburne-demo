@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
+import crypto from "node:crypto";
 import { createRepository } from "./repository.js";
 import { sendNotification, listNotifications } from "./notifications.js";
 
@@ -17,7 +18,10 @@ const serverDir = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.resolve(serverDir, "../../client/dist");
 const hasClientBuild = fs.existsSync(path.join(clientDist, "index.html"));
 
-const jwtSecret = process.env.JWT_SECRET || "fallback-swinburne-secret-key-998877";
+const jwtSecret = process.env.JWT_SECRET || crypto.randomBytes(48).toString("hex");
+if (!process.env.JWT_SECRET) {
+  console.warn("[auth] JWT_SECRET is not set — using a random ephemeral secret. Set JWT_SECRET in .env so sessions persist across restarts.");
+}
 
 app.use(cors({ origin: clientOrigin }));
 app.use(express.json());
@@ -74,7 +78,8 @@ const equipmentSchema = z.object({
   category: z.string().min(2).max(50),
   location: z.string().min(2).max(50),
   status: z.enum(["AVAILABLE", "BORROWED", "MAINTENANCE", "RETIRED"]).optional(),
-  conditionNotes: z.string().max(240).optional().nullable()
+  conditionNotes: z.string().max(240).optional().nullable(),
+  totalQuantity: z.number().int().positive().max(999).optional()
 });
 
 const userRoleSchema = z.object({
@@ -101,13 +106,29 @@ function route(handler) {
 
 // Google OAuth verification helper
 async function verifyGoogleToken(accessToken) {
-  const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+  const expectedAudience = process.env.GOOGLE_CLIENT_ID;
+  if (!expectedAudience) {
+    const err = new Error("Google login is not configured on the server.");
+    err.status = 500;
+    throw err;
+  }
+  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
   if (!response.ok) {
     const err = new Error("Google account verification failed.");
     err.status = 401;
     throw err;
   }
   const info = await response.json();
+  if (info.aud !== expectedAudience) {
+    const err = new Error("Google token was not issued for this application.");
+    err.status = 401;
+    throw err;
+  }
+  if (info.email_verified !== "true" && info.email_verified !== true) {
+    const err = new Error("Google email is not verified.");
+    err.status = 401;
+    throw err;
+  }
   if (!info.email) {
     const err = new Error("Unable to retrieve email from Google.");
     err.status = 400;
@@ -130,7 +151,7 @@ function authenticateToken(req, res, next) {
     req.user = user;
     next();
   } catch (error) {
-    return res.status(403).json({ message: "Session has expired or is invalid. Please log in again." });
+    return res.status(401).json({ message: "Session has expired or is invalid. Please log in again." });
   }
 }
 
@@ -213,8 +234,10 @@ app.post("/api/auth/logout", (req, res) => {
 // ==========================================
 app.use("/api", authenticateToken);
 
+const STAFF_ROLES = ["LECTURER", "SUPPORT", "ADMIN", "OPERATIONS"];
+
 function requireStaff(req, res, next) {
-  if (!req.user || req.user.role === "STUDENT") {
+  if (!req.user || !STAFF_ROLES.includes(req.user.role)) {
     return res.status(403).json({ message: "This function is only for staff/lecturers." });
   }
   next();
@@ -227,11 +250,39 @@ function loadOwnRequest(req, res, next) {
       if (!request) {
         return res.status(404).json({ message: "Borrow request not found." });
       }
-      if (req.user.role === "STUDENT" && request.lecturerId !== req.user.id) {
+      const isOwner = request.lecturerId === req.user.id;
+      const canManageAny = ["SUPPORT", "ADMIN", "OPERATIONS"].includes(req.user.role);
+      if (!isOwner && !canManageAny) {
         return res.status(403).json({ message: "You can only modify your own requests." });
       }
       req.borrowRequest = request;
       next();
+    })
+    .catch(next);
+}
+
+function loadApprovable(req, res, next) {
+  Promise.resolve()
+    .then(async () => {
+      const request = await repository.getRequest(Number(req.params.id));
+      if (!request) {
+        return res.status(404).json({ message: "Borrow request not found." });
+      }
+      const role = req.user.role;
+      if (["SUPPORT", "ADMIN", "OPERATIONS"].includes(role)) {
+        req.borrowRequest = request;
+        return next();
+      }
+      if (role === "LECTURER") {
+        const isOwnStudent = request.lecturer?.lecturerId === req.user.id;
+        const isSelf = request.lecturerId === req.user.id;
+        if (isOwnStudent || isSelf) {
+          req.borrowRequest = request;
+          return next();
+        }
+        return res.status(403).json({ message: "Lecturers can only approve or deny their own students' requests." });
+      }
+      return res.status(403).json({ message: "You are not allowed to approve or deny requests." });
     })
     .catch(next);
 }
@@ -270,7 +321,7 @@ app.get("/api/borrow-requests", route(async (req, res) => {
 }));
 
 app.get("/api/notifications", route(async (req, res) => {
-  res.json(listNotifications(Number(req.query.limit ?? 20)));
+  res.json(listNotifications(Number(req.query.limit ?? 20), req.user.email));
 }));
 
 app.get("/api/users/:id/borrow-history", route(async (req, res) => {
@@ -312,15 +363,21 @@ app.patch("/api/borrow-requests/:id", loadOwnRequest, route(async (req, res) => 
   res.json(await repository.editRequest(Number(req.params.id), payload));
 }));
 
-app.post("/api/borrow-requests/:id/approve", requireStaff, route(async (req, res) => {
+app.post("/api/borrow-requests/:id/approve", loadApprovable, route(async (req, res) => {
   const updated = await repository.approveRequest(Number(req.params.id), req.user.id);
   safeNotify(() => notifyBorrower(updated, "REQUEST_APPROVED", `Request approved • ${itemName(updated)}`, `Your borrow request for ${itemName(updated)} was approved. Due ${updated.dueAt}.`));
   res.json(updated);
 }));
 
-app.post("/api/borrow-requests/:id/deny", requireStaff, route(async (req, res) => {
+app.post("/api/borrow-requests/:id/deny", loadApprovable, route(async (req, res) => {
   const updated = await repository.denyRequest(Number(req.params.id), req.user.id);
   safeNotify(() => notifyBorrower(updated, "REQUEST_DENIED", `Request denied • ${itemName(updated)}`, `Your borrow request for ${itemName(updated)} was denied.`));
+  res.json(updated);
+}));
+
+app.post("/api/borrow-requests/:id/check-out", requireStaff, route(async (req, res) => {
+  const updated = await repository.checkOut(Number(req.params.id), { actorName: req.user.email });
+  safeNotify(() => notifyBorrower(updated, "EQUIPMENT_CHECKED_OUT", `Checked out • ${itemName(updated)}`, `${itemName(updated)} has been checked out and is now in use. Due ${updated.dueAt}.`));
   res.json(updated);
 }));
 

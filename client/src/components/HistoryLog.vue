@@ -119,14 +119,17 @@ onMounted(() => {
   }
   emitFetch();
 });
+
+import { makeTranslator } from "../translate";
+const t = makeTranslator(props.session?.user?.email);
 </script>
 
 <template>
   <section class="panel history-log-panel">
     <div class="panel-heading">
       <div>
-        <h2>Borrowing History Log</h2>
-        <p>Search, filter, and view past and active borrow requests.</p>
+        <h2>{{ t('Borrowing History Log') }}</h2>
+        <p>{{ t('Search, filter, and view past and active borrow requests.') }}</p>
       </div>
     </div>
 
@@ -137,7 +140,7 @@ onMounted(() => {
         <input 
           v-model="filters.search" 
           type="text" 
-          placeholder="Search items, users, classroom..." 
+          :placeholder="t('Search items, users, classroom...')" 
           class="filter-input"
         />
       </div>
@@ -145,33 +148,34 @@ onMounted(() => {
       <div class="filter-group">
         <Filter :size="16" class="filter-icon" />
         <select v-model="filters.status" class="filter-select">
-          <option value="">All Statuses</option>
-          <option value="REQUESTED">Requested</option>
-          <option value="APPROVED">Approved</option>
-          <option value="BORROWED">Borrowed</option>
-          <option value="NEAR_DUE">Near Due Date</option>
-          <option value="OVERDUE">Overdue</option>
-          <option value="RETURNED">Returned</option>
-          <option value="CANCELLED">Cancelled</option>
+          <option value="">{{ t('All Statuses') }}</option>
+          <option value="REQUESTED">{{ t('Requested') }}</option>
+          <option value="APPROVED">{{ t('Approved') }}</option>
+          <option value="BORROWED">{{ t('Borrowed') }}</option>
+          <option value="NEAR_DUE">{{ t('Near Due Date') }}</option>
+          <option value="OVERDUE">{{ t('Overdue') }}</option>
+          <option value="RETURNED">{{ t('Returned') }}</option>
+          <option value="CANCELLED">{{ t('Cancelled') }}</option>
         </select>
       </div>
 
       <div class="filter-group">
         <select v-model="filters.purpose" class="filter-select">
-          <option value="">All Purposes</option>
-          <option value="CLASSROOM">Classroom</option>
-          <option value="LAB">Lab</option>
-          <option value="RESEARCH">Research</option>
-          <option value="EVENT">Event</option>
+          <option value="">{{ t('All Purposes') }}</option>
+          <option value="CLASSROOM">{{ t('Classroom') }}</option>
+          <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
+          <option value="LAB">{{ t('Lab') }}</option>
+          <option value="RESEARCH">{{ t('Research') }}</option>
+          <option value="EVENT">{{ t('Event') }}</option>
         </select>
       </div>
 
       <div class="filter-group">
         <select v-model="filters.sortBy" class="filter-select">
-          <option value="createdAt">Date Created</option>
-          <option value="startDate">Start Date</option>
-          <option value="dueAt">Due Date</option>
-          <option value="returnedAt">Returned Date</option>
+          <option value="createdAt">{{ t('Date Created') }}</option>
+          <option value="startDate">{{ t('Start Date') }}</option>
+          <option value="dueAt">{{ t('Due Date') }}</option>
+          <option value="returnedAt">{{ t('Returned Date') }}</option>
         </select>
       </div>
 
@@ -183,7 +187,7 @@ onMounted(() => {
         >
           <SortAsc v-if="filters.sortOrder === 'asc'" :size="16" />
           <SortDesc v-else :size="16" />
-          {{ filters.sortOrder === 'asc' ? 'Ascending' : 'Descending' }}
+          {{ filters.sortOrder === 'asc' ? t('Ascending') : t('Descending') }}
         </button>
       </div>
     </div>
@@ -193,15 +197,15 @@ onMounted(() => {
       <table>
         <thead>
           <tr>
-            <th style="width: 60px;">No.</th>
-            <th>User</th>
-            <th>Equipment</th>
-            <th>Purpose</th>
-            <th>Classroom / University</th>
-            <th>Borrowed At</th>
-            <th>Due At</th>
-            <th>Returned At</th>
-            <th>Status</th>
+            <th style="width: 60px;">{{ t('No.') }}</th>
+            <th>{{ t('User') }}</th>
+            <th>{{ t('Equipment') }}</th>
+            <th>{{ t('Purpose') }}</th>
+            <th>{{ t('Classroom / University') }}</th>
+            <th>{{ t('Borrowed At') }}</th>
+            <th>{{ t('Due At') }}</th>
+            <th>{{ t('Returned At') }}</th>
+            <th>{{ t('Status') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -218,7 +222,7 @@ onMounted(() => {
               <span class="asset-sub">{{ request.equipment?.assetCode }}</span>
             </td>
             <td>
-              <span class="purpose-badge">{{ request.purpose }}</span>
+              <span class="purpose-badge">{{ t(request.purpose) }}</span>
             </td>
             <td>
               <span v-if="request.classroom">Room: {{ request.classroom }}</span>
@@ -228,11 +232,11 @@ onMounted(() => {
             <td>{{ formatDateTime(request.dueAt) }}</td>
             <td>{{ request.returnedAt ? formatDateTime(request.returnedAt) : "-" }}</td>
             <td>
-              <span :class="statusClass(getDisplayStatus(request))">{{ getDisplayStatus(request).replace('_', ' ') }}</span>
+              <span :class="statusClass(getDisplayStatus(request))">{{ t(getDisplayStatus(request)).replace('_', ' ') }}</span>
             </td>
           </tr>
           <tr v-if="historyData.data.length === 0">
-            <td colspan="9" class="empty-row-text">No borrow history records match filters.</td>
+            <td colspan="9" class="empty-row-text">{{ t('No borrow history records match filters.') }}</td>
           </tr>
         </tbody>
       </table>
@@ -241,7 +245,7 @@ onMounted(() => {
     <!-- Pagination Footer -->
     <div class="pagination-footer">
       <div class="pagination-info">
-        Showing {{ historyData.data.length }} of {{ historyData.total }} records
+        {{ t('Showing ') }}{{ historyData.data.length }}{{ t(' of ') }}{{ historyData.total }}{{ t(' records') }}
       </div>
       <div class="pagination-actions">
         <button 
@@ -250,7 +254,7 @@ onMounted(() => {
           :disabled="filters.page <= 1"
           @click="prevPage"
         >
-          <ChevronLeft :size="16" /> Previous
+          <ChevronLeft :size="16" /> {{ t('Previous') }}
         </button>
         <div class="page-numbers">
           <button 
@@ -270,7 +274,7 @@ onMounted(() => {
           :disabled="filters.page >= totalPages"
           @click="nextPage"
         >
-          Next <ChevronRight :size="16" />
+          {{ t('Next') }} <ChevronRight :size="16" />
         </button>
       </div>
     </div>

@@ -2,6 +2,16 @@
 import { ref } from "vue";
 import { ChevronDown, HelpCircle, BookOpen, UserCheck, ShieldAlert } from "@lucide/vue";
 
+const props = defineProps({
+  session: {
+    type: Object,
+    required: true
+  }
+});
+
+import { makeTranslator } from "../translate";
+const t = makeTranslator(props.session?.user?.email);
+
 const faqs = ref([
   {
     question: "How do I request to borrow equipment?",
@@ -46,8 +56,8 @@ function toggleFaq(index) {
       <div class="faq-title-wrap">
         <HelpCircle class="faq-icon" :size="28" />
         <div>
-          <h1>Frequently Asked Questions</h1>
-          <p>Find answers to common questions about the Swinburne Equipment Portal.</p>
+          <h1>{{ t('Frequently Asked Questions') }}</h1>
+          <p>{{ t('Find answers to common questions about the Swinburne Equipment Portal.') }}</p>
         </div>
       </div>
     </header>
@@ -66,13 +76,13 @@ function toggleFaq(index) {
             @click="toggleFaq(index)"
             :aria-expanded="faq.open"
           >
-            <span class="faq-category-badge" :class="faq.category.toLowerCase()">{{ faq.category }}</span>
-            <span class="faq-question-text">{{ faq.question }}</span>
+            <span class="faq-category-badge" :class="faq.category.toLowerCase()">{{ t(faq.category) }}</span>
+            <span class="faq-question-text">{{ t(faq.question) }}</span>
             <ChevronDown class="faq-caret" :size="18" />
           </button>
           <div class="faq-answer-wrapper" :style="{ maxHeight: faq.open ? '200px' : '0px' }">
             <div class="faq-answer">
-              <p>{{ faq.answer }}</p>
+              <p>{{ t(faq.answer) }}</p>
             </div>
           </div>
         </div>
@@ -81,14 +91,14 @@ function toggleFaq(index) {
       <aside class="faq-sidebar">
         <div class="support-card">
           <BookOpen :size="24" class="support-icon" />
-          <h3>Need more help?</h3>
-          <p>Read our portal documentation or guidelines for detailed information on student and lecturer policies.</p>
-          <a href="#" class="support-link">View Guidelines</a>
+          <h3>{{ t('Need more help?') }}</h3>
+          <p>{{ t('Read our portal documentation or guidelines for detailed information on student and lecturer policies.') }}</p>
+          <a href="#" class="support-link">{{ t('View Guidelines') }}</a>
         </div>
         <div class="support-card support-desk">
           <UserCheck :size="24" class="support-icon" />
-          <h3>Support Desk</h3>
-          <p>Contact Swinburne Vietnam Support Desk for emergency equipment requests or physical support.</p>
+          <h3>{{ t('Support Desk') }}</h3>
+          <p>{{ t('Contact Swinburne Vietnam Support Desk for emergency equipment requests or physical support.') }}</p>
           <strong>Email: support@fe.edu.vn</strong>
           <strong>Hotline: +84 24 7300 3289</strong>
         </div>

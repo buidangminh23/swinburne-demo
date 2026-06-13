@@ -28,6 +28,7 @@ const locations = [
 
 const accounts = [
   { name: "LECTURER", email: "buidangminh23@fpt.edu.vn", isDemo: true, color: "#4e5b66" },
+  { name: "VOVINAM TEACHER", email: "vovinamteacher@fpt.edu.vn", isDemo: true, color: "#10b981" },
   { name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", isDemo: true, photo: avatarDangMinh },
   { name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", isDemo: true, color: "#3f51b5" },
   { name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", isDemo: true, color: "#d84315" },

@@ -20,17 +20,25 @@ const classroomOptions = [
   "LIB DESK",
   "MED DESK",
   "EN402",
-  "EN403"
+  "EN403",
+  "Vovinam Room"
 ];
 
 const props = defineProps({
   equipment: {
     type: Array,
     default: () => []
+  },
+  session: {
+    type: Object,
+    required: true
   }
 });
 
 const emit = defineEmits(["borrow"]);
+
+import { makeTranslator } from "../translate";
+const t = makeTranslator(props.session?.user?.email);
 
 const selectedEquipmentId = ref(props.equipment[0]?.id ?? null);
 const selectedItem = computed(() => props.equipment.find((item) => item.id === selectedEquipmentId.value) ?? null);
@@ -179,15 +187,37 @@ function handleCellClick(date, hour) {
   }
 }
 
+watch(() => bookingForm.purpose, (newVal) => {
+  if (newVal === "VOVINAM") {
+    bookingForm.classroom = "Vovinam Room";
+    if (!["Study", "Practice", "Group Work"].includes(bookingForm.unitOrProject)) {
+      bookingForm.unitOrProject = "Study";
+    }
+  } else if (newVal === "CLASSROOM") {
+    if (bookingForm.classroom === "Vovinam Room") {
+      bookingForm.classroom = "ATC 625";
+    }
+    bookingForm.unitOrProject = "Teaching";
+  }
+});
+
+const filteredBookingReasonOptions = computed(() => {
+  if (bookingForm.purpose === "VOVINAM") {
+    return ["Study", "Practice", "Group Work"];
+  }
+  return reasonOptions;
+});
+
 async function confirmBooking() {
   submitting.value = true;
+  const isVov = bookingForm.purpose === "VOVINAM";
   try {
     emit("borrow", {
       equipmentId: selectedEquipmentId.value,
-      classroom: bookingForm.classroom,
-      purpose: bookingForm.purpose,
+      classroom: isVov ? "Vovinam Room" : bookingForm.classroom,
+      purpose: isVov ? "CLASSROOM" : bookingForm.purpose,
       program: bookingForm.program,
-      unitOrProject: bookingForm.purpose === "CLASSROOM" ? bookingForm.unitOrProject : null,
+      unitOrProject: bookingForm.purpose === "CLASSROOM" || isVov ? bookingForm.unitOrProject : null,
       startDate: bookingForm.start,
       dueAt: bookingForm.end
     });
@@ -241,14 +271,14 @@ function formatDateTime(dateStr) {
   <section class="panel schedules-panel">
     <div class="panel-heading">
       <div>
-        <h2>Equipment Availability Schedule</h2>
-        <p>Live 24h × 7-day availability per item from real bookings. Click a green slot to reserve at that exact time.</p>
+        <h2>{{ t('Equipment Availability Schedule') }}</h2>
+        <p>{{ t('Live 24h × 7-day availability per item from real bookings. Click a green slot to reserve at that exact time.') }}</p>
       </div>
     </div>
 
     <div class="schedule-selector">
       <label>
-        Select Equipment:
+        {{ t('Select Equipment:') }}
         <select v-model="selectedEquipmentId" class="equipment-select">
           <option v-for="item in equipment" :key="item.id" :value="item.id">
             {{ item.assetCode }} - {{ item.name }}
@@ -263,20 +293,20 @@ function formatDateTime(dateStr) {
         
         <label class="toggle-hours-label">
           <input v-model="showWorkingHoursOnly" type="checkbox" />
-          <span>Working Hours (08:00 - 22:00)</span>
+          <span>{{ t('Working Hours (08:00 - 22:00)') }}</span>
         </label>
       </div>
 
       <div v-if="selectedItem" class="item-status-summary">
         <div class="status-meta">
           <span class="status-indicator">
-            Current Status:
-            <span :class="'status-chip ' + selectedItem.status.toLowerCase()">{{ selectedItem.status }}</span>
+            {{ t('Current Status:') }}
+            <span :class="'status-chip ' + selectedItem.status.toLowerCase()">{{ t(selectedItem.status) }}</span>
           </span>
-          <span class="location-indicator">Location: <strong>{{ selectedItem.location }}</strong></span>
+          <span class="location-indicator">{{ t('Location: ') }}<strong>{{ selectedItem.location }}</strong></span>
         </div>
         <div v-if="activeBookingNow" class="active-booking-details">
-          Currently borrowed by <strong>{{ activeBookingNow.borrower }}</strong> ({{ activeBookingNow.purpose }}) until {{ formatDateTime(activeBookingNow.end) }}
+          {{ t('Currently borrowed by ') }}<strong>{{ activeBookingNow.borrower }}</strong> ({{ t(activeBookingNow.purpose) }}){{ t(' until ') }}{{ formatDateTime(activeBookingNow.end) }}
         </div>
       </div>
     </div>
@@ -285,22 +315,22 @@ function formatDateTime(dateStr) {
       <label class="legend-item filter-checkbox">
         <input v-model="statusFilters.available" type="checkbox" />
         <span class="legend-color available"></span> 
-        <span>Available (Click to book)</span>
+        <span>{{ t('Available (Click to book)') }}</span>
       </label>
       <label class="legend-item filter-checkbox">
         <input v-model="statusFilters.reserved" type="checkbox" />
         <span class="legend-color reserved"></span> 
-        <span>Reserved / Borrowed</span>
+        <span>{{ t('Reserved / Borrowed') }}</span>
       </label>
       <label class="legend-item filter-checkbox">
         <input v-model="statusFilters.maintenance" type="checkbox" />
         <span class="legend-color maintenance"></span> 
-        <span>Out of service</span>
+        <span>{{ t('Out of service') }}</span>
       </label>
       <label class="legend-item filter-checkbox">
         <input v-model="statusFilters.past" type="checkbox" />
         <span class="legend-color past"></span> 
-        <span>Past</span>
+        <span>{{ t('Past') }}</span>
       </label>
     </div>
 
@@ -310,7 +340,7 @@ function formatDateTime(dateStr) {
         <div v-for="(date, index) in weekDays" :key="index" :class="['grid-header-cell', { today: isToday(date) }]">
           <span class="day-name">{{ dayNames[index] }}</span>
           <span class="day-date">{{ fmtDay(date) }}</span>
-          <span v-if="isToday(date)" class="today-badge">Today</span>
+          <span v-if="isToday(date)" class="today-badge">{{ t('Today') }}</span>
         </div>
 
         <template v-for="hour in filteredSlotHours" :key="hour">
@@ -334,13 +364,13 @@ function formatDateTime(dateStr) {
             @click="handleCellClick(date, hour)"
           >
             <span v-if="cellStatus(date, hour) === 'AVAILABLE'" class="cell-text available-text">
-              {{ statusFilters.available ? 'Open' : '' }}
+              {{ statusFilters.available ? t('Open') : '' }}
             </span>
             <span v-else-if="cellStatus(date, hour) === 'RESERVED'" class="cell-text reserved-text">
-              {{ statusFilters.reserved ? 'Booked' : '' }}
+              {{ statusFilters.reserved ? t('Booked') : '' }}
             </span>
             <span v-else-if="cellStatus(date, hour) === 'MAINTENANCE'" class="cell-text maintenance-text">
-              {{ statusFilters.maintenance ? 'Out' : '' }}
+              {{ statusFilters.maintenance ? t('Out') : '' }}
             </span>
             <span v-else class="cell-text past-text">
               {{ statusFilters.past ? '—' : '' }}
@@ -353,7 +383,7 @@ function formatDateTime(dateStr) {
     <div v-if="isModalOpen" class="modal-overlay" @click.self="isModalOpen = false">
       <div class="modal-card">
         <header class="modal-header">
-          <h3>Reserve {{ selectedItem?.name }}</h3>
+          <h3>{{ t('Reserve ') }}{{ selectedItem?.name }}</h3>
           <button type="button" class="close-btn" @click="isModalOpen = false">&times;</button>
         </header>
         <form class="modal-form" @submit.prevent="confirmBooking">
@@ -362,39 +392,40 @@ function formatDateTime(dateStr) {
             <span>{{ bookingForm.label }}</span>
           </div>
           <label>
-            Classroom:
-            <select v-model="bookingForm.classroom">
+            {{ t('Classroom') }}:
+            <select v-model="bookingForm.classroom" :disabled="bookingForm.purpose === 'VOVINAM'">
               <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
             </select>
           </label>
           <label>
-            Purpose:
+            {{ t('Purpose') }}:
             <select v-model="bookingForm.purpose">
-              <option value="CLASSROOM">Classroom Instruction</option>
-              <option value="LAB">Lab Session</option>
-              <option value="RESEARCH">Research Work</option>
-              <option value="EVENT">Swinburne Event</option>
+              <option value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
+              <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
+              <option value="LAB">{{ t('Lab Session') }}</option>
+              <option value="RESEARCH">{{ t('Research Work') }}</option>
+              <option value="EVENT">{{ t('Swinburne Event') }}</option>
             </select>
           </label>
-          <label v-if="bookingForm.purpose === 'CLASSROOM'">
-            Reason of Use:
+          <label v-if="bookingForm.purpose === 'CLASSROOM' || bookingForm.purpose === 'VOVINAM'">
+            {{ t('Reason of Use:') }}
             <select v-model="bookingForm.unitOrProject">
-              <option v-for="r in reasonOptions" :key="r" :value="r">{{ r }}</option>
+              <option v-for="r in filteredBookingReasonOptions" :key="r" :value="r">{{ t(r) }}</option>
             </select>
           </label>
           <label>
-            University:
+            {{ t('University:') }}
             <select v-model="bookingForm.program">
-              <option value="Swinburne">Swinburne</option>
-              <option value="Asia">Asia</option>
-              <option value="FPT">FPT</option>
+              <option value="Swinburne">{{ t('Swinburne') }}</option>
+              <option value="Asia">{{ t('Asia') }}</option>
+              <option value="FPT">{{ t('FPT') }}</option>
             </select>
           </label>
 
           <div class="modal-actions">
-            <button type="button" class="btn-cancel" @click="isModalOpen = false">Cancel</button>
+            <button type="button" class="btn-cancel" @click="isModalOpen = false">{{ t('Cancel') }}</button>
             <button type="submit" class="btn-confirm" :disabled="submitting">
-              {{ submitting ? "Reserving..." : "Confirm Reservation" }}
+              {{ submitting ? t('Reserving...') : t('Confirm Reservation') }}
             </button>
           </div>
         </form>

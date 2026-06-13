@@ -83,9 +83,7 @@ async function borrowEquipment(payload) {
     const body = Array.isArray(payload) ? payload : [payload];
     await api.borrow(body);
     await loadPortal();
-    state.message = session.value.user.role === "STUDENT"
-      ? "Borrow request submitted successfully for approval."
-      : "Borrow request recorded and equipment marked as borrowed.";
+    state.message = "Borrow request submitted successfully for approval.";
   } catch (error) {
     state.error = error.message;
   }
@@ -149,6 +147,18 @@ async function extendRequest({ id, payload }) {
     await api.extend(id, payload);
     await loadPortal();
     state.message = "Borrow extension granted successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function checkOutRequest(id) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.checkOut(id);
+    await loadPortal();
+    state.message = "Equipment checked out and now in use.";
   } catch (error) {
     state.error = error.message;
   }
@@ -257,6 +267,7 @@ onMounted(() => {
     @approve="approveRequest"
     @deny="denyRequest"
     @extend="extendRequest"
+    @check-out="checkOutRequest"
     @edit="editBorrow"
     @custody="logCustody"
     @remind="sendReminder"

@@ -33,6 +33,7 @@ enum EquipmentStatus {
 enum BorrowStatus {
   REQUESTED
   APPROVED
+  RESERVED
   BORROWED
   RETURNED
   CANCELLED
@@ -58,6 +59,7 @@ model Equipment {
   location       String
   status         EquipmentStatus @default(AVAILABLE)
   conditionNotes String?
+  totalQuantity  Int             @default(1)
   updatedAt      DateTime        @updatedAt
   requests       BorrowRequest[]
 }
@@ -87,4 +89,8 @@ model BorrowRequest {
   custodyLog       String?
   equipment        Equipment     @relation(fields: [equipmentId], references: [id])
   lecturer         User          @relation(fields: [lecturerId], references: [id])
+
+  @@index([equipmentId])
+  @@index([lecturerId])
+  @@index([status])
 }

@@ -1,5 +1,29 @@
 import { PrismaClient } from "@prisma/client";
 
+const DAY = 24 * 60 * 60 * 1000;
+const fromNow = (ms) => new Date(Date.now() + ms).toISOString();
+
+const HOLD_STATUSES = ["RESERVED", "BORROWED"];
+
+function rangesOverlap(aStart, aEnd, bStart, bEnd) {
+  return new Date(aStart).getTime() < new Date(bEnd).getTime() &&
+    new Date(bStart).getTime() < new Date(aEnd).getTime();
+}
+
+function requestWindow(request) {
+  return {
+    start: request.startDate ?? request.createdAt,
+    end: request.dueAt
+  };
+}
+
+function isImmediateStart(startDate) {
+  if (!startDate) {
+    return true;
+  }
+  return new Date(startDate).getTime() <= Date.now() + 60 * 1000;
+}
+
 const users = [
   { id: 1, name: "LECTURER", email: "buidangminh23@fpt.edu.vn", role: "LECTURER" },
   { id: 2, name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT" },
@@ -7,7 +31,11 @@ const users = [
   { id: 4, name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", lecturerId: 1 },
   { id: 5, name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF" },
   { id: 6, name: "LECTURER", email: "linhnt89@fpt.edu.vn", role: "LECTURER" },
-  { id: 7, name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT" }
+  { id: 7, name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT" },
+  { id: 8, name: "VOVINAM TEACHER", email: "vovinamteacher@fpt.edu.vn", role: "LECTURER" },
+  { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER" },
+  { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER" },
+  { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS" }
 ];
 
 const equipment = [
@@ -60,8 +88,63 @@ const equipment = [
     status: "AVAILABLE",
     conditionNotes: "Batteries replaced",
     updatedAt: new Date("2026-05-27T10:20:00.000Z").toISOString()
+  },
+  {
+    id: 6,
+    assetCode: "VOV-GIA-006",
+    name: "Vovinam Protective Gear",
+    category: "Vovinam",
+    location: "HN-VOVINAM",
+    status: "AVAILABLE",
+    conditionNotes: "Standard size L, good condition",
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 7,
+    assetCode: "VOV-GAN-007",
+    name: "Boxing Gloves",
+    category: "Vovinam",
+    location: "HN-VOVINAM",
+    status: "AVAILABLE",
+    conditionNotes: "12oz, red colour",
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 8,
+    assetCode: "VOV-CON-008",
+    name: "Wooden Nunchaku",
+    category: "Vovinam",
+    location: "HN-VOVINAM",
+    status: "AVAILABLE",
+    conditionNotes: "Linked with cord, polished",
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 9,
+    assetCode: "VOV-THA-009",
+    name: "Training Mat",
+    category: "Vovinam",
+    location: "HN-VOVINAM",
+    status: "AVAILABLE",
+    conditionNotes: "EVA foam, blue/red reversible",
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 10,
+    assetCode: "VOV-KIE-010",
+    name: "Wooden Sword",
+    category: "Vovinam",
+    location: "HN-VOVINAM",
+    status: "AVAILABLE",
+    conditionNotes: "Bokken type, oak wood",
+    updatedAt: new Date().toISOString()
   }
 ];
+
+const STOCK_OVERRIDES = { 6: 10, 7: 8, 8: 6, 9: 5, 10: 4 };
+equipment.forEach((item) => {
+  item.totalQuantity = STOCK_OVERRIDES[item.id] ?? 1;
+});
 
 const borrowRequests = [
   {
@@ -69,12 +152,12 @@ const borrowRequests = [
     equipmentId: 2,
     lecturerId: 1,
     classroom: "EN402",
-    dueAt: new Date("2026-05-29T10:30:00.000Z").toISOString(),
+    dueAt: fromNow(2 * DAY),
     returnedAt: null,
     status: "BORROWED",
     handoverNotes: "Collected by lecturer for morning tutorial",
-    createdAt: new Date("2026-05-27T09:10:00.000Z").toISOString(),
-    updatedAt: new Date("2026-05-27T09:10:00.000Z").toISOString(),
+    createdAt: fromNow(-1 * DAY),
+    updatedAt: fromNow(-1 * DAY),
     purpose: "CLASSROOM",
     program: "Bachelor of Computer Science",
     unitOrProject: "COS20031.1",
@@ -85,12 +168,12 @@ const borrowRequests = [
     equipmentId: 4,
     lecturerId: 4,
     classroom: "ATC 625",
-    dueAt: new Date("2026-05-26T10:30:00.000Z").toISOString(),
-    returnedAt: new Date("2026-05-26T10:05:00.000Z").toISOString(),
+    dueAt: fromNow(-4 * DAY),
+    returnedAt: fromNow(-4 * DAY),
     status: "RETURNED",
     handoverNotes: "Used for data science workshop recording",
-    createdAt: new Date("2026-05-24T08:20:00.000Z").toISOString(),
-    updatedAt: new Date("2026-05-26T10:05:00.000Z").toISOString(),
+    createdAt: fromNow(-6 * DAY),
+    updatedAt: fromNow(-4 * DAY),
     purpose: "RESEARCH",
     program: "Data Science Specialisation",
     unitOrProject: "Research Project A",
@@ -103,12 +186,12 @@ const borrowRequests = [
     equipmentId: 5,
     lecturerId: 4,
     classroom: "EN402",
-    dueAt: new Date("2026-05-29T12:00:00.000Z").toISOString(),
+    dueAt: fromNow(12 * 60 * 60 * 1000),
     returnedAt: null,
     status: "BORROWED",
     handoverNotes: "Microphone set for classroom presentation",
-    createdAt: new Date("2026-05-27T11:45:00.000Z").toISOString(),
-    updatedAt: new Date("2026-05-27T11:45:00.000Z").toISOString(),
+    createdAt: fromNow(-1 * DAY),
+    updatedAt: fromNow(-1 * DAY),
     purpose: "CLASSROOM",
     program: "Bachelor of Computer Science",
     unitOrProject: "COS20031.1",
@@ -203,6 +286,32 @@ function buildEditData(input, { toDate }) {
   return data;
 }
 
+function computeDisplayStatus(item, availableNow) {
+  if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
+    return item.status;
+  }
+  return availableNow <= 0 ? "BORROWED" : "AVAILABLE";
+}
+
+function demoAvailableUnits(equipmentId, window, excludeRequestId = null) {
+  const item = equipment.find((candidate) => candidate.id === equipmentId);
+  if (!item) {
+    return 0;
+  }
+  if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
+    return 0;
+  }
+  const occupied = borrowRequests
+    .filter((request) =>
+      request.equipmentId === equipmentId &&
+      request.id !== excludeRequestId &&
+      HOLD_STATUSES.includes(request.status) &&
+      rangesOverlap(requestWindow(request).start, requestWindow(request).end, window.start, window.end)
+    )
+    .reduce((sum, request) => sum + (request.quantity ?? 1), 0);
+  return (item.totalQuantity ?? 1) - occupied;
+}
+
 class DemoRepository {
   async login(email) {
     const candidate = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
@@ -219,12 +328,17 @@ class DemoRepository {
   }
 
   async listEquipment() {
+    const now = new Date().toISOString();
     return equipment.map(item => {
       const itemRequests = borrowRequests
         .filter((r) => r.equipmentId === item.id)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const availableNow = demoAvailableUnits(item.id, { start: now, end: now });
       return {
         ...item,
+        totalQuantity: item.totalQuantity ?? 1,
+        availableNow: Math.max(0, availableNow),
+        displayStatus: computeDisplayStatus(item, availableNow),
         latestRequest: itemRequests[0] || null
       };
     });
@@ -252,35 +366,36 @@ class DemoRepository {
       throw error;
     }
 
-    if (item.status === "RETIRED") {
-      const error = new Error("Equipment has been retired and cannot be borrowed");
+    if (["RETIRED", "MAINTENANCE"].includes(item.status)) {
+      const error = new Error(`Equipment is ${item.status.toLowerCase()} and cannot be booked`);
+      error.status = 409;
+      throw error;
+    }
+
+    const quantity = input.quantity ?? 1;
+    const start = input.startDate ? new Date(input.startDate).toISOString() : new Date().toISOString();
+    const end = new Date(input.dueAt).toISOString();
+    if (new Date(end).getTime() <= new Date(start).getTime()) {
+      const error = new Error("Return time must be after the start time");
+      error.status = 400;
+      throw error;
+    }
+    const available = demoAvailableUnits(item.id, { start, end });
+    if (quantity > available) {
+      const error = new Error(`Only ${Math.max(0, available)} of ${item.totalQuantity ?? 1} unit(s) are free for that time window`);
       error.status = 409;
       throw error;
     }
 
     const user = users.find((candidate) => candidate.id === input.lecturerId);
-    const isStudent = user?.role === "STUDENT";
-
-    if (item.status !== "AVAILABLE" && !isStudent) {
-      const error = new Error("Equipment is not available");
-      error.status = 409;
-      throw error;
-    }
-
-    const status = isStudent ? "REQUESTED" : "BORROWED";
+    const status = "REQUESTED";
     const purpose = input.purpose ?? "CLASSROOM";
-
-    if (!isStudent) {
-      item.status = "BORROWED";
-      item.conditionNotes = `Borrowed for ${input.classroom || purpose}`;
-      item.updatedAt = new Date().toISOString();
-    }
 
     const custody = [];
     if (purpose === "EVENT") {
       custody.push({
         at: new Date().toISOString(),
-        action: isStudent ? "REQUESTED" : "CHECKED_OUT",
+        action: "REQUESTED",
         actor: user?.name ?? `User ${input.lecturerId}`,
         notes: input.handoverNotes ?? ""
       });
@@ -291,7 +406,7 @@ class DemoRepository {
       equipmentId: item.id,
       lecturerId: input.lecturerId,
       classroom: input.classroom ?? null,
-      dueAt: new Date(input.dueAt).toISOString(),
+      dueAt: end,
       returnedAt: null,
       status,
       handoverNotes: input.handoverNotes ?? "",
@@ -300,7 +415,7 @@ class DemoRepository {
       purpose,
       program: input.program ?? null,
       unitOrProject: input.unitOrProject ?? null,
-      quantity: input.quantity ?? 1,
+      quantity,
       startDate: input.startDate ? new Date(input.startDate).toISOString() : null,
       recurrence: input.recurrence ?? null,
       custodyLog: JSON.stringify(custody)
@@ -330,14 +445,9 @@ class DemoRepository {
     request.returnedAt = new Date().toISOString();
     request.updatedAt = new Date().toISOString();
 
-    if (item) {
-      if (request.isStatusOk) {
-        item.status = "AVAILABLE";
-        item.conditionNotes = "Returned and confirmed OK";
-      } else {
-        item.status = "MAINTENANCE";
-        item.conditionNotes = `Returned damaged: ${request.damageReport}`;
-      }
+    if (item && !request.isStatusOk) {
+      item.status = "MAINTENANCE";
+      item.conditionNotes = `Returned damaged: ${request.damageReport}`;
       item.updatedAt = new Date().toISOString();
     }
 
@@ -350,6 +460,33 @@ class DemoRepository {
     });
     request.custodyLog = JSON.stringify(custody);
 
+    return attachEquipment(request);
+  }
+
+  async checkOut(id, input = {}) {
+    const request = borrowRequests.find((candidate) => candidate.id === id);
+    if (!request) {
+      const error = new Error("Request not found");
+      error.status = 404;
+      throw error;
+    }
+    if (request.status !== "RESERVED") {
+      const error = new Error("Only reserved bookings can be checked out");
+      error.status = 409;
+      throw error;
+    }
+    request.status = "BORROWED";
+    request.updatedAt = new Date().toISOString();
+    if (request.purpose === "EVENT") {
+      const log = parseCustody(request.custodyLog);
+      log.push({
+        at: new Date().toISOString(),
+        action: "CHECKED_OUT",
+        actor: input.actorName ?? "Staff",
+        notes: input.notes ?? ""
+      });
+      request.custodyLog = JSON.stringify(log);
+    }
     return attachEquipment(request);
   }
 
@@ -379,17 +516,20 @@ class DemoRepository {
       throw error;
     }
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
-    if (!item || item.status !== "AVAILABLE") {
-      const error = new Error("Equipment is no longer available to approve");
+    if (!item) {
+      const error = new Error("Equipment not found");
+      error.status = 404;
+      throw error;
+    }
+    const available = demoAvailableUnits(item.id, requestWindow(request), request.id);
+    if ((request.quantity ?? 1) > available) {
+      const error = new Error(`Equipment is no longer free for that time window (only ${Math.max(0, available)} unit(s) left)`);
       error.status = 409;
       throw error;
     }
-    request.status = "BORROWED";
+    request.status = isImmediateStart(request.startDate) ? "BORROWED" : "RESERVED";
     request.approvedById = userId;
     request.updatedAt = new Date().toISOString();
-    item.status = "BORROWED";
-    item.conditionNotes = `Approved borrow for ${request.classroom || request.purpose}`;
-    item.updatedAt = new Date().toISOString();
     return attachEquipment(request);
   }
 
@@ -400,23 +540,14 @@ class DemoRepository {
       error.status = 404;
       throw error;
     }
-    if (!["REQUESTED", "BORROWED"].includes(request.status)) {
-      const error = new Error("Only pending or active requests can be denied");
+    if (!["REQUESTED", "RESERVED", "BORROWED"].includes(request.status)) {
+      const error = new Error("Only pending, reserved or active requests can be cancelled");
       error.status = 409;
       throw error;
     }
-    const wasHoldingEquipment = request.status === "BORROWED";
     request.status = "CANCELLED";
     request.deniedById = userId;
     request.updatedAt = new Date().toISOString();
-    if (wasHoldingEquipment) {
-      const item = equipment.find((candidate) => candidate.id === request.equipmentId);
-      if (item) {
-        item.status = "AVAILABLE";
-        item.conditionNotes = "Borrow request denied";
-        item.updatedAt = new Date().toISOString();
-      }
-    }
     return attachEquipment(request);
   }
 
@@ -465,7 +596,11 @@ class DemoRepository {
     }
 
     if (query.purpose) {
-      list = list.filter(r => r.purpose === query.purpose);
+      if (query.purpose === "VOVINAM") {
+        list = list.filter(r => r.classroom === "Vovinam Room");
+      } else {
+        list = list.filter(r => r.purpose === query.purpose);
+      }
     }
 
     if (query.search) {
@@ -485,6 +620,31 @@ class DemoRepository {
     const sortField = query.sortBy ?? "createdAt";
     const sortOrder = query.sortOrder ?? "desc";
     list.sort((left, right) => {
+      if (sortField === "nearDue") {
+        const now = new Date();
+        const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const leftNear = left.status === "BORROWED" && new Date(left.dueAt) > now && new Date(left.dueAt) < limit ? 1 : 0;
+        const rightNear = right.status === "BORROWED" && new Date(right.dueAt) > now && new Date(right.dueAt) < limit ? 1 : 0;
+        if (leftNear !== rightNear) {
+          return sortOrder === "desc" ? rightNear - leftNear : leftNear - rightNear;
+        }
+        // Secondary sort: due date
+        const lVal = left.dueAt ? new Date(left.dueAt).getTime() : 0;
+        const rVal = right.dueAt ? new Date(right.dueAt).getTime() : 0;
+        return sortOrder === "desc" ? rVal - lVal : lVal - rVal;
+      }
+      if (sortField === "overdue") {
+        const now = new Date();
+        const leftOver = left.status === "BORROWED" && new Date(left.dueAt) < now ? 1 : 0;
+        const rightOver = right.status === "BORROWED" && new Date(right.dueAt) < now ? 1 : 0;
+        if (leftOver !== rightOver) {
+          return sortOrder === "desc" ? rightOver - leftOver : leftOver - rightOver;
+        }
+        // Secondary sort: due date
+        const lVal = left.dueAt ? new Date(left.dueAt).getTime() : 0;
+        const rVal = right.dueAt ? new Date(right.dueAt).getTime() : 0;
+        return sortOrder === "desc" ? rVal - lVal : lVal - rVal;
+      }
       const lVal = left[sortField] ? new Date(left[sortField]).getTime() : 0;
       const rVal = right[sortField] ? new Date(right[sortField]).getTime() : 0;
       return sortOrder === "desc" ? rVal - lVal : lVal - rVal;
@@ -510,8 +670,8 @@ class DemoRepository {
       error.status = 404;
       throw error;
     }
-    if (!["REQUESTED", "BORROWED"].includes(request.status)) {
-      const error = new Error("Only pending or active borrowings can be edited");
+    if (!["REQUESTED", "RESERVED", "BORROWED"].includes(request.status)) {
+      const error = new Error("Only pending, reserved or active borrowings can be edited");
       error.status = 409;
       throw error;
     }
@@ -548,7 +708,7 @@ class DemoRepository {
       throw error;
     }
     const bookings = borrowRequests
-      .filter((request) => request.equipmentId === equipmentId && ["REQUESTED", "BORROWED"].includes(request.status))
+      .filter((request) => request.equipmentId === equipmentId && ["REQUESTED", "RESERVED", "BORROWED"].includes(request.status))
       .map((request) => ({
         requestId: request.id,
         status: request.status,
@@ -574,20 +734,37 @@ class DemoRepository {
   }
 
   async summary() {
-    const counts = equipment.reduce(
-      (accumulator, item) => ({ ...accumulator, [item.status]: (accumulator[item.status] ?? 0) + 1 }),
-      {}
-    );
-    const pendingRequests = borrowRequests.filter((r) => r.status === "REQUESTED").length;
-    const currentBorrowing = borrowRequests.filter((r) => r.status === "BORROWED").length;
+    const now = new Date().toISOString();
+    let available = 0;
+    let fullyBooked = 0;
+    let maintenance = 0;
+    let totalUnits = 0;
+    let availableUnits = 0;
+    for (const item of equipment) {
+      totalUnits += item.totalQuantity ?? 1;
+      if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
+        maintenance += 1;
+        continue;
+      }
+      const free = Math.max(0, demoAvailableUnits(item.id, { start: now, end: now }));
+      availableUnits += free;
+      if (free <= 0) {
+        fullyBooked += 1;
+      } else {
+        available += 1;
+      }
+    }
     return {
       totalEquipment: equipment.length,
-      available: counts.AVAILABLE ?? 0,
-      borrowed: counts.BORROWED ?? 0,
-      maintenance: counts.MAINTENANCE ?? 0,
+      totalUnits,
+      availableUnits,
+      available,
+      borrowed: fullyBooked,
+      maintenance,
       activeRequests: borrowRequests.filter((request) => !["RETURNED", "CANCELLED"].includes(request.status)).length,
-      pendingRequests,
-      currentBorrowing,
+      pendingRequests: borrowRequests.filter((r) => r.status === "REQUESTED").length,
+      reservations: borrowRequests.filter((r) => r.status === "RESERVED").length,
+      currentBorrowing: borrowRequests.filter((r) => r.status === "BORROWED").length,
       nextMeeting: "29/5 Sprint 1 demo"
     };
   }
@@ -630,6 +807,7 @@ class DemoRepository {
       location: input.location,
       status: input.status ?? "AVAILABLE",
       conditionNotes: input.conditionNotes ?? "",
+      totalQuantity: input.totalQuantity ?? 1,
       updatedAt: new Date().toISOString()
     };
     equipment.push(item);
@@ -648,6 +826,7 @@ class DemoRepository {
     item.location = input.location ?? item.location;
     item.status = input.status ?? item.status;
     item.conditionNotes = input.conditionNotes !== undefined ? input.conditionNotes : item.conditionNotes;
+    item.totalQuantity = input.totalQuantity ?? item.totalQuantity;
     item.updatedAt = new Date().toISOString();
     return item;
   }
@@ -656,6 +835,27 @@ class DemoRepository {
 class PrismaRepository {
   constructor() {
     this.prisma = new PrismaClient();
+  }
+
+  async _availableUnits(tx, equipmentId, window, excludeRequestId = null) {
+    const item = await tx.equipment.findUnique({ where: { id: equipmentId } });
+    if (!item) {
+      return { item: null, available: 0 };
+    }
+    if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
+      return { item, available: 0 };
+    }
+    const holds = await tx.borrowRequest.findMany({
+      where: {
+        equipmentId,
+        status: { in: HOLD_STATUSES },
+        ...(excludeRequestId ? { id: { not: excludeRequestId } } : {})
+      }
+    });
+    const occupied = holds
+      .filter((r) => rangesOverlap(r.startDate ?? r.createdAt, r.dueAt, window.start, window.end))
+      .reduce((sum, r) => sum + (r.quantity ?? 1), 0);
+    return { item, available: (item.totalQuantity ?? 1) - occupied };
   }
 
   async login(email) {
@@ -672,20 +872,31 @@ class PrismaRepository {
   }
 
   async listEquipment() {
-    const items = await this.prisma.equipment.findMany({
-      include: {
-        requests: {
-          orderBy: { createdAt: "desc" },
-          take: 1
-        }
-      },
-      orderBy: { assetCode: "asc" }
-    });
+    const now = new Date();
+    const [items, activeHolds] = await Promise.all([
+      this.prisma.equipment.findMany({
+        include: {
+          requests: {
+            orderBy: { createdAt: "desc" },
+            take: 1
+          }
+        },
+        orderBy: { assetCode: "asc" }
+      }),
+      this.prisma.borrowRequest.findMany({ where: { status: { in: HOLD_STATUSES } } })
+    ]);
     return items.map(item => {
       const latestRequest = item.requests[0] || null;
       const { requests, ...rest } = item;
+      const occupied = activeHolds
+        .filter((r) => r.equipmentId === item.id && rangesOverlap(r.startDate ?? r.createdAt, r.dueAt, now, now))
+        .reduce((sum, r) => sum + (r.quantity ?? 1), 0);
+      const availableNow = Math.max(0, (item.totalQuantity ?? 1) - occupied);
       return {
         ...rest,
+        totalQuantity: item.totalQuantity ?? 1,
+        availableNow,
+        displayStatus: computeDisplayStatus(item, availableNow),
         latestRequest
       };
     });
@@ -710,7 +921,6 @@ class PrismaRepository {
   async borrowEquipment(input) {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id: input.lecturerId } });
-      const isStudent = user?.role === "STUDENT";
 
       const item = await tx.equipment.findUnique({ where: { id: input.equipmentId } });
       if (!item) {
@@ -719,36 +929,35 @@ class PrismaRepository {
         throw error;
       }
 
-      if (item.status === "RETIRED") {
-        const error = new Error("Equipment has been retired and cannot be borrowed");
+      if (["RETIRED", "MAINTENANCE"].includes(item.status)) {
+        const error = new Error(`Equipment is ${item.status.toLowerCase()} and cannot be booked`);
         error.status = 409;
         throw error;
       }
 
-      if (item.status !== "AVAILABLE" && !isStudent) {
-        const error = new Error("Equipment is not available");
+      const quantity = input.quantity ?? 1;
+      const start = input.startDate ? new Date(input.startDate) : new Date();
+      const end = new Date(input.dueAt);
+      if (end.getTime() <= start.getTime()) {
+        const error = new Error("Return time must be after the start time");
+        error.status = 400;
+        throw error;
+      }
+      const { available } = await this._availableUnits(tx, input.equipmentId, { start: start.toISOString(), end: end.toISOString() });
+      if (quantity > available) {
+        const error = new Error(`Only ${Math.max(0, available)} of ${item.totalQuantity ?? 1} unit(s) are free for that time window`);
         error.status = 409;
         throw error;
       }
 
-      const status = isStudent ? "REQUESTED" : "BORROWED";
+      const status = "REQUESTED";
       const purpose = input.purpose ?? "CLASSROOM";
-
-      if (!isStudent) {
-        await tx.equipment.update({
-          where: { id: input.equipmentId },
-          data: {
-            status: "BORROWED",
-            conditionNotes: `Borrowed for ${input.classroom || purpose}`
-          }
-        });
-      }
 
       const custody = [];
       if (purpose === "EVENT") {
         custody.push({
           at: new Date().toISOString(),
-          action: isStudent ? "REQUESTED" : "CHECKED_OUT",
+          action: "REQUESTED",
           actor: user?.name ?? `User ${input.lecturerId}`,
           notes: input.handoverNotes ?? ""
         });
@@ -793,13 +1002,15 @@ class PrismaRepository {
       const damageReport = input.damageReport ?? "";
       const returnedQuantity = input.returnedQuantity ?? request.quantity;
 
-      await tx.equipment.update({
-        where: { id: request.equipmentId },
-        data: {
-          status: isStatusOk ? "AVAILABLE" : "MAINTENANCE",
-          conditionNotes: isStatusOk ? "Returned and confirmed OK" : `Returned damaged: ${damageReport}`
-        }
-      });
+      if (!isStatusOk) {
+        await tx.equipment.update({
+          where: { id: request.equipmentId },
+          data: {
+            status: "MAINTENANCE",
+            conditionNotes: `Returned damaged: ${damageReport}`
+          }
+        });
+      }
 
       const custody = parseCustody(request.custodyLog);
       custody.push({
@@ -819,6 +1030,38 @@ class PrismaRepository {
           damageReport,
           custodyLog: JSON.stringify(custody)
         },
+        include: { equipment: true, lecturer: true }
+      });
+    });
+  }
+
+  async checkOut(id, input = {}) {
+    return this.prisma.$transaction(async (tx) => {
+      const request = await tx.borrowRequest.findUnique({ where: { id } });
+      if (!request) {
+        const error = new Error("Request not found");
+        error.status = 404;
+        throw error;
+      }
+      if (request.status !== "RESERVED") {
+        const error = new Error("Only reserved bookings can be checked out");
+        error.status = 409;
+        throw error;
+      }
+      const data = { status: "BORROWED" };
+      if (request.purpose === "EVENT") {
+        const log = parseCustody(request.custodyLog);
+        log.push({
+          at: new Date().toISOString(),
+          action: "CHECKED_OUT",
+          actor: input.actorName ?? "Staff",
+          notes: input.notes ?? ""
+        });
+        data.custodyLog = JSON.stringify(log);
+      }
+      return tx.borrowRequest.update({
+        where: { id },
+        data,
         include: { equipment: true, lecturer: true }
       });
     });
@@ -847,23 +1090,26 @@ class PrismaRepository {
         error.status = 409;
         throw error;
       }
-      const item = await tx.equipment.findUnique({ where: { id: request.equipmentId } });
-      if (!item || item.status !== "AVAILABLE") {
-        const error = new Error("Equipment is no longer available to approve");
+      const { item, available } = await this._availableUnits(
+        tx,
+        request.equipmentId,
+        { start: request.startDate ?? request.createdAt, end: request.dueAt },
+        request.id
+      );
+      if (!item) {
+        const error = new Error("Equipment not found");
+        error.status = 404;
+        throw error;
+      }
+      if ((request.quantity ?? 1) > available) {
+        const error = new Error(`Equipment is no longer free for that time window (only ${Math.max(0, available)} unit(s) left)`);
         error.status = 409;
         throw error;
       }
-      await tx.equipment.update({
-        where: { id: request.equipmentId },
-        data: {
-          status: "BORROWED",
-          conditionNotes: `Approved borrow for ${request.classroom || request.purpose}`
-        }
-      });
       return tx.borrowRequest.update({
         where: { id },
         data: {
-          status: "BORROWED",
+          status: isImmediateStart(request.startDate) ? "BORROWED" : "RESERVED",
           approvedById: userId
         },
         include: { equipment: true, lecturer: true }
@@ -879,19 +1125,10 @@ class PrismaRepository {
         error.status = 404;
         throw error;
       }
-      if (!["REQUESTED", "BORROWED"].includes(request.status)) {
-        const error = new Error("Only pending or active requests can be denied");
+      if (!["REQUESTED", "RESERVED", "BORROWED"].includes(request.status)) {
+        const error = new Error("Only pending, reserved or active requests can be cancelled");
         error.status = 409;
         throw error;
-      }
-      if (request.status === "BORROWED") {
-        await tx.equipment.update({
-          where: { id: request.equipmentId },
-          data: {
-            status: "AVAILABLE",
-            conditionNotes: "Borrow request denied"
-          }
-        });
       }
       return tx.borrowRequest.update({
         where: { id },
@@ -956,7 +1193,11 @@ class PrismaRepository {
       }
     }
     if (query.purpose) {
-      where.purpose = query.purpose;
+      if (query.purpose === "VOVINAM") {
+        where.classroom = "Vovinam Room";
+      } else {
+        where.purpose = query.purpose;
+      }
     }
     if (query.search) {
       where.OR = [
@@ -969,17 +1210,50 @@ class PrismaRepository {
 
     const sortBy = query.sortBy ?? "createdAt";
     const sortOrder = query.sortOrder ?? "desc";
+    const isCustomSort = ["nearDue", "overdue"].includes(sortBy);
 
-    const [data, total] = await Promise.all([
+    const [allData, total] = await Promise.all([
       this.prisma.borrowRequest.findMany({
         where,
         include: { equipment: true, lecturer: true },
-        orderBy: { [sortBy]: sortOrder },
-        skip,
-        take: limit
+        orderBy: isCustomSort ? undefined : { [sortBy]: sortOrder },
+        ...(isCustomSort ? {} : { skip, take: limit })
       }),
       this.prisma.borrowRequest.count({ where })
     ]);
+
+    let data = allData;
+    if (isCustomSort) {
+      data.sort((left, right) => {
+        if (sortBy === "nearDue") {
+          const now = new Date();
+          const limitTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          const leftNear = left.status === "BORROWED" && new Date(left.dueAt) > now && new Date(left.dueAt) < limitTime ? 1 : 0;
+          const rightNear = right.status === "BORROWED" && new Date(right.dueAt) > now && new Date(right.dueAt) < limitTime ? 1 : 0;
+          if (leftNear !== rightNear) {
+            return sortOrder === "desc" ? rightNear - leftNear : leftNear - rightNear;
+          }
+          // Secondary sort: due date
+          const lVal = left.dueAt ? new Date(left.dueAt).getTime() : 0;
+          const rVal = right.dueAt ? new Date(right.dueAt).getTime() : 0;
+          return sortOrder === "desc" ? rVal - lVal : lVal - rVal;
+        }
+        if (sortBy === "overdue") {
+          const now = new Date();
+          const leftOver = left.status === "BORROWED" && new Date(left.dueAt) < now ? 1 : 0;
+          const rightOver = right.status === "BORROWED" && new Date(right.dueAt) < now ? 1 : 0;
+          if (leftOver !== rightOver) {
+            return sortOrder === "desc" ? rightOver - leftOver : leftOver - rightOver;
+          }
+          // Secondary sort: due date
+          const lVal = left.dueAt ? new Date(left.dueAt).getTime() : 0;
+          const rVal = right.dueAt ? new Date(right.dueAt).getTime() : 0;
+          return sortOrder === "desc" ? rVal - lVal : lVal - rVal;
+        }
+        return 0;
+      });
+      data = data.slice(skip, skip + limit);
+    }
 
     return {
       data,
@@ -996,8 +1270,8 @@ class PrismaRepository {
       error.status = 404;
       throw error;
     }
-    if (!["REQUESTED", "BORROWED"].includes(request.status)) {
-      const error = new Error("Only pending or active borrowings can be edited");
+    if (!["REQUESTED", "RESERVED", "BORROWED"].includes(request.status)) {
+      const error = new Error("Only pending, reserved or active borrowings can be edited");
       error.status = 409;
       throw error;
     }
@@ -1038,7 +1312,7 @@ class PrismaRepository {
       throw error;
     }
     const requests = await this.prisma.borrowRequest.findMany({
-      where: { equipmentId, status: { in: ["REQUESTED", "BORROWED"] } },
+      where: { equipmentId, status: { in: ["REQUESTED", "RESERVED", "BORROWED"] } },
       include: { lecturer: true }
     });
     const bookings = requests.map((request) => ({
@@ -1068,22 +1342,47 @@ class PrismaRepository {
   }
 
   async summary() {
-    const [totalEquipment, available, borrowed, maintenance, activeRequests, pendingRequests, currentBorrowing] = await Promise.all([
-      this.prisma.equipment.count(),
-      this.prisma.equipment.count({ where: { status: "AVAILABLE" } }),
-      this.prisma.equipment.count({ where: { status: "BORROWED" } }),
-      this.prisma.equipment.count({ where: { status: "MAINTENANCE" } }),
+    const now = new Date();
+    const [items, activeHolds, activeRequests, pendingRequests, reservations, currentBorrowing] = await Promise.all([
+      this.prisma.equipment.findMany(),
+      this.prisma.borrowRequest.findMany({ where: { status: { in: HOLD_STATUSES } } }),
       this.prisma.borrowRequest.count({ where: { status: { notIn: ["RETURNED", "CANCELLED"] } } }),
       this.prisma.borrowRequest.count({ where: { status: "REQUESTED" } }),
+      this.prisma.borrowRequest.count({ where: { status: "RESERVED" } }),
       this.prisma.borrowRequest.count({ where: { status: "BORROWED" } })
     ]);
+    let available = 0;
+    let fullyBooked = 0;
+    let maintenance = 0;
+    let totalUnits = 0;
+    let availableUnits = 0;
+    for (const item of items) {
+      totalUnits += item.totalQuantity ?? 1;
+      if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
+        maintenance += 1;
+        continue;
+      }
+      const occupied = activeHolds
+        .filter((r) => r.equipmentId === item.id && rangesOverlap(r.startDate ?? r.createdAt, r.dueAt, now, now))
+        .reduce((sum, r) => sum + (r.quantity ?? 1), 0);
+      const free = Math.max(0, (item.totalQuantity ?? 1) - occupied);
+      availableUnits += free;
+      if (free <= 0) {
+        fullyBooked += 1;
+      } else {
+        available += 1;
+      }
+    }
     return {
-      totalEquipment,
+      totalEquipment: items.length,
+      totalUnits,
+      availableUnits,
       available,
-      borrowed,
+      borrowed: fullyBooked,
       maintenance,
       activeRequests,
       pendingRequests,
+      reservations,
       currentBorrowing,
       nextMeeting: "29/5 Sprint 1 demo"
     };
@@ -1120,7 +1419,8 @@ class PrismaRepository {
         category: input.category,
         location: input.location,
         status: input.status ?? "AVAILABLE",
-        conditionNotes: input.conditionNotes ?? ""
+        conditionNotes: input.conditionNotes ?? "",
+        totalQuantity: input.totalQuantity ?? 1
       }
     });
   }
@@ -1133,7 +1433,8 @@ class PrismaRepository {
         category: input.category,
         location: input.location,
         status: input.status,
-        conditionNotes: input.conditionNotes
+        conditionNotes: input.conditionNotes,
+        totalQuantity: input.totalQuantity
       }
     });
   }

@@ -13,13 +13,13 @@ const isEditing = ref(false);
 const editTarget = ref(null);
 const form = reactive({
   assetCode: "", name: "", category: "", location: "",
-  status: "AVAILABLE", conditionNotes: ""
+  status: "AVAILABLE", conditionNotes: "", totalQuantity: 1
 });
 
 function openAdd() {
   isEditing.value = false;
   editTarget.value = null;
-  Object.assign(form, { assetCode: "", name: "", category: "", location: "", status: "AVAILABLE", conditionNotes: "" });
+  Object.assign(form, { assetCode: "", name: "", category: "", location: "", status: "AVAILABLE", conditionNotes: "", totalQuantity: 1 });
   showModal.value = true;
 }
 
@@ -32,17 +32,19 @@ function openEdit(item) {
     category: item.category,
     location: item.location,
     status: item.status,
-    conditionNotes: item.conditionNotes || ""
+    conditionNotes: item.conditionNotes || "",
+    totalQuantity: item.totalQuantity ?? 1
   });
   showModal.value = true;
 }
 
 function submitForm() {
   if (!form.assetCode || !form.name || !form.category || !form.location) return;
+  const payload = { ...form, totalQuantity: Number(form.totalQuantity) || 1 };
   if (isEditing.value) {
-    emit("edit-equipment", { id: editTarget.value.id, payload: { ...form } });
+    emit("edit-equipment", { id: editTarget.value.id, payload });
   } else {
-    emit("add-equipment", { ...form });
+    emit("add-equipment", payload);
   }
   showModal.value = false;
 }
@@ -123,6 +125,7 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
         <div class="eq-meta">
           <span><Tag :size="12" /> {{ item.category }}</span>
           <span><MapPin :size="12" /> {{ item.location }}</span>
+          <span><Layers :size="12" /> Stock: {{ item.availableNow ?? item.totalQuantity ?? 1 }} / {{ item.totalQuantity ?? 1 }} available now</span>
           <span v-if="item.conditionNotes" class="eq-notes"><Layers :size="12" /> {{ item.conditionNotes }}</span>
         </div>
 
@@ -165,6 +168,10 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
               <input v-model="form.location" required placeholder="HN-ATC-625" />
             </label>
           </div>
+          <label>
+            Total Quantity <span class="hint">identical units in stock</span>
+            <input v-model.number="form.totalQuantity" type="number" min="1" />
+          </label>
           <label>
             Initial Status
             <select v-model="form.status">

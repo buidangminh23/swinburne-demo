@@ -62,6 +62,11 @@ export async function sendNotification({ to, type, subject, message, meta = {} }
   return entry;
 }
 
-export function listNotifications(limit = 20) {
-  return history.slice(0, Math.max(0, limit));
+export function listNotifications(limit = 20, email = null) {
+  let list = history;
+  if (email) {
+    const lower = String(email).toLowerCase();
+    list = history.filter((entry) => entry.to.some((addr) => String(addr).toLowerCase() === lower));
+  }
+  return list.slice(0, Math.max(0, limit));
 }
