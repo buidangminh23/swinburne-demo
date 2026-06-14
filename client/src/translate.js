@@ -267,7 +267,6 @@ const translations = {
   "Describe damage, missing accessories, or issues...": "Mô tả hư hỏng, thiếu phụ kiện hoặc sự cố...",
 
   // Alerts & Equipment Names
-  "Smart Dashboard Alerts": "Cảnh báo bảng điều khiển",
   "Overdue return": "Trả quá hạn",
   "Return due soon": "Sắp đến hạn trả",
   "Partial return open": "Trả lại một phần",
