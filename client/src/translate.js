@@ -222,6 +222,10 @@ const translations = {
   "Equipment Timeline": "Dòng thời gian thiết bị",
   "Confirm Return": "Xác nhận trả đồ",
   "Notification Center": "Trung tâm thông báo",
+  "Staff": "Nhân viên",
+  "Remaining:": "Còn lại:",
+  "Condition:": "Tình trạng:",
+  "View equipment history timeline": "Xem lịch sử hoạt động thiết bị",
 
   // Audit Log view
   "System Audit Log": "Nhật ký hoạt động hệ thống",

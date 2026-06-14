@@ -11,7 +11,9 @@ import {
   Pencil,
   ScrollText,
   ChevronRight,
-  Mail
+  Mail,
+  UserRound,
+  Wrench
 } from "@lucide/vue";
 
 const props = defineProps({
@@ -26,10 +28,30 @@ const props = defineProps({
   initialStatus: {
     type: String,
     default: "ALL"
+  },
+  timelines: {
+    type: Array,
+    default: () => []
   }
 });
 
 const emit = defineEmits(["approve", "deny", "extend", "edit", "custody", "remind", "check-out"]);
+
+const selectedTimeline = ref(null);
+
+function showTimeline(equipmentId) {
+  const found = props.timelines.find(t => t.equipment.id === equipmentId);
+  if (found) {
+    selectedTimeline.value = found;
+  } else {
+    // Fallback if not found in timelines array: find from requests
+    const req = props.requests.find(r => r.equipmentId === equipmentId || r.equipment?.id === equipmentId);
+    selectedTimeline.value = {
+      equipment: req ? req.equipment : { name: "Equipment", assetCode: "" },
+      events: []
+    };
+  }
+}
 
 const searchText = ref("");
 const statusFilter = ref(props.initialStatus || "ALL");
@@ -243,7 +265,14 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
             <td>
               <div class="equip-cell">
                 <strong class="equip-name">{{ req.equipment?.name }}</strong>
-                <span class="asset-code">{{ req.equipment?.assetCode }}</span>
+                <span
+                  class="asset-code timeline-trigger"
+                  @click="showTimeline(req.equipmentId || req.equipment?.id)"
+                  :title="t('View equipment history timeline')"
+                >
+                  <Clock :size="10" />
+                  {{ req.equipment?.assetCode }}
+                </span>
                 <span class="qty-sub">{{ t('Quantity: ') }}{{ req.quantity }}</span>
               </div>
             </td>
@@ -356,6 +385,58 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
       </table>
     </div>
   </section>
+
+  <!-- Equipment History Timeline Modal -->
+  <div v-if="selectedTimeline" class="modal-overlay" @click.self="selectedTimeline = null">
+    <div class="modal-card">
+      <header class="modal-header">
+        <h3>
+          <Clock :size="16" />
+          <span>{{ t('Equipment Timeline') }}</span>
+        </h3>
+        <button type="button" class="close-btn" @click="selectedTimeline = null">&times;</button>
+      </header>
+      <div class="modal-body timeline-modal-body">
+        <div class="timeline-equip-details">
+          <span class="asset-code">{{ selectedTimeline.equipment.assetCode }}</span>
+          <h4>{{ selectedTimeline.equipment.name }}</h4>
+          <p class="equip-meta">{{ t(selectedTimeline.equipment.category) }} · {{ selectedTimeline.equipment.location }}</p>
+        </div>
+
+        <ol class="modal-event-list">
+          <li v-for="event in selectedTimeline.events" :key="event.id" class="modal-event-item">
+            <div class="event-marker">
+              <Wrench v-if="event.type === 'AUDIT'" :size="12" />
+              <Clock v-else :size="12" />
+            </div>
+            <div class="event-body">
+              <div class="event-title-row">
+                <strong>{{ t(event.title) }}</strong>
+                <small>{{ formatDate(event.at) }}</small>
+              </div>
+              <div v-if="event.lecturer" class="event-person">
+                <UserRound :size="13" />
+                <span>{{ t('Lecturer') }}: {{ event.lecturer.name }} · {{ event.lecturer.email }}</span>
+              </div>
+              <div v-if="event.staff" class="event-person staff">
+                <span>{{ t('Staff') }}: {{ event.staff.name || event.staff.email }}</span>
+              </div>
+              <div class="event-details">
+                <span v-if="event.details?.purpose">{{ t('Purpose') }}: {{ t(event.details.purpose) }}</span>
+                <span v-if="event.details?.classroom">{{ t('Classroom') }}: {{ event.details.classroom }}</span>
+                <span v-if="event.details?.quantity">{{ t('Quantity: ') }}{{ event.details.quantity }}</span>
+                <span v-if="event.details?.remainingQuantity">{{ t('Remaining:') }} {{ event.details.remainingQuantity }}</span>
+                <span v-if="event.details?.conditionAfter">{{ t('Condition:') }} {{ event.details.conditionAfter }}</span>
+              </div>
+            </div>
+          </li>
+          <li v-if="selectedTimeline.events.length === 0" class="empty-line">
+            {{ t('No custody entries yet.') || 'Chưa có lịch sử hoạt động nào.' }}
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -645,5 +726,175 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
   color: #727285;
   font-style: italic;
   font-size: 13.5px;
+}
+
+/* Timeline trigger and modal styles */
+.timeline-trigger {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.timeline-trigger:hover {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f7f5ff;
+  border-bottom: 1px solid #eeeeef;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #3e3e4a;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.close-btn {
+  background: transparent;
+  border: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: #a7a7b4;
+  cursor: pointer;
+  padding: 0;
+}
+
+.timeline-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.timeline-equip-details {
+  border-bottom: 1px solid #eeeeef;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+}
+
+.timeline-equip-details h4 {
+  margin: 6px 0 2px;
+  font-size: 15px;
+  color: #2d2d3a;
+}
+
+.timeline-equip-details .equip-meta {
+  margin: 0;
+  color: #727285;
+  font-size: 12px;
+}
+
+.modal-event-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-event-item {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 12px;
+}
+
+.event-marker {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.event-title-row strong {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.event-title-row small {
+  color: #727285;
+  white-space: nowrap;
+}
+
+.event-person {
+  margin-top: 4px;
+  color: #474753;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.event-person.staff {
+  color: #047857;
+}
+
+.event-details {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.event-details span {
+  background: #f7f7fb;
+  border: 1px solid #ececf3;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #5d5d6f;
+}
+
+.empty-line {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 13px;
+  padding: 10px 0;
 }
 </style>
