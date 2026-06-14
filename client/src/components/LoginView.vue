@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, watch, onMounted } from "vue";
+import { isProductionMode } from "../config";
 import swinburneLogo from "../assets/swinburne-vietnam-logo.svg";
 import avatarDangMinh from "../assets/avatar-dang-minh.png";
 import avatarDinhDung from "../assets/avatar-dinh-dung.png";
@@ -26,7 +27,7 @@ const locations = [
   { value: "CT", label: "Swinburne CT" }
 ];
 
-const accounts = [
+const demoAccounts = [
   { name: "LECTURER", email: "buidangminh23@fpt.edu.vn", isDemo: true, color: "#4e5b66" },
   { name: "VOVINAM TEACHER", email: "vovinamteacher@fpt.edu.vn", isDemo: true, color: "#10b981" },
   { name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", isDemo: true, photo: avatarDangMinh },
@@ -38,6 +39,8 @@ const accounts = [
   { name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", isDemo: true, color: "#4338ca" },
   { name: "STUDENT 2", email: "student2@fpt.edu.vn", isDemo: true, color: "#0891b2" }
 ];
+
+const accounts = isProductionMode ? [] : demoAccounts;
 
 const loginError = ref("");
 const showCustomInput = ref(false);

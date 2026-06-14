@@ -453,7 +453,7 @@ const activeTabDisplay = computed(() => {
           <SchedulesView :equipment="state.equipment" :session="session" @borrow="$emit('borrow', $event)" />
         </template>
 
-        <template v-else-if="activeTab === 'status' && canManageEquipment">
+        <template v-else-if="activeTab === 'status'">
           <StatusPanel :equipment="state.equipment" @status="$emit('status', $event)" />
         </template>
 

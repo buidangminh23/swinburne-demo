@@ -1,3 +1,5 @@
+import { isProductionMode } from "./config";
+
 const DAY = 24 * 60 * 60 * 1000;
 const fromNow = (ms) => new Date(Date.now() + ms).toISOString();
 const relativeDate = (days, hours) => {
@@ -473,9 +475,9 @@ const SEED_VERSION = "2026-06-16";
 const users = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-users");
-    return saved ? JSON.parse(saved) : defaultUsers;
+    return saved ? JSON.parse(saved) : (isProductionMode ? [] : defaultUsers);
   } catch {
-    return defaultUsers;
+    return isProductionMode ? [] : defaultUsers;
   }
 })();
 
@@ -491,9 +493,9 @@ const equipment = (() => {
 const borrowRequests = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-borrowRequests");
-    return saved ? JSON.parse(saved) : defaultBorrowRequests;
+    return saved ? JSON.parse(saved) : (isProductionMode ? [] : defaultBorrowRequests);
   } catch {
-    return defaultBorrowRequests;
+    return isProductionMode ? [] : defaultBorrowRequests;
   }
 })();
 
