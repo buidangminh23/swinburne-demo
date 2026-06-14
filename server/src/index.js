@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
+import crypto from "node:crypto";
 import { createRepository } from "./repository.js";
 import { sendNotification, listNotifications } from "./notifications.js";
 
@@ -17,7 +18,20 @@ const serverDir = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.resolve(serverDir, "../../client/dist");
 const hasClientBuild = fs.existsSync(path.join(clientDist, "index.html"));
 
-const jwtSecret = process.env.JWT_SECRET || "fallback-swinburne-secret-key-998877";
+function resolveJwtSecret() {
+  if (process.env.JWT_SECRET) {
+    return process.env.JWT_SECRET;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET must be set in production. Refusing to start with an insecure default.");
+  }
+  console.warn("[security] JWT_SECRET is not set; using a random ephemeral secret. Tokens will not survive a restart. Set JWT_SECRET in your .env for stable sessions.");
+  return crypto.randomBytes(48).toString("hex");
+}
+
+const jwtSecret = resolveJwtSecret();
+const demoLoginPassword = process.env.DEMO_LOGIN_PASSWORD ?? "demo";
+const credentialLoginEnabled = process.env.NODE_ENV !== "production";
 
 app.use(cors({ origin: clientOrigin }));
 app.use(express.json());
@@ -133,16 +147,21 @@ app.get("/", (req, res) => {
 app.post(
   "/api/auth/login",
   route(async (req, res) => {
+    if (!credentialLoginEnabled) {
+      return res.status(403).json({ message: "Credential login is disabled in production. Please sign in with Google." });
+    }
     const payload = loginSchema.parse(req.body);
+    if (payload.password !== demoLoginPassword) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
     const result = await repository.login(payload.email);
-    
-    // Sign a real secure JWT token containing the user details
+
     const token = jwt.sign(
       { id: result.user.id, email: result.user.email, role: result.user.role },
       jwtSecret,
       { expiresIn: "7d" }
     );
-    
+
     res.json({
       user: result.user,
       token
@@ -186,11 +205,39 @@ app.post("/api/auth/logout", (req, res) => {
 // ==========================================
 app.use("/api", authenticateToken);
 
-function requireStaff(req, res, next) {
-  if (!req.user || req.user.role === "STUDENT") {
-    return res.status(403).json({ message: "Chức năng này chỉ dành cho cán bộ/giảng viên." });
-  }
-  next();
+const CAPABILITIES = {
+  STUDENT: [],
+  LECTURER: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER"],
+  EVENT_STAFF: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER"],
+  SUPPORT: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER", "MANAGE_EQUIPMENT"],
+  OPERATIONS: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER", "MANAGE_EQUIPMENT"],
+  ADMIN: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER", "MANAGE_EQUIPMENT"]
+};
+
+function can(role, capability) {
+  return (CAPABILITIES[role] ?? []).includes(capability);
+}
+
+function requireCapability(capability) {
+  return (req, res, next) => {
+    if (!req.user || !can(req.user.role, capability)) {
+      return res.status(403).json({ message: "You do not have permission to perform this action." });
+    }
+    next();
+  };
+}
+
+function loadRequest(req, res, next) {
+  Promise.resolve()
+    .then(async () => {
+      const request = await repository.getRequest(Number(req.params.id));
+      if (!request) {
+        return res.status(404).json({ message: "Không tìm thấy yêu cầu mượn." });
+      }
+      req.borrowRequest = request;
+      next();
+    })
+    .catch(next);
 }
 
 function loadOwnRequest(req, res, next) {
@@ -285,13 +332,13 @@ app.patch("/api/borrow-requests/:id", loadOwnRequest, route(async (req, res) => 
   res.json(await repository.editRequest(Number(req.params.id), payload));
 }));
 
-app.post("/api/borrow-requests/:id/approve", requireStaff, route(async (req, res) => {
+app.post("/api/borrow-requests/:id/approve", requireCapability("APPROVE_REQUEST"), route(async (req, res) => {
   const updated = await repository.approveRequest(Number(req.params.id), req.user.id);
   safeNotify(() => notifyBorrower(updated, "REQUEST_APPROVED", `Request approved • ${itemName(updated)}`, `Your borrow request for ${itemName(updated)} was approved. Due ${updated.dueAt}.`));
   res.json(updated);
 }));
 
-app.post("/api/borrow-requests/:id/deny", requireStaff, route(async (req, res) => {
+app.post("/api/borrow-requests/:id/deny", requireCapability("DENY_REQUEST"), route(async (req, res) => {
   const updated = await repository.denyRequest(Number(req.params.id), req.user.id);
   safeNotify(() => notifyBorrower(updated, "REQUEST_DENIED", `Request denied • ${itemName(updated)}`, `Your borrow request for ${itemName(updated)} was denied.`));
   res.json(updated);
@@ -311,7 +358,7 @@ app.post("/api/borrow-requests/:id/custody", loadOwnRequest, route(async (req, r
   res.json(await repository.addCustody(Number(req.params.id), { ...payload, actor: payload.actor ?? req.user.email }));
 }));
 
-app.post("/api/borrow-requests/:id/remind", requireStaff, route(async (req, res) => {
+app.post("/api/borrow-requests/:id/remind", requireCapability("SEND_REMINDER"), route(async (req, res) => {
   const request = await repository.getRequest(Number(req.params.id));
   if (!request) {
     return res.status(404).json({ message: "Không tìm thấy yêu cầu mượn." });
@@ -334,13 +381,16 @@ app.get("/api/borrow-history", route(async (req, res) => {
   res.json(await repository.listAllHistory(query));
 }));
 
-app.post("/api/borrow-requests/:id/return", loadOwnRequest, route(async (req, res) => {
-  const updated = await repository.confirmReturn(Number(req.params.id), { ...req.body, actorName: req.user.email });
+app.post("/api/borrow-requests/:id/return", requireCapability("CONFIRM_RETURN"), loadRequest, route(async (req, res) => {
+  if (req.borrowRequest.lecturerId === req.user.id) {
+    return res.status(403).json({ message: "A different staff member must confirm this return (separation of duties)." });
+  }
+  const updated = await repository.confirmReturn(Number(req.params.id), { ...req.body, actorId: req.user.id, actorName: req.user.email });
   safeNotify(() => notifyBorrower(updated, "EQUIPMENT_RETURNED", `Return confirmed • ${itemName(updated)}`, `Return of ${itemName(updated)} has been confirmed.`));
   res.json(updated);
 }));
 
-app.patch("/api/equipment/:id/status", requireStaff, route(async (req, res) => {
+app.patch("/api/equipment/:id/status", requireCapability("MANAGE_EQUIPMENT"), route(async (req, res) => {
   const payload = statusSchema.parse(req.body);
   res.json(await repository.updateEquipmentStatus(Number(req.params.id), payload));
 }));
@@ -366,6 +416,11 @@ app.use((error, req, res, next) => {
   res.status(error.status ?? 500).json({ message: error.message ?? "Lỗi máy chủ ngoài dự kiến" });
 });
 
-app.listen(port, () => {
-  console.log(`API listening on http://localhost:${port}`);
-});
+const isEntrypoint = process.argv[1] === fileURLToPath(import.meta.url);
+if (isEntrypoint) {
+  app.listen(port, () => {
+    console.log(`API listening on http://localhost:${port}`);
+  });
+}
+
+export { app };

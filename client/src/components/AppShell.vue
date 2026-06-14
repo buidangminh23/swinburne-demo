@@ -72,6 +72,8 @@ function submitEdit(event) {
 }
 
 const isStudent = computed(() => props.session.user.role === "STUDENT");
+const canManageEquipment = computed(() => ["SUPPORT", "OPERATIONS", "ADMIN"].includes(props.session.user.role));
+const canConfirmReturn = computed(() => props.session.user.role !== "STUDENT");
 const displayEmail = computed(() => props.session.user.email);
 const displayName = computed(() => props.session.user.name);
 
@@ -130,8 +132,8 @@ function formatDate(dateStr) {
         <a :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="activeTab = 'borrow'"><ClipboardList :size="18" /> Borrow Equipment</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="activeTab = 'history'"><History :size="18" /> History Log</a>
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="activeTab = 'schedules'"><CalendarDays :size="18" /> Schedules</a>
-        <a :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> Confirm Return</a>
-        <a :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> Update Status</a>
+        <a v-if="canConfirmReturn" :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> Confirm Return</a>
+        <a v-if="canManageEquipment" :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> Update Status</a>
       </nav>
     </aside>
 
@@ -327,7 +329,7 @@ function formatDate(dateStr) {
                       <td>{{ formatDate(req.dueAt) }}</td>
                       <td class="action-cell">
                         <button class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> Edit</button>
-                        <button v-if="req.status === 'BORROWED'" class="widget-btn return-btn" @click="activeTab = 'returns'">Return</button>
+                        <button v-if="req.status === 'BORROWED' && canConfirmReturn" class="widget-btn return-btn" @click="activeTab = 'returns'">Return</button>
                         <button v-if="req.status === 'BORROWED' && req.purpose === 'RESEARCH'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
                         <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> Custody</button>
                       </td>
@@ -350,7 +352,7 @@ function formatDate(dateStr) {
           <BorrowPanel :equipment="state.equipment" :is-student="isStudent" @borrow="$emit('borrow', $event)" />
         </template>
         
-        <template v-else-if="activeTab === 'returns'">
+        <template v-else-if="activeTab === 'returns' && canConfirmReturn">
           <ReturnPanel :requests="state.requests" @return="$emit('return', $event)" />
         </template>
         
@@ -362,7 +364,7 @@ function formatDate(dateStr) {
           <SchedulesView :equipment="state.equipment" @borrow="$emit('borrow', $event)" />
         </template>
         
-        <template v-else-if="activeTab === 'status'">
+        <template v-else-if="activeTab === 'status' && canManageEquipment">
           <StatusPanel :equipment="state.equipment" @status="$emit('status', $event)" />
         </template>
       </section>
