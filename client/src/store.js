@@ -108,7 +108,7 @@ const defaultEquipment = [
   }
 ];
 
-const STOCK_OVERRIDES = { 6: 10, 7: 8, 8: 6, 9: 5, 10: 4 };
+const STOCK_OVERRIDES = {};
 defaultEquipment.forEach((item) => {
   item.totalQuantity = STOCK_OVERRIDES[item.id] ?? 1;
 });
@@ -205,130 +205,6 @@ const defaultBorrowRequests = [
     unitOrProject: "COS20031.1",
     quantity: 1
   },
-  // Equipment 6: Vovinam Protective Gear
-  {
-    id: 8,
-    equipmentId: 6,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(0, 10),
-    dueAt: relativeDate(0, 12),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Martial arts practice",
-    createdAt: relativeDate(-1, 8),
-    updatedAt: relativeDate(-1, 8),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 2
-  },
-  {
-    id: 9,
-    equipmentId: 6,
-    lecturerId: 8,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Official class training session",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "FPT",
-    unitOrProject: "Study",
-    quantity: 5
-  },
-  // Equipment 7: Boxing Gloves
-  {
-    id: 10,
-    equipmentId: 7,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(0, 10),
-    dueAt: relativeDate(0, 12),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Martial arts practice",
-    createdAt: relativeDate(-1, 8),
-    updatedAt: relativeDate(-1, 8),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 2
-  },
-  {
-    id: 11,
-    equipmentId: 7,
-    lecturerId: 8,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Official class training session",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "FPT",
-    unitOrProject: "Study",
-    quantity: 4
-  },
-  // Equipment 8: Wooden Nunchaku
-  {
-    id: 12,
-    equipmentId: 8,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(2, 8),
-    dueAt: relativeDate(2, 10),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Nunchaku practice",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 2
-  },
-  // Equipment 9: Training Mat
-  {
-    id: 13,
-    equipmentId: 9,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(0, 10),
-    dueAt: relativeDate(0, 12),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Training floor setups",
-    createdAt: relativeDate(-1, 8),
-    updatedAt: relativeDate(-1, 8),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 5
-  },
-  // Equipment 10: Wooden Sword
-  {
-    id: 14,
-    equipmentId: 10,
-    lecturerId: 8,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Wooden sword kata drills",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "FPT",
-    unitOrProject: "Study",
-    quantity: 3
-  },
   // Pending Approval Requests for Demo
   {
     id: 15,
@@ -348,23 +224,6 @@ const defaultBorrowRequests = [
     quantity: 1
   },
   {
-    id: 16,
-    equipmentId: 6,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "REQUESTED",
-    handoverNotes: "Student training gear request",
-    createdAt: relativeDate(0, -1),
-    updatedAt: relativeDate(0, -1),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 3
-  },
-  {
     id: 18,
     equipmentId: 4,
     lecturerId: 10,
@@ -380,23 +239,6 @@ const defaultBorrowRequests = [
     program: "Bachelor of Computer Science",
     unitOrProject: "COS30008",
     quantity: 1
-  },
-  {
-    id: 19,
-    equipmentId: 7,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "REQUESTED",
-    handoverNotes: "Extra gloves for sparring session",
-    createdAt: relativeDate(0, -1),
-    updatedAt: relativeDate(0, -1),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 2
   },
   {
     id: 20,
@@ -417,7 +259,7 @@ const defaultBorrowRequests = [
   }
 ];
 
-const SEED_VERSION = "2026-06-17-smart-ops";
+const SEED_VERSION = "2026-06-19-no-vovinam";
 const AUDIT_KEY = "swin-demo-audit-log";
 const PREF_KEY = "swin-demo-notification-preferences";
 const REMINDER_KEY = "swin-demo-reminder-rules";
