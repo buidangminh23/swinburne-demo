@@ -253,7 +253,7 @@ class DemoRepository {
     }
 
     const user = users.find((candidate) => candidate.id === input.lecturerId);
-    const isStudent = user?.role === "STUDENT";
+    const isStudent = ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(user?.role);
 
     if (item.status !== "AVAILABLE" && !isStudent) {
       const error = new Error("Equipment is not available");
@@ -431,11 +431,7 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
-    if (request.purpose !== "RESEARCH") {
-      const error = new Error("Extensions are only available for research borrowings");
-      error.status = 409;
-      throw error;
-    }
+
     const currentDue = new Date(request.dueAt);
     const newDue = input.dueAt ? new Date(input.dueAt) : new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
     request.dueAt = newDue.toISOString();
@@ -637,7 +633,7 @@ class PrismaRepository {
   async borrowEquipment(input) {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id: input.lecturerId } });
-      const isStudent = user?.role === "STUDENT";
+      const isStudent = ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(user?.role);
 
       const item = await tx.equipment.findUnique({ where: { id: input.equipmentId } });
       if (!item) {
@@ -849,11 +845,7 @@ class PrismaRepository {
       error.status = 409;
       throw error;
     }
-    if (request.purpose !== "RESEARCH") {
-      const error = new Error("Extensions are only available for research borrowings");
-      error.status = 409;
-      throw error;
-    }
+
     const currentDue = new Date(request.dueAt);
     const newDue = input.dueAt ? new Date(input.dueAt) : new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
     return this.prisma.borrowRequest.update({

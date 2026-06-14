@@ -38,7 +38,7 @@ async function loadPortal() {
     state.sprints = sprints;
     state.notifications = notifications;
 
-    const historyParams = user?.role === "STUDENT" ? { userId: user.id } : {};
+    const historyParams = ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(user?.role) ? { userId: user.id } : {};
     const histResult = await api.history(historyParams);
     state.borrowHistory = histResult.data || [];
     state.historyData = histResult;
@@ -75,7 +75,7 @@ async function borrowEquipment(payload) {
   try {
     await api.borrow({ ...payload, lecturerId: session.value.user.id });
     await loadPortal();
-    state.message = session.value.user.role === "STUDENT"
+    state.message = ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(session.value.user.role)
       ? "Borrow request submitted successfully for approval."
       : "Borrow request recorded and equipment marked as borrowed.";
   } catch (error) {

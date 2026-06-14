@@ -64,7 +64,7 @@ function statusClass(status) {
 }
 
 onMounted(() => {
-  if (props.session.user.role === "STUDENT") {
+  if (["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(props.session.user.role)) {
     filters.userId = props.session.user.id;
   }
   emitFetch();

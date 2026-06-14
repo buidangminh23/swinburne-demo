@@ -41,8 +41,7 @@ if (hasClientBuild) {
 }
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1)
+  email: z.string().email()
 });
 
 const borrowSchema = z.object({
@@ -151,9 +150,6 @@ app.post(
       return res.status(403).json({ message: "Credential login is disabled in production. Please sign in with Google." });
     }
     const payload = loginSchema.parse(req.body);
-    if (payload.password !== demoLoginPassword) {
-      return res.status(401).json({ message: "Invalid email or password." });
-    }
     const result = await repository.login(payload.email);
 
     const token = jwt.sign(
@@ -208,8 +204,8 @@ app.use("/api", authenticateToken);
 const CAPABILITIES = {
   STUDENT: [],
   LECTURER: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER"],
-  EVENT_STAFF: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER"],
-  SUPPORT: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER", "MANAGE_EQUIPMENT"],
+  EVENT_STAFF: [],
+  SUPPORT: [],
   OPERATIONS: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER", "MANAGE_EQUIPMENT"],
   ADMIN: ["APPROVE_REQUEST", "DENY_REQUEST", "CONFIRM_RETURN", "SEND_REMINDER", "MANAGE_EQUIPMENT"]
 };
@@ -247,7 +243,7 @@ function loadOwnRequest(req, res, next) {
       if (!request) {
         return res.status(404).json({ message: "Không tìm thấy yêu cầu mượn." });
       }
-      if (req.user.role === "STUDENT" && request.lecturerId !== req.user.id) {
+      if (["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(req.user.role) && request.lecturerId !== req.user.id) {
         return res.status(403).json({ message: "Bạn chỉ có thể thao tác trên yêu cầu của chính mình." });
       }
       req.borrowRequest = request;
@@ -295,7 +291,7 @@ app.get("/api/notifications", route(async (req, res) => {
 
 app.get("/api/users/:id/borrow-history", route(async (req, res) => {
   const targetId = Number(req.params.id);
-  if (req.user.role === "STUDENT" && targetId !== req.user.id) {
+  if (["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(req.user.role) && targetId !== req.user.id) {
     return res.status(403).json({ message: "Bạn chỉ có thể xem lịch sử của chính mình." });
   }
   res.json(await repository.listBorrowHistory(targetId));

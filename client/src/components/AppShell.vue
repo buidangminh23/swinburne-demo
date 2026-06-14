@@ -71,9 +71,9 @@ function submitEdit(event) {
   editingRequest.value = null;
 }
 
-const isStudent = computed(() => props.session.user.role === "STUDENT");
-const canManageEquipment = computed(() => ["SUPPORT", "OPERATIONS", "ADMIN"].includes(props.session.user.role));
-const canConfirmReturn = computed(() => props.session.user.role !== "STUDENT");
+const isStudent = computed(() => ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(props.session.user.role));
+const canManageEquipment = computed(() => ["OPERATIONS", "ADMIN"].includes(props.session.user.role));
+const canConfirmReturn = computed(() => !["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(props.session.user.role));
 const displayEmail = computed(() => props.session.user.email);
 const displayName = computed(() => props.session.user.name);
 
@@ -296,7 +296,7 @@ function formatDate(dateStr) {
                       <td>{{ req.equipment?.name }}</td>
                       <td class="warning-text">{{ formatDate(req.dueAt) }}</td>
                       <td class="action-cell">
-                        <button v-if="req.purpose === 'RESEARCH'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
+                        <button class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
                         <button class="widget-btn remind-btn" @click="$emit('remind', req.id)">Send Reminder</button>
                       </td>
                     </tr>
@@ -330,7 +330,7 @@ function formatDate(dateStr) {
                       <td class="action-cell">
                         <button class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> Edit</button>
                         <button v-if="req.status === 'BORROWED' && canConfirmReturn" class="widget-btn return-btn" @click="activeTab = 'returns'">Return</button>
-                        <button v-if="req.status === 'BORROWED' && req.purpose === 'RESEARCH'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
+                        <button v-if="req.status === 'BORROWED'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">Extend 7d</button>
                         <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> Custody</button>
                       </td>
                     </tr>

@@ -37,6 +37,8 @@ const accounts = [
 ];
 
 const loginError = ref("");
+const showCustomInput = ref(false);
+const customEmail = ref("");
 
 onMounted(() => {
   // Dynamically load Google Identity Services client script
@@ -111,9 +113,23 @@ async function selectAccount(account) {
   busy.value = true;
   try {
     await emit("login", {
-      email: account.email,
-      password: "demo"
+      email: account.email
     });
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function submitCustomEmail() {
+  if (!customEmail.value) return;
+  loginError.value = "";
+  busy.value = true;
+  try {
+    await emit("login", {
+      email: customEmail.value
+    });
+  } catch (err) {
+    loginError.value = err.message || "Đăng nhập thất bại.";
   } finally {
     busy.value = false;
   }
@@ -194,7 +210,7 @@ function getInitial(name) {
 
         <!-- Right column -->
         <div class="google-right-col">
-          <div class="accounts-list">
+          <div v-if="!showCustomInput" class="accounts-list">
             <button 
               v-for="acc in accounts" 
               :key="acc.email" 
@@ -216,7 +232,7 @@ function getInitial(name) {
             </button>
 
             <!-- Use another account -->
-            <button type="button" class="account-row another-account-row" :disabled="busy">
+            <button type="button" class="account-row another-account-row" :disabled="busy" @click="showCustomInput = true">
               <div class="avatar-circle another">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -227,6 +243,19 @@ function getInitial(name) {
                 <span class="account-name">Sử dụng một tài khoản khác</span>
               </div>
             </button>
+          </div>
+
+          <div v-else class="custom-email-input-wrap">
+            <form class="custom-email-form" @submit.prevent="submitCustomEmail">
+              <label class="custom-email-label">
+                Địa chỉ email
+                <input v-model="customEmail" type="email" placeholder="example@swin.edu.vn" required class="custom-email-input" :disabled="busy" />
+              </label>
+              <div class="custom-email-actions">
+                <button type="button" class="custom-email-back-btn" @click="showCustomInput = false" :disabled="busy">Quay lại</button>
+                <button type="submit" class="custom-email-submit-btn" :disabled="busy">Đăng nhập</button>
+              </div>
+            </form>
           </div>
 
           <p v-if="loginError" class="google-error-msg">{{ loginError }}</p>
@@ -666,5 +695,77 @@ function getInitial(name) {
   .google-left-col h1 {
     font-size: 28px;
   }
+}
+
+/* Custom email input form styles */
+.custom-email-input-wrap {
+  padding: 12px;
+}
+.custom-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.custom-email-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: #e3e3e3;
+  font-weight: 500;
+  text-align: left;
+}
+.custom-email-input {
+  background: #1e1e1e;
+  border: 1px solid #444746;
+  border-radius: 4px;
+  height: 40px;
+  padding: 0 12px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.custom-email-input:focus {
+  border-color: #8ab4f8;
+}
+.custom-email-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.custom-email-back-btn {
+  background: transparent;
+  border: 1px solid #444746;
+  border-radius: 4px;
+  color: #c4c7c5;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.custom-email-back-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.custom-email-submit-btn {
+  background: #8ab4f8;
+  border: none;
+  border-radius: 4px;
+  color: #0f0f0f;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.custom-email-submit-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.custom-email-submit-btn:disabled, .custom-email-back-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
