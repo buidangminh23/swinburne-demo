@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  LECTURER
+  SUPPORT
+  ADMIN
+  OPERATIONS
+  EVENT_STAFF
+}
+
+enum BorrowPurpose {
+  CLASSROOM
+  LAB
+  RESEARCH
+  EVENT
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  BORROWED
+  MAINTENANCE
+  RETIRED
+}
+
+enum BorrowStatus {
+  REQUESTED
+  APPROVED
+  BORROWED
+  RETURNED
+  CANCELLED
+}
+
+model User {
+  id        Int             @id @default(autoincrement())
+  name      String
+  email     String          @unique
+  role      UserRole
+  createdAt DateTime        @default(now())
+  requests  BorrowRequest[]
+}
+
+model Equipment {
+  id             Int             @id @default(autoincrement())
+  assetCode      String          @unique
+  name           String
+  category       String
+  location       String
+  status         EquipmentStatus @default(AVAILABLE)
+  conditionNotes String?
+  updatedAt      DateTime        @updatedAt
+  requests       BorrowRequest[]
+}
+
+model BorrowRequest {
+  id               Int           @id @default(autoincrement())
+  equipmentId      Int
+  lecturerId       Int
+  classroom        String?
+  dueAt            DateTime
+  returnedAt       DateTime?
+  status           BorrowStatus  @default(REQUESTED)
+  handoverNotes    String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  purpose          BorrowPurpose @default(CLASSROOM)
+  program          String?
+  unitOrProject    String?
+  quantity         Int           @default(1)
+  returnedQuantity Int?
+  isStatusOk       Boolean?
+  damageReport     String?
+  startDate        DateTime?
+  recurrence       String?
+  approvedById     Int?
+  deniedById       Int?
+  custodyLog       String?
+  equipment        Equipment     @relation(fields: [equipmentId], references: [id])
+  lecturer         User          @relation(fields: [lecturerId], references: [id])
+}

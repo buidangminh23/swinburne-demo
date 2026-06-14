@@ -7,11 +7,23 @@
     "node": ">=20"
   },
   "workspaces": [
-    "client"
+    "client",
+    "server"
   ],
   "scripts": {
-    "dev": "npm --workspace client run dev",
-    "build": "npm --workspace client run build",
-    "preview": "npm --workspace client run preview"
+    "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "npm --workspace client run dev",
+    "dev:server": "npm --workspace server run dev",
+    "build": "npm --workspace server run build && npm --workspace client run build",
+    "preview": "npm --workspace client run preview",
+    "start": "npm --workspace server run start",
+    "test": "npm --workspace server test",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "prisma:seed": "node server/src/seed.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prisma": "^6.19.0"
   }
 }
