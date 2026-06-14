@@ -37,7 +37,7 @@ const props = defineProps({
 const emit = defineEmits(["save", "close"]);
 
 import { makeTranslator } from "../translate";
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 const form = reactive({
   purpose: "CLASSROOM",

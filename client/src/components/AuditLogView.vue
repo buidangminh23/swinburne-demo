@@ -9,7 +9,7 @@ const props = defineProps({
   session: { type: Object, required: true }
 });
 
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 const search = ref("");
 const actionFilter = ref("ALL");

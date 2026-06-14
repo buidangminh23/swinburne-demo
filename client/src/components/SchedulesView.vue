@@ -38,7 +38,7 @@ const props = defineProps({
 const emit = defineEmits(["borrow"]);
 
 import { makeTranslator } from "../translate";
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 const selectedEquipmentId = ref(props.equipment[0]?.id ?? null);
 const selectedItem = computed(() => props.equipment.find((item) => item.id === selectedEquipmentId.value) ?? null);

@@ -283,14 +283,22 @@ const translations = {
 };
 
 export function makeTranslator(email) {
-  const isVovinam = email === "vovinamteacher@fpt.edu.vn";
+  const isVovinam = String(email || "").toLowerCase() === "vovinamteacher@fpt.edu.vn";
   
+  // Build case-insensitive translation map
+  const lowerTranslations = {};
+  for (const [key, val] of Object.entries(translations)) {
+    lowerTranslations[key.toLowerCase()] = val;
+  }
+
   const translateFn = (text) => {
     if (!isVovinam) return text;
     if (typeof text !== "string") return text;
     const clean = text.trim();
     if (translations[clean]) return translations[clean];
-    if (translations[clean.toLowerCase()]) return translations[clean.toLowerCase()];
+    
+    const lowerClean = clean.toLowerCase();
+    if (lowerTranslations[lowerClean]) return lowerTranslations[lowerClean];
 
     // Dynamic pattern matching for alerts
     if (clean.endsWith(" is overdue.")) {

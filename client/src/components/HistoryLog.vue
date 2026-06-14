@@ -128,7 +128,7 @@ onMounted(() => {
 });
 
 import { makeTranslator } from "../translate";
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 </script>
 
 <template>

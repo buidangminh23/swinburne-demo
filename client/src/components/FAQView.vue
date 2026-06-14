@@ -10,7 +10,7 @@ const props = defineProps({
 });
 
 import { makeTranslator } from "../translate";
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 const faqs = ref([
   {

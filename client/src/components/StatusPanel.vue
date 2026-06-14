@@ -15,7 +15,7 @@ const props = defineProps({
   }
 });
 
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 const emit = defineEmits(["status"]);
 const form = reactive({
