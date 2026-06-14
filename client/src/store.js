@@ -39,7 +39,8 @@ const defaultUsers = [
   { id: 8, name: "VOVINAM TEACHER", email: "vovinamteacher@fpt.edu.vn", role: "LECTURER" },
   { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER" },
   { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER" },
-  { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS" }
+  { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS" },
+  { id: 12, name: "STUDENT 2", email: "student2@fpt.edu.vn", role: "STUDENT", lecturerId: 6 }
 ];
 
 const defaultEquipment = [
@@ -485,10 +486,27 @@ const defaultBorrowRequests = [
     program: "Swinburne",
     unitOrProject: "Practice",
     quantity: 2
+  },
+  {
+    id: 20,
+    equipmentId: 5,
+    lecturerId: 12,
+    classroom: "EN402",
+    startDate: relativeDate(1, 9),
+    dueAt: relativeDate(1, 11),
+    returnedAt: null,
+    status: "REQUESTED",
+    handoverNotes: "Lapel mic for student presentation rehearsal",
+    createdAt: relativeDate(0, -1),
+    updatedAt: relativeDate(0, -1),
+    purpose: "CLASSROOM",
+    program: "Bachelor of Computer Science",
+    unitOrProject: "COS20031.1",
+    quantity: 1
   }
 ];
 
-const SEED_VERSION = "2026-06-14";
+const SEED_VERSION = "2026-06-15";
 
 (() => {
   try {
