@@ -4,8 +4,9 @@ Web portal for managing classroom equipment borrowing and returns — Sprint 1 d
 
 ## Tech Stack
 
-- Frontend: Vue 3 + Vite (single-page app)
-- Data: in-browser store persisted to `localStorage` — no backend
+- **Frontend: Vue.js** (Vue 3 + Vite) — single-page app, runs in the browser
+- **Backend: Node.js** — not included in this build; production is frontend-only, with data in the browser's `localStorage`
+- Build tool: Node.js (Vite/npm) — build/dev time only
 - Deploy: Vercel (static SPA)
 
 ## How It Works
