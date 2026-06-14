@@ -44,7 +44,6 @@ const translations = {
   "Cancelled": "Đã hủy",
   "All Purposes": "Tất cả mục đích",
   "Classroom": "Phòng học",
-  "Vovinam Room": "Phòng võ Vovinam",
   "Lab": "Phòng Lab",
   "Research": "Nghiên cứu",
   "Event": "Sự kiện",
@@ -157,7 +156,6 @@ const translations = {
 
   // Purpose names
   "CLASSROOM": "GIẢNG DẠY",
-  "VOVINAM": "PHÒNG VÕ VOVINAM",
   "LAB": "PHÒNG LAB",
   "RESEARCH": "NGHIÊN CỨU",
   "EVENT": "SỰ KIỆN",
@@ -279,11 +277,7 @@ const translations = {
   "Wireless Presentation Clicker": "Bút trình chiếu không dây",
   "Portable Projector": "Máy chiếu di động",
   "HDMI Capture Adapter": "Cáp chuyển đổi HDMI Capture",
-  "Lapel Microphone Set": "Bộ micro cài áo",
-  "Vovinam Protective Gear": "Giáp bảo hộ Vovinam",
-  "Boxing Gloves": "Găng tay đấm bốc",
-  "Vovinam Training Mat": "Thảm tập Vovinam",
-  "Martial Arts Target Pad": "Bia đỡ đòn võ thuật"
+  "Lapel Microphone Set": "Bộ micro cài áo"
 };
 
 export function makeTranslator(email) {

@@ -925,11 +925,7 @@ class DemoRepository {
     }
 
     if (query.purpose) {
-      if (query.purpose === "VOVINAM") {
-        list = list.filter(r => r.classroom === "Vovinam Room");
-      } else {
-        list = list.filter(r => r.purpose === query.purpose);
-      }
+      list = list.filter(r => r.purpose === query.purpose);
     }
 
     if (query.search) {

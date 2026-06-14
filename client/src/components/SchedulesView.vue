@@ -20,8 +20,7 @@ const classroomOptions = [
   "LIB DESK",
   "MED DESK",
   "EN402",
-  "EN403",
-  "Vovinam Room"
+  "EN403"
 ];
 
 const props = defineProps({
@@ -188,36 +187,22 @@ function handleCellClick(date, hour) {
 }
 
 watch(() => bookingForm.purpose, (newVal) => {
-  if (newVal === "VOVINAM") {
-    bookingForm.classroom = "Vovinam Room";
-    if (!["Study", "Practice", "Group Work"].includes(bookingForm.unitOrProject)) {
-      bookingForm.unitOrProject = "Study";
-    }
-  } else if (newVal === "CLASSROOM") {
-    if (bookingForm.classroom === "Vovinam Room") {
-      bookingForm.classroom = "ATC 625";
-    }
+  if (newVal === "CLASSROOM") {
     bookingForm.unitOrProject = "Teaching";
   }
 });
 
-const filteredBookingReasonOptions = computed(() => {
-  if (bookingForm.purpose === "VOVINAM") {
-    return ["Study", "Practice", "Group Work"];
-  }
-  return reasonOptions;
-});
+const filteredBookingReasonOptions = computed(() => reasonOptions);
 
 async function confirmBooking() {
   submitting.value = true;
-  const isVov = bookingForm.purpose === "VOVINAM";
   try {
     emit("borrow", {
       equipmentId: selectedEquipmentId.value,
-      classroom: isVov ? "Vovinam Room" : bookingForm.classroom,
-      purpose: isVov ? "CLASSROOM" : bookingForm.purpose,
+      classroom: bookingForm.classroom,
+      purpose: bookingForm.purpose,
       program: bookingForm.program,
-      unitOrProject: bookingForm.purpose === "CLASSROOM" || isVov ? bookingForm.unitOrProject : null,
+      unitOrProject: bookingForm.purpose === "CLASSROOM" ? bookingForm.unitOrProject : null,
       startDate: bookingForm.start,
       dueAt: bookingForm.end
     });
@@ -393,7 +378,7 @@ function formatDateTime(dateStr) {
           </div>
           <label>
             {{ t('Classroom') }}:
-            <select v-model="bookingForm.classroom" :disabled="bookingForm.purpose === 'VOVINAM'">
+            <select v-model="bookingForm.classroom">
               <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
             </select>
           </label>
@@ -401,13 +386,12 @@ function formatDateTime(dateStr) {
             {{ t('Purpose') }}:
             <select v-model="bookingForm.purpose">
               <option value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
-              <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
               <option value="LAB">{{ t('Lab Session') }}</option>
               <option value="RESEARCH">{{ t('Research Work') }}</option>
               <option value="EVENT">{{ t('Swinburne Event') }}</option>
             </select>
           </label>
-          <label v-if="bookingForm.purpose === 'CLASSROOM' || bookingForm.purpose === 'VOVINAM'">
+          <label v-if="bookingForm.purpose === 'CLASSROOM'">
             {{ t('Reason of Use:') }}
             <select v-model="bookingForm.unitOrProject">
               <option v-for="r in filteredBookingReasonOptions" :key="r" :value="r">{{ t(r) }}</option>

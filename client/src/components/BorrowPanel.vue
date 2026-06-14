@@ -45,31 +45,15 @@ const classroomOptions = [
   "LIB DESK",
   "MED DESK",
   "EN402",
-  "EN403",
-  "Vovinam Room"
+  "EN403"
 ];
-
-const vovinamEquipment = computed(() => {
-  return props.equipment.filter((item) => {
-    if (item.status !== "AVAILABLE" || cart.some(c => c.id === item.id)) {
-      return false;
-    }
-    return item.assetCode.startsWith("VOV-") || item.category === "Vovinam";
-  });
-});
 
 const availableEquipment = computed(() => {
   return props.equipment.filter((item) => {
     if (item.status !== "AVAILABLE" || cart.some(c => c.id === item.id)) {
       return false;
     }
-    const isVovinam = item.assetCode.startsWith("VOV-") || item.category === "Vovinam";
-
-    if (form.purpose === "VOVINAM") {
-      // If purpose is Vovinam Room, ONLY return Vovinam items
-      return isVovinam;
-    }
-    return !isVovinam;
+    return true;
   });
 });
 
@@ -92,18 +76,12 @@ onMounted(() => {
 });
 
 watch(() => form.purpose, (newVal) => {
-  if (newVal === "VOVINAM") {
-    form.classroom = "Vovinam Room";
-    form.unitOrProject = "Study";
-  } else if (newVal === "CLASSROOM") {
+  if (newVal === "CLASSROOM") {
     form.unitOrProject = "Teaching";
   }
 });
 
 const filteredReasonOptions = computed(() => {
-  if (form.purpose === "VOVINAM") {
-    return ["Study", "Practice", "Group Work"];
-  }
   return reasonOptions;
 });
 
@@ -129,13 +107,6 @@ const hasBlockingConflict = computed(() => preflightResults.value.some((result) 
 
 const filteredAvailable = computed(() => {
   return availableEquipment.value.filter(item =>
-    item.name.toLowerCase().includes(search.value.toLowerCase()) ||
-    item.assetCode.toLowerCase().includes(search.value.toLowerCase())
-  );
-});
-
-const filteredVovinam = computed(() => {
-  return vovinamEquipment.value.filter(item =>
     item.name.toLowerCase().includes(search.value.toLowerCase()) ||
     item.assetCode.toLowerCase().includes(search.value.toLowerCase())
   );
@@ -170,15 +141,15 @@ function submit() {
   // The parent handles single or array requests. Let's map cart into request objects:
   const requests = cart.map(item => ({
     equipmentId: item.id,
-    classroom: form.purpose === "CLASSROOM" || form.purpose === "VOVINAM" ? form.classroom : null,
+    classroom: form.purpose === "CLASSROOM" ? form.classroom : null,
     dueAt: new Date(form.dueAt).toISOString(),
     handoverNotes: form.handoverNotes,
-    purpose: form.purpose === "VOVINAM" ? "CLASSROOM" : form.purpose,
+    purpose: form.purpose,
     program: form.program,
-    unitOrProject: form.purpose === "CLASSROOM" || form.purpose === "VOVINAM" ? form.unitOrProject : null,
+    unitOrProject: form.purpose === "CLASSROOM" ? form.unitOrProject : null,
     quantity: item.quantity,
     startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
-    recurrence: (form.purpose === "CLASSROOM" || form.purpose === "VOVINAM") && form.recurrence !== "NONE" ? form.recurrence : null
+    recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null
   }));
 
   // Emit either first request or all of them depending on parent capability
@@ -216,14 +187,13 @@ function submit() {
             Purpose
             <select v-model="form.purpose">
               <option value="CLASSROOM">Classroom Use</option>
-              <option value="VOVINAM">Vovinam Room</option>
               <option value="LAB">Lab Session</option>
               <option value="RESEARCH">Research Project</option>
               <option value="EVENT">Event Support</option>
             </select>
           </label>
         </div>
-        <div v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'" style="margin-top: 12px;">
+        <div v-if="form.purpose === 'CLASSROOM'" style="margin-top: 12px;">
           <label>
             Reason of Use
             <select v-model="form.unitOrProject">
@@ -249,22 +219,6 @@ function submit() {
           </div>
           <div v-if="filteredAvailable.length === 0" class="empty-list-text">
             No matching available equipment.
-          </div>
-        </div>
-
-        <!-- Additional Vovinam Equipment section for all accounts -->
-        <div v-if="(form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM') && form.classroom === 'Vovinam Room'" class="vovinam-equipment-section">
-          <h4 class="vovinam-section-title">🥋 Đồ dùng phòng học võ (Martial Arts Equipment)</h4>
-          <div class="vovinam-items-list">
-            <div v-for="item in filteredVovinam" :key="item.id" class="vovinam-item-row">
-              <span class="vovinam-item-name">{{ item.assetCode }} - {{ item.name }}</span>
-              <button type="button" class="add-to-vov-btn" @click="addToCart(item)">
-                <Plus :size="12" /> Add
-              </button>
-            </div>
-            <div v-if="filteredVovinam.length === 0" class="empty-list-text">
-              Không có đồ dùng học võ khả dụng.
-            </div>
           </div>
         </div>
 
@@ -311,11 +265,11 @@ function submit() {
           </label>
         </div>
 
-        <div v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'" class="classroom-fields">
+        <div v-if="form.purpose === 'CLASSROOM'" class="classroom-fields">
           <div class="form-grid">
             <label>
               Classroom
-              <select v-model="form.classroom" :disabled="form.purpose === 'VOVINAM'">
+              <select v-model="form.classroom">
                 <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
               </select>
             </label>
@@ -556,61 +510,5 @@ function submit() {
   border-radius: 4px;
   padding: 6px 8px;
   margin: 0 0 8px;
-}
-
-.vovinam-equipment-section {
-  margin-top: 16px;
-  background: #f0f7ff;
-  border: 1px solid #cce3f5;
-  border-radius: 6px;
-  padding: 12px;
-}
-.vovinam-section-title {
-  font-size: 12px;
-  font-weight: 800;
-  color: #1d4ed8;
-  margin: 0 0 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.vovinam-items-list {
-  max-height: 150px;
-  overflow-y: auto;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  padding: 4px;
-}
-.vovinam-item-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 8px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 11.5px;
-}
-.vovinam-item-row:last-child {
-  border-bottom: 0;
-}
-.vovinam-item-name {
-  color: #334155;
-  font-weight: 500;
-}
-.add-to-vov-btn {
-  min-height: 22px;
-  padding: 0 8px;
-  font-size: 10px;
-  background: #2563eb;
-  color: white;
-  border: 0;
-  border-radius: 3px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-.add-to-vov-btn:hover {
-  background: #1d4ed8;
 }
 </style>

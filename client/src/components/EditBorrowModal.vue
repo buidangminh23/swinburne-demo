@@ -19,8 +19,7 @@ const classroomOptions = [
   "LIB DESK",
   "MED DESK",
   "EN402",
-  "EN403",
-  "Vovinam Room"
+  "EN403"
 ];
 
 const props = defineProps({
@@ -63,10 +62,9 @@ watch(
   () => props.request,
   (request) => {
     if (!request) return;
-    const isVovinam = request.purpose === "CLASSROOM" && request.classroom === "Vovinam Room";
-    form.purpose = isVovinam ? "VOVINAM" : (request.purpose ?? "CLASSROOM");
+    form.purpose = request.purpose ?? "CLASSROOM";
     form.program = request.program ?? "";
-    form.unitOrProject = request.unitOrProject || (isVovinam ? "Study" : "Teaching");
+    form.unitOrProject = request.unitOrProject || "Teaching";
     form.classroom = request.classroom ?? "ATC 625";
     form.dueAt = toLocalInput(request.dueAt);
     form.startDate = toLocalInput(request.startDate);
@@ -78,36 +76,22 @@ watch(
 );
 
 watch(() => form.purpose, (newVal) => {
-  if (newVal === "VOVINAM") {
-    form.classroom = "Vovinam Room";
-    if (!["Study", "Practice", "Group Work"].includes(form.unitOrProject)) {
-      form.unitOrProject = "Study";
-    }
-  } else if (newVal === "CLASSROOM") {
-    if (form.classroom === "Vovinam Room") {
-      form.classroom = "ATC 625";
-    }
+  if (newVal === "CLASSROOM") {
     form.unitOrProject = "Teaching";
   }
 });
 
-const filteredReasonOptions = computed(() => {
-  if (form.purpose === "VOVINAM") {
-    return ["Study", "Practice", "Group Work"];
-  }
-  return reasonOptions;
-});
+const filteredReasonOptions = computed(() => reasonOptions);
 
 function submit() {
-  const isVov = form.purpose === "VOVINAM";
   const payload = {
-    purpose: isVov ? "CLASSROOM" : form.purpose,
+    purpose: form.purpose,
     program: form.program || null,
-    unitOrProject: form.purpose === "CLASSROOM" || isVov ? form.unitOrProject : null,
-    classroom: isVov ? "Vovinam Room" : (form.classroom || null),
+    unitOrProject: form.purpose === "CLASSROOM" ? form.unitOrProject : null,
+    classroom: form.classroom || null,
     dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : undefined,
     quantity: Number(form.quantity) || 1,
-    recurrence: (form.purpose === "CLASSROOM" || isVov) && form.recurrence !== "NONE" ? form.recurrence : null,
+    recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null,
     startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
     handoverNotes: form.handoverNotes || null
   };
@@ -127,7 +111,6 @@ function submit() {
           {{ t('Purpose') }}
           <select v-model="form.purpose">
             <option value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
-            <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
             <option value="LAB">{{ t('Lab Session') }}</option>
             <option value="RESEARCH">{{ t('Research Work') }}</option>
             <option value="EVENT">{{ t('Swinburne Event') }}</option>
@@ -142,14 +125,14 @@ function submit() {
           </select>
         </label>
 
-        <label v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'">
+        <label v-if="form.purpose === 'CLASSROOM'">
           {{ t('Classroom') }}
-          <select v-model="form.classroom" :disabled="form.purpose === 'VOVINAM'">
+          <select v-model="form.classroom">
             <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
           </select>
         </label>
 
-        <label v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'">
+        <label v-if="form.purpose === 'CLASSROOM'">
           {{ t('Reason of Use:') }}
           <select v-model="form.unitOrProject">
             <option v-for="r in filteredReasonOptions" :key="r" :value="r">{{ t(r) }}</option>
@@ -165,7 +148,7 @@ function submit() {
             <input v-model="form.dueAt" type="datetime-local" />
           </label>
         </div>
-        <label v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'">
+        <label v-if="form.purpose === 'CLASSROOM'">
           {{ t('Recurrence') }}
           <select v-model="form.recurrence">
             <option value="NONE">{{ t('Single Session') }}</option>

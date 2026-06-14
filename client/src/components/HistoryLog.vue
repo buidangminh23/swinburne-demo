@@ -170,7 +170,6 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
         <select v-model="filters.purpose" class="filter-select">
           <option value="">{{ t('All Purposes') }}</option>
           <option value="CLASSROOM">{{ t('Classroom') }}</option>
-          <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
           <option value="LAB">{{ t('Lab') }}</option>
           <option value="RESEARCH">{{ t('Research') }}</option>
           <option value="EVENT">{{ t('Event') }}</option>

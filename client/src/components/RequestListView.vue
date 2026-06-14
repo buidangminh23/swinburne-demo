@@ -125,11 +125,7 @@ const filteredRequests = computed(() => {
 
   // Purpose Filter
   if (purposeFilter.value !== "ALL") {
-    if (purposeFilter.value === "VOVINAM") {
-      list = list.filter(r => r.classroom === "Vovinam Room");
-    } else {
-      list = list.filter(r => r.purpose === purposeFilter.value);
-    }
+    list = list.filter(r => r.purpose === purposeFilter.value);
   }
 
 
@@ -211,7 +207,6 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
           <select v-model="purposeFilter" class="filter-select">
             <option value="ALL">{{ t('All Purposes') }}</option>
             <option value="CLASSROOM">{{ t('Classroom') }}</option>
-            <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
             <option value="LAB">{{ t('Lab') }}</option>
             <option value="RESEARCH">{{ t('Research') }}</option>
             <option value="EVENT">{{ t('Event') }}</option>
@@ -326,7 +321,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
                 <!-- General actions -->
                 <button
-                  v-if="['REQUESTED', 'BORROWED'].includes(req.status) && (session.user.id === req.lecturerId || isSupportOrAdmin || canActOn(req) || (session.user.email === 'vovinamteacher@fpt.edu.vn' && (req.classroom === 'Vovinam Room' || req.equipment?.category === 'Vovinam')))"
+                  v-if="['REQUESTED', 'BORROWED'].includes(req.status) && (session.user.id === req.lecturerId || isSupportOrAdmin || canActOn(req))"
                   class="action-btn edit"
                   @click="emit('edit', req)"
                   :title="t('Edit')"
@@ -346,7 +341,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
                 <!-- Extend action -->
                 <button
-                  v-if="req.status === 'BORROWED' && (session.user.id === req.lecturerId || isSupportOrAdmin || canActOn(req) || (session.user.email === 'vovinamteacher@fpt.edu.vn' && (req.classroom === 'Vovinam Room' || req.equipment?.category === 'Vovinam')))"
+                  v-if="req.status === 'BORROWED' && (session.user.id === req.lecturerId || isSupportOrAdmin || canActOn(req))"
                   class="action-btn extend"
                   @click="emit('extend', { id: req.id, payload: {} })"
                   :title="t('Extend borrowing by 7 days')"
