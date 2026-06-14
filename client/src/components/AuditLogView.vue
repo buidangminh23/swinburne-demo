@@ -2,9 +2,14 @@
 import { computed, ref } from "vue";
 import { Search, ScrollText } from "@lucide/vue";
 
+import { makeTranslator } from "../translate";
+
 const props = defineProps({
-  entries: { type: Array, default: () => [] }
+  entries: { type: Array, default: () => [] },
+  session: { type: Object, required: true }
 });
+
+const t = makeTranslator(props.session?.user?.email);
 
 const search = ref("");
 const actionFilter = ref("ALL");
@@ -30,16 +35,16 @@ function formatDate(value) {
   <section class="audit-page">
     <div class="panel audit-header">
       <div>
-        <h2><ScrollText :size="20" /> System Audit Log</h2>
-        <p>Toan he thong: request, return, status, equipment, user, and notification changes.</p>
+        <h2><ScrollText :size="20" /> {{ t('System Audit Log') }}</h2>
+        <p>{{ t('Toan he thong: request, return, status, equipment, user, and notification changes.') }}</p>
       </div>
       <div class="audit-filters">
         <label class="search-box">
           <Search :size="15" />
-          <input v-model="search" type="text" placeholder="Search audit log..." />
+          <input v-model="search" type="text" :placeholder="t('Search audit log...')" />
         </label>
         <select v-model="actionFilter">
-          <option value="ALL">All actions</option>
+          <option value="ALL">{{ t('All actions') }}</option>
           <option v-for="action in actions" :key="action" :value="action">{{ action }}</option>
         </select>
       </div>
@@ -49,11 +54,11 @@ function formatDate(value) {
       <table class="audit-table">
         <thead>
           <tr>
-            <th>Time</th>
-            <th>Action</th>
-            <th>Actor</th>
-            <th>Entity</th>
-            <th>Details</th>
+            <th>{{ t('Time') }}</th>
+            <th>{{ t('Action') }}</th>
+            <th>{{ t('Actor') }}</th>
+            <th>{{ t('Entity') }}</th>
+            <th>{{ t('Details') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -65,7 +70,7 @@ function formatDate(value) {
             <td class="details-cell">{{ JSON.stringify(entry.details ?? {}) }}</td>
           </tr>
           <tr v-if="filteredEntries.length === 0">
-            <td colspan="5" class="empty-state">No audit entries match the filters.</td>
+            <td colspan="5" class="empty-state">{{ t('No audit entries match the filters.') }}</td>
           </tr>
         </tbody>
       </table>

@@ -431,7 +431,7 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
-    if (request.purpose !== "RESEARCH") {
+    if (request.purpose !== "RESEARCH" && request.classroom !== "Vovinam Room" && request.lecturerId !== 8) {
       const error = new Error("Extensions are only available for research borrowings");
       error.status = 409;
       throw error;
@@ -849,7 +849,7 @@ class PrismaRepository {
       error.status = 409;
       throw error;
     }
-    if (request.purpose !== "RESEARCH") {
+    if (request.purpose !== "RESEARCH" && request.classroom !== "Vovinam Room" && request.lecturerId !== 8) {
       const error = new Error("Extensions are only available for research borrowings");
       error.status = 409;
       throw error;

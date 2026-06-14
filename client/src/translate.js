@@ -214,7 +214,55 @@ const translations = {
   "FPT": "FPT",
   "Today": "Hôm nay",
   "Quantity": "Số lượng",
-  "Handover Notes": "Ghi chú bàn giao"
+  "Handover Notes": "Ghi chú bàn giao",
+
+  // Missing sidebar and panel translations
+  "Audit Log": "Nhật ký hệ thống",
+  "Update Status": "Cập nhật trạng thái",
+  "Equipment Timeline": "Dòng thời gian thiết bị",
+  "Confirm Return": "Xác nhận trả đồ",
+  "Notification Center": "Trung tâm thông báo",
+
+  // Audit Log view
+  "System Audit Log": "Nhật ký hoạt động hệ thống",
+  "Toan he thong: request, return, status, equipment, user, and notification changes.": "Toàn hệ thống: các thay đổi về yêu cầu, trả đồ, trạng thái, thiết bị, người dùng và thông báo.",
+  "Search audit log...": "Tìm kiếm nhật ký hoạt động...",
+  "All actions": "Tất cả hoạt động",
+  "Time": "Thời gian",
+  "Action": "Hoạt động",
+  "Actor": "Người thực hiện",
+  "Entity": "Đối tượng",
+  "Details": "Chi tiết",
+  "No audit entries match the filters.": "Không có nhật ký hoạt động nào khớp với bộ lọc.",
+
+  // Status panel
+  "Keep inventory state accurate.": "Giữ cho trạng thái kho chính xác.",
+  "Equipment": "Thiết bị",
+  "Select item": "Chọn thiết bị",
+  "Available": "Khả dụng",
+  "Borrowed": "Đang mượn",
+  "Maintenance": "Bảo trì",
+  "Retired": "Đã thanh lý",
+  "Update equipment status": "Cập nhật trạng thái thiết bị",
+
+  // Return panel
+  "Close active borrowed items with checklist verification.": "Đóng các lượt mượn hoạt động với xác nhận danh sách kiểm tra.",
+  "No borrowed items pending return.": "Không có thiết bị đang mượn nào cần trả.",
+  "Select Borrow Record:": "Chọn bản ghi mượn:",
+  "Choose item to return": "Chọn thiết bị để trả",
+  "Quantity Returned:": "Số lượng trả:",
+  "Status OK?": "Trạng thái ổn?",
+  "Yes": "Có",
+  "No": "Không",
+  "Accessory Checklist": "Danh sách phụ kiện",
+  "Condition Before": "Tình trạng trước",
+  "Condition After": "Tình trạng sau",
+  "Condition before handover...": "Tình trạng trước khi bàn giao...",
+  "Condition after return...": "Tình trạng sau khi trả...",
+  "Before Photo URL": "URL ảnh trước",
+  "After Photo URL": "URL ảnh sau",
+  "Damage/Incident Report:": "Báo cáo hư hỏng/sự cố:",
+  "Describe damage, missing accessories, or issues...": "Mô tả hư hỏng, thiếu phụ kiện hoặc sự cố..."
 };
 
 export function makeTranslator(email) {

@@ -2,12 +2,20 @@
 import { ref, reactive, watch, computed } from "vue";
 import { CheckCircle2, AlertTriangle, Check, X } from "@lucide/vue";
 
+import { makeTranslator } from "../translate";
+
 const props = defineProps({
   requests: {
     type: Array,
     default: () => []
+  },
+  session: {
+    type: Object,
+    required: true
   }
 });
+
+const t = makeTranslator(props.session?.user?.email);
 
 const emit = defineEmits(["return"]);
 
@@ -86,21 +94,21 @@ function submit() {
     <div class="panel-heading compact">
       <CheckCircle2 :size="20" />
       <div>
-        <h2>Confirm return</h2>
-        <p>Close active borrowed items with checklist verification.</p>
+        <h2>{{ t('Confirm Return') }}</h2>
+        <p>{{ t('Close active borrowed items with checklist verification.') }}</p>
       </div>
     </div>
 
     <div v-if="returnableRequests.length === 0" class="return-list">
-      <p class="empty-state">No borrowed items pending return.</p>
+      <p class="empty-state">{{ t('No borrowed items pending return.') }}</p>
     </div>
 
     <div v-else class="return-flow-wrap">
       <!-- Select request -->
       <label class="form-field">
-        Select Borrow Record:
+        {{ t('Select Borrow Record:') }}
         <select v-model="selectedRequestId" class="select-request-dropdown">
-          <option value="">Choose item to return</option>
+          <option value="">{{ t('Choose item to return') }}</option>
           <option v-for="request in returnableRequests" :key="request.id" :value="request.id">
             {{ request.equipment?.assetCode }} - {{ request.equipment?.name }} ({{ request.lecturer?.name }})
           </option>
@@ -111,7 +119,7 @@ function submit() {
       <form v-if="selectedRequestId" class="stacked-form return-form" @submit.prevent="submit">
         <div class="checklist-grid">
           <label>
-            Quantity Returned:
+            {{ t('Quantity Returned:') }}
             <input
               v-model="form.returnedQuantity"
               type="number"
@@ -119,32 +127,32 @@ function submit() {
               :max="selectedRemainingQuantity"
               class="qty-input"
             />
-            <small class="field-hint">Remaining: {{ selectedRemainingQuantity }} / original {{ selectedRequest?.quantity ?? 1 }}</small>
+            <small class="field-hint">{{ t('Remaining: ') }}{{ selectedRemainingQuantity }} / {{ t('original ') }}{{ selectedRequest?.quantity ?? 1 }}</small>
           </label>
 
           <div class="status-verify-wrap">
-            <span class="verify-label">Status OK?</span>
+            <span class="verify-label">{{ t('Status OK?') }}</span>
             <div class="verify-buttons">
               <button
                 type="button"
                 :class="['verify-btn yes', { active: form.isStatusOk }]"
                 @click="form.isStatusOk = true"
               >
-                <Check :size="14" /> Yes
+                <Check :size="14" /> {{ t('Yes') }}
               </button>
               <button
                 type="button"
                 :class="['verify-btn no', { active: !form.isStatusOk }]"
                 @click="form.isStatusOk = false"
               >
-                <X :size="14" /> No
+                <X :size="14" /> {{ t('No') }}
               </button>
             </div>
           </div>
         </div>
 
         <div v-if="expectedAccessories.length" class="accessory-checklist">
-          <span class="verify-label">Accessory Checklist</span>
+          <span class="verify-label">{{ t('Accessory Checklist') }}</span>
           <label v-for="accessory in expectedAccessories" :key="accessory" class="accessory-row">
             <input v-model="form.accessoryChecks[accessory]" type="checkbox" />
             <span>{{ accessory }}</span>
@@ -153,19 +161,19 @@ function submit() {
 
         <div class="condition-grid">
           <label>
-            Condition Before
-            <textarea v-model="form.conditionBefore" rows="2" placeholder="Condition before handover..."></textarea>
+            {{ t('Condition Before') }}
+            <textarea v-model="form.conditionBefore" rows="2" :placeholder="t('Condition before handover...')"></textarea>
           </label>
           <label>
-            Condition After
-            <textarea v-model="form.conditionAfter" rows="2" placeholder="Condition after return..."></textarea>
+            {{ t('Condition After') }}
+            <textarea v-model="form.conditionAfter" rows="2" :placeholder="t('Condition after return...')"></textarea>
           </label>
           <label>
-            Before Photo URL
+            {{ t('Before Photo URL') }}
             <input v-model="form.photoBeforeUrl" type="url" placeholder="https://..." />
           </label>
           <label>
-            After Photo URL
+            {{ t('After Photo URL') }}
             <input v-model="form.photoAfterUrl" type="url" placeholder="https://..." />
           </label>
         </div>
@@ -173,18 +181,18 @@ function submit() {
         <!-- Damage Report Form -->
         <div v-if="!form.isStatusOk" class="damage-report-wrap">
           <label class="danger-alert-label">
-            <AlertTriangle :size="14" /> Damage/Incident Report:
+            <AlertTriangle :size="14" /> {{ t('Damage/Incident Report:') }}
             <textarea
               v-model="form.damageReport"
               rows="3"
-              placeholder="Describe damage, missing accessories, or issues..."
+              :placeholder="t('Describe damage, missing accessories, or issues...')"
               required
             ></textarea>
           </label>
         </div>
 
         <button type="submit" class="submit-return-btn">
-          Confirm Return
+          {{ t('Confirm Return') }}
         </button>
       </form>
     </div>

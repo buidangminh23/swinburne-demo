@@ -297,7 +297,7 @@ const t = makeTranslator(props.session?.user?.email);
 
                 <!-- General actions -->
                 <button
-                  v-if="['REQUESTED', 'BORROWED'].includes(req.status) && (session.user.id === req.lecturerId || isSupportOrAdmin)"
+                  v-if="['REQUESTED', 'BORROWED'].includes(req.status) && (session.user.id === req.lecturerId || isSupportOrAdmin || canActOn(req) || (session.user.email === 'vovinamteacher@fpt.edu.vn' && (req.classroom === 'Vovinam Room' || req.equipment?.category === 'Vovinam')))"
                   class="action-btn edit"
                   @click="emit('edit', req)"
                   :title="t('Edit')"
@@ -317,7 +317,7 @@ const t = makeTranslator(props.session?.user?.email);
 
                 <!-- Extend action -->
                 <button
-                  v-if="req.status === 'BORROWED'"
+                  v-if="req.status === 'BORROWED' && (session.user.id === req.lecturerId || isSupportOrAdmin || canActOn(req) || (session.user.email === 'vovinamteacher@fpt.edu.vn' && (req.classroom === 'Vovinam Room' || req.equipment?.category === 'Vovinam')))"
                   class="action-btn extend"
                   @click="emit('extend', { id: req.id, payload: {} })"
                   :title="t('Extend borrowing by 7 days')"

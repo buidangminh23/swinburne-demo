@@ -180,9 +180,11 @@ const activeTabDisplay = computed(() => {
   if (activeTab.value === 'borrow') return t('Borrow Equipment');
   if (activeTab.value === 'history') return t('History Log');
   if (activeTab.value === 'schedules') return t('Schedules');
-  if (activeTab.value === 'timeline') return 'Equipment Timeline';
-  if (activeTab.value === 'notifications') return 'Notification Center';
-  if (activeTab.value === 'audit-log') return 'Audit Log';
+  if (activeTab.value === 'timeline') return t('Equipment Timeline');
+  if (activeTab.value === 'notifications') return t('Notification Center');
+  if (activeTab.value === 'audit-log') return t('Audit Log');
+  if (activeTab.value === 'returns') return t('Confirm Return');
+  if (activeTab.value === 'status') return t('Update Status');
   if (activeTab.value === 'faq') return t('FAQ');
   if (activeTab.value === 'profile') return t('My Profile');
   return activeTab.value;
@@ -200,19 +202,19 @@ const activeTabDisplay = computed(() => {
         <span class="nav-group">{{ t('Custom') }}</span>
 
         <!-- Admin views -->
-        <a v-if="isAdmin" :class="{ active: activeTab === 'admin-equipment' }" href="#" @click.prevent="activeTab = 'admin-equipment'"><Boxes :size="18" /> Equipment Management</a>
-        <a v-if="isAdmin" :class="{ active: activeTab === 'admin-users' }" href="#" @click.prevent="activeTab = 'admin-users'"><UserRound :size="18" /> User Management</a>
+        <a v-if="isAdmin" :class="{ active: activeTab === 'admin-equipment' }" href="#" @click.prevent="activeTab = 'admin-equipment'"><Boxes :size="18" /> {{ t('Equipment Management') }}</a>
+        <a v-if="isAdmin" :class="{ active: activeTab === 'admin-users' }" href="#" @click.prevent="activeTab = 'admin-users'"><UserRound :size="18" /> {{ t('User Management') }}</a>
 
         <a v-if="isAdmin || isSupport || isLecturer || isOperations" :class="{ active: activeTab === 'equipment' }" href="#" @click.prevent="activeTab = 'equipment'"><Boxes :size="18" /> {{ t('All Requests') }}</a>
         <a v-if="isAdmin || isSupport || isLecturer || isOperations" :class="{ active: activeTab === 'pending-approvals' }" href="#" @click.prevent="activeTab = 'pending-approvals'"><ShieldCheck :size="18" /> {{ t('Pending Approvals') }}</a>
-        <a v-if="!isAdmin && session.user.email !== 'vovinamteacher@fpt.edu.vn'" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="activeTab = 'borrow'"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
+        <a v-if="!isAdmin && !isSupport && !isOperations" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="activeTab = 'borrow'"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="activeTab = 'history'"><History :size="18" /> {{ t('History Log') }}</a>
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="activeTab = 'schedules'"><CalendarDays :size="18" /> {{ t('Schedules') }}</a>
-        <a v-if="isStaff" :class="{ active: activeTab === 'timeline' }" href="#" @click.prevent="activeTab = 'timeline'"><Clock3 :size="18" /> Equipment Timeline</a>
-        <a :class="{ active: activeTab === 'notifications' }" href="#" @click.prevent="activeTab = 'notifications'"><Bell :size="18" /> Notification Center</a>
-        <a v-if="isStaff" :class="{ active: activeTab === 'audit-log' }" href="#" @click.prevent="activeTab = 'audit-log'"><ScrollText :size="18" /> Audit Log</a>
-        <a v-if="isSupport || isAdmin || isOperations" :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> Confirm Return</a>
-        <a v-if="isAdmin || isSupport || isLecturer || isOperations" :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> Update Status</a>
+        <a v-if="isStaff" :class="{ active: activeTab === 'timeline' }" href="#" @click.prevent="activeTab = 'timeline'"><Clock3 :size="18" /> {{ t('Equipment Timeline') }}</a>
+        <a :class="{ active: activeTab === 'notifications' }" href="#" @click.prevent="activeTab = 'notifications'"><Bell :size="18" /> {{ t('Notification Center') }}</a>
+        <a v-if="isStaff" :class="{ active: activeTab === 'audit-log' }" href="#" @click.prevent="activeTab = 'audit-log'"><ScrollText :size="18" /> {{ t('Audit Log') }}</a>
+        <a v-if="isSupport || isAdmin || isOperations" :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> {{ t('Confirm Return') }}</a>
+        <a v-if="isAdmin || isSupport || isLecturer || isOperations" :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> {{ t('Update Status') }}</a>
         <a :class="{ active: activeTab === 'faq' }" href="#" @click.prevent="activeTab = 'faq'"><HelpCircle :size="18" /> {{ t('FAQ') }}</a>
       </nav>
     </aside>
@@ -275,7 +277,7 @@ const activeTabDisplay = computed(() => {
           <div v-if="state.smartAlerts?.length" class="smart-alert-strip panel">
             <div class="smart-alert-head">
               <AlertTriangle :size="18" />
-              <strong>Smart Dashboard Alerts</strong>
+              <strong>{{ t('Smart Dashboard Alerts') }}</strong>
               <span>{{ state.smartAlerts.length }}</span>
             </div>
             <div class="smart-alert-list">
@@ -287,7 +289,7 @@ const activeTabDisplay = computed(() => {
           </div>
           <div class="dashboard-widgets-grid">
             <!-- 1. PENDING APPROVALS (Lecturer/Support/Admin only) -->
-            <div v-if="!isStudent" class="dashboard-widget panel">
+            <div v-if="!isStudent && !isVovinamTeacher" class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2>{{ t('Pending Approval Requests') }} ({{ pendingRequests.length }})</h2>
               </div>
@@ -325,7 +327,7 @@ const activeTabDisplay = computed(() => {
             </div>
 
             <!-- 2. OVERDUE RETURNS (Lecturer/Support/Admin only) -->
-            <div v-if="!isStudent && overdueRequests.length > 0" class="dashboard-widget panel">
+            <div v-if="!isStudent && !isVovinamTeacher && overdueRequests.length > 0" class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2 class="text-danger">⚠️ {{ t('Overdue Returns') }} ({{ overdueRequests.length }})</h2>
               </div>
@@ -357,7 +359,7 @@ const activeTabDisplay = computed(() => {
             </div>
 
             <!-- 3. NEAR DUE BORROWED EQUIPMENT -->
-            <div v-if="!isStudent && nearDueRequests.length > 0" class="dashboard-widget panel">
+            <div v-if="!isStudent && !isVovinamTeacher && nearDueRequests.length > 0" class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2 class="text-warning">🕒 {{ t('Near Due Borrowed Equipment') }} ({{ nearDueRequests.length }})</h2>
               </div>
@@ -468,7 +470,7 @@ const activeTabDisplay = computed(() => {
         </template>
 
         <template v-else-if="activeTab === 'returns' && (isSupport || isAdmin || isOperations)">
-          <ReturnPanel :requests="state.requests" @return="$emit('return', $event)" />
+          <ReturnPanel :requests="state.requests" :session="session" @return="$emit('return', $event)" />
         </template>
 
         <template v-else-if="activeTab === 'history'">
@@ -480,7 +482,7 @@ const activeTabDisplay = computed(() => {
         </template>
 
         <template v-else-if="activeTab === 'timeline' && isStaff">
-          <EquipmentTimelineView :timelines="state.equipmentTimelines" />
+          <EquipmentTimelineView :timelines="state.equipmentTimelines" :session="session" />
         </template>
 
         <template v-else-if="activeTab === 'notifications'">
@@ -495,17 +497,6 @@ const activeTabDisplay = computed(() => {
         </template>
 
         <template v-else-if="activeTab === 'audit-log' && isStaff">
-          <AuditLogView :entries="state.auditLog" />
-        </template>
-
-        <template v-else-if="activeTab === 'status'">
-          <StatusPanel :equipment="state.equipment" @status="$emit('status', $event)" />
-        </template>
-
-        <template v-else-if="activeTab === 'admin-equipment'">
-          <AdminEquipmentView
-            :equipment="state.equipment"
-            @add-equipment="$emit('add-equipment', $event)"
             @edit-equipment="$emit('edit-equipment', $event)"
             @status="$emit('status', $event)"
           />
