@@ -277,7 +277,32 @@ const translations = {
   "Wireless Presentation Clicker": "Bút trình chiếu không dây",
   "Portable Projector": "Máy chiếu di động",
   "HDMI Capture Adapter": "Cáp chuyển đổi HDMI Capture",
-  "Lapel Microphone Set": "Bộ micro cài áo"
+  "Lapel Microphone Set": "Bộ micro cài áo",
+  "Filter notifications, tune preferences, and control demo auto reminder rules.": "Lọc thông báo, tùy chỉnh tùy chọn và kiểm soát các quy tắc nhắc nhở tự động.",
+  "Search notifications...": "Tìm kiếm thông báo...",
+  "All types": "Tất cả loại",
+  "All status": "Tất cả trạng thái",
+  "Unread": "Chưa đọc",
+  "Read": "Đã đọc",
+  "No notifications match the filters.": "Không có thông báo nào khớp với bộ lọc.",
+  "Notification Preferences": "Tùy chọn thông báo",
+  "Save Preferences": "Lưu tùy chọn",
+  "Auto Reminder Rules": "Quy tắc nhắc nhở tự động",
+  "Save Rules": "Lưu quy tắc",
+  "Remaining: ": "Còn lại: ",
+  "original ": "ban đầu ",
+  "Reserved": "Đã đặt lịch",
+  "Pending Approval": "Đang chờ duyệt",
+  "Check Out": "Lấy đồ",
+  "Check out reserved equipment": "Lấy thiết bị đã đặt lịch",
+  "Custody": "Bàn giao",
+  "Classroom / University": "Phòng học / Trường đại học",
+  "Equipment Management": "Quản lý thiết bị",
+  "User Management": "Quản lý người dùng",
+  "Pending Requests": "Yêu cầu đang chờ",
+  "Current Borrowing": "Đang mượn",
+  "Updating...": "Đang cập nhật...",
+  "Coming Soon": "Sắp ra mắt"
 };
 
 export function makeTranslator(email) {
