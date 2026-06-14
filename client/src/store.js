@@ -932,11 +932,7 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
-    if (request.purpose !== "RESEARCH") {
-      const error = new Error("Extensions are only available for research borrowings");
-      error.status = 409;
-      throw error;
-    }
+
     const currentDue = new Date(request.dueAt);
     const newDue = input.dueAt ? new Date(input.dueAt) : new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
     request.dueAt = newDue.toISOString();

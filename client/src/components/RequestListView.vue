@@ -315,9 +315,9 @@ const t = makeTranslator(props.session?.user?.email);
                   {{ t('Check Out') }}
                 </button>
 
-                <!-- Extend action for RESEARCH purposes -->
+                <!-- Extend action -->
                 <button 
-                  v-if="req.status === 'BORROWED' && req.purpose === 'RESEARCH'"
+                  v-if="req.status === 'BORROWED'"
                   class="action-btn extend"
                   @click="emit('extend', { id: req.id, payload: {} })"
                   :title="t('Extend borrowing by 7 days')"

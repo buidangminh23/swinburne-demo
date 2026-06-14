@@ -86,11 +86,11 @@ function confirmDeny(id) {
   }
 }
 
-const isStudent = computed(() => props.session.user.role === "STUDENT");
+const isStudent = computed(() => ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(props.session.user.role));
 const isAdmin = computed(() => props.session.user.role === "ADMIN");
-const isSupport = computed(() => props.session.user.role === "SUPPORT");
+const isSupport = computed(() => false);
 const isLecturer = computed(() => props.session.user.role === "LECTURER");
-const isEventStaff = computed(() => props.session.user.role === "EVENT_STAFF");
+const isEventStaff = computed(() => false);
 const isOperations = computed(() => props.session.user.role === "OPERATIONS");
 const displayEmail = computed(() => props.session.user.email);
 const displayName = computed(() => props.session.user.name);
@@ -354,7 +354,7 @@ const activeTabDisplay = computed(() => {
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td class="action-cell">
-                        <button v-if="req.purpose === 'RESEARCH'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
+                        <button class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
                         <button class="widget-btn remind-btn" @click="$emit('remind', req.id)">{{ t('Send Reminder') }}</button>
                       </td>
                     </tr>
@@ -392,7 +392,7 @@ const activeTabDisplay = computed(() => {
                         <button class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> {{ t('Edit') }}</button>
                         <button v-if="req.status === 'BORROWED' && (isSupport || isAdmin || isOperations)" class="widget-btn return-btn" @click="activeTab = 'returns'">{{ t('Return') }}</button>
                         <button v-if="req.status === 'RESERVED' && !isStudent" class="widget-btn approve-btn" @click="$emit('check-out', req.id)">{{ t('Check Out') }}</button>
-                        <button v-if="req.status === 'BORROWED' && req.purpose === 'RESEARCH'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
+                        <button v-if="req.status === 'BORROWED'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
                         <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> {{ t('Custody') }}</button>
                       </td>
                     </tr>

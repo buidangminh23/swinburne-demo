@@ -45,7 +45,7 @@ async function loadPortal() {
       state.users = [];
     }
 
-    const historyParams = user?.role === "STUDENT" ? { userId: user.id } : {};
+    const historyParams = ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(user?.role) ? { userId: user.id } : {};
     const histResult = await api.history(historyParams);
     state.borrowHistory = histResult.data || [];
     state.historyData = histResult;
