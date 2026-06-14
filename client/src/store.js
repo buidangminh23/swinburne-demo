@@ -454,7 +454,7 @@ const defaultBorrowRequests = [
   }
 ];
 
-const SEED_VERSION = "2026-06-17-no-data";
+const SEED_VERSION = "2026-06-18-catalog";
 
 (() => {
   try {
@@ -473,18 +473,18 @@ const SEED_VERSION = "2026-06-17-no-data";
 const users = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-users");
-    return saved ? JSON.parse(saved) : defaultUsers;
+    return saved ? JSON.parse(saved) : [];
   } catch {
-    return defaultUsers;
+    return [];
   }
 })();
 
 const equipment = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-equipment");
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : defaultEquipment;
   } catch {
-    return [];
+    return defaultEquipment;
   }
 })();
 
