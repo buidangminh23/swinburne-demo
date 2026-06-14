@@ -9,6 +9,22 @@ Web portal for managing classroom equipment borrowing and returns — Sprint 1 d
 - Build tool: Node.js (Vite/npm) — build/dev time only
 - Deploy: Vercel (static frontend; backend hosted separately)
 
+## Build Modes & Environment
+
+One codebase serves **both** the demo and production deployments — they differ only by build-time env vars, so they stay in sync.
+
+| Env var | Values | Effect |
+|---------|--------|--------|
+| `VITE_APP_MODE` | `demo` (default) · `production` | `demo` = full seed data + click-to-login account chooser. `production` = equipment catalog only (no seed users/requests) and the demo chooser is hidden (typed `@fpt.edu.vn` email login). |
+| `VITE_USE_REAL_API` | `false` (default) · `true` | `false` = in-browser `localStorage` store (`apiMock`). `true` = calls the real Node/Express backend (`apiHttp`). |
+| `VITE_API_BASE` | URL | Backend base URL, used when `VITE_USE_REAL_API=true`. |
+| `VITE_GOOGLE_CLIENT_ID` | string (optional) | Enables real Google sign-in. |
+
+Vercel deploys (both build this branch with `npm run build`):
+
+- **Demo:** `VITE_APP_MODE=demo` (or unset).
+- **Production:** `VITE_APP_MODE=production` (add `VITE_USE_REAL_API=true` + `VITE_API_BASE` once a backend is hosted).
+
 ## How It Works
 
 This is a client-only SPA. All data (users, equipment, borrow requests) lives in
