@@ -206,8 +206,7 @@ const activeTabDisplay = computed(() => {
           <div class="notif-wrap">
             <button class="icon-button" aria-label="Notifications" @click="notifOpen = !notifOpen">
               <Bell :size="18" />
-              <span v-if="pendingRequests.length > 0">{{ pendingRequests.length }}</span>
-              <span v-else>0</span>
+              <span v-if="state.notifications.length > 0">{{ state.notifications.length }}</span>
             </button>
             <div v-if="notifOpen" class="notif-menu">
               <div class="notif-head">{{ t('Notifications') }}</div>

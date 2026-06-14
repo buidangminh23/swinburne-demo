@@ -496,6 +496,7 @@ const SEED_VERSION = "2026-06-14";
       localStorage.removeItem("swin-demo-users");
       localStorage.removeItem("swin-demo-equipment");
       localStorage.removeItem("swin-demo-borrowRequests");
+      localStorage.removeItem("swin-demo-notifications");
       localStorage.setItem("swin-demo-seed-version", SEED_VERSION);
     }
   } catch {

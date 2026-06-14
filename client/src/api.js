@@ -11,8 +11,25 @@ function currentUser() {
   }
 }
 
-const notifications = [];
-let notifSeq = 0;
+const NOTIF_KEY = "swin-demo-notifications";
+
+const notifications = (() => {
+  try {
+    const saved = localStorage.getItem(NOTIF_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+})();
+let notifSeq = notifications.reduce((max, n) => Math.max(max, n.id ?? 0), 0);
+
+function persistNotifications() {
+  try {
+    localStorage.setItem(NOTIF_KEY, JSON.stringify(notifications));
+  } catch {
+    /* noop */
+  }
+}
 
 function pushNotification({ to, type, subject, message }) {
   const recipients = (Array.isArray(to) ? to : [to]).filter(Boolean);
@@ -28,6 +45,7 @@ function pushNotification({ to, type, subject, message }) {
   if (notifications.length > 100) {
     notifications.length = 100;
   }
+  persistNotifications();
 }
 
 async function staffEmails() {
