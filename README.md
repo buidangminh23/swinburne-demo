@@ -1,127 +1,33 @@
 # Swinburne Equipment Portal
 
-Web portal quản lý mượn và trả thiết bị lớp học cho demo Sprint 1.
+Web portal for managing classroom equipment borrowing and returns — Sprint 1 demo.
 
 ## Tech Stack
 
-- Frontend: Vue 3 + Vite chạy trên Node.js
-- Backend: Node.js + Express
-- Database: MySQL
-- ORM: Prisma
-- Demo mode: dùng in-memory data khi chưa cấu hình `DATABASE_URL`
+- Frontend: Vue 3 + Vite (single-page app)
+- Data: in-browser store persisted to `localStorage` — no backend
+- Deploy: Vercel (static SPA)
 
-## Web Hoạt Động Như Thế Nào
+## How It Works
 
-Ứng dụng tách thành hai phần chính:
+This is a client-only SPA. All data (users, equipment, borrow requests) lives in
+`client/src/store.js` and is persisted to the browser's `localStorage`
+(keys `swin-demo-users`, `swin-demo-equipment`, `swin-demo-borrowRequests`).
 
-- Vue.js render giao diện portal trên trình duyệt.
-- Node.js backend nhận request từ Vue, xử lý nghiệp vụ và trả dữ liệu qua REST API.
-- Prisma là lớp trung gian giữa backend và MySQL.
-- Khi chưa có MySQL, backend tự dùng demo data trong bộ nhớ để trình bày được ngay.
+There is no server and no real authentication — it is a demo. `client/src/api.js`
+delegates every call to the in-browser store, so the UI behaves as if it were
+talking to a backend.
 
-Luồng cơ bản:
+The store seeds default data on first load. Bumping `SEED_VERSION` in
+`client/src/store.js` clears stale `localStorage` on the next visit, so the demo
+always starts from the latest seed (and the relative seed dates stay fresh).
 
-1. Người dùng mở web ở `http://127.0.0.1:5173` hoặc `http://localhost:4000`.
-2. Vue hiển thị màn hình login.
-3. Khi login, Vue gọi API `POST /api/auth/login`.
-4. Backend kiểm tra tài khoản demo và trả về user + token demo.
-5. Vue gọi các API để lấy summary, danh sách thiết bị, request đang mượn, sprint plan và borrow history nếu là student.
-6. Khi người dùng borrow, confirm return hoặc update status, Vue gửi request lên backend.
-7. Backend cập nhật dữ liệu qua repository. Nếu có MySQL thì Prisma ghi vào database, nếu không thì ghi vào demo store.
-8. Vue reload dữ liệu và cập nhật dashboard.
+Basic flow:
 
-## Node.js Backend
-
-Backend nằm trong thư mục `server/`.
-
-Backend dùng Node.js + Express để:
-
-- Cung cấp REST API cho frontend.
-- Xử lý login/logout.
-- Trả danh sách thiết bị.
-- Tạo request mượn thiết bị.
-- Xác nhận trả thiết bị.
-- Cập nhật trạng thái thiết bị.
-- Trả lịch sử mượn đồ của student.
-- Trả sprint roadmap cho demo.
-- Serve frontend build ở route `/` khi đã chạy `npm run build`.
-
-Các API chính:
-
-- `GET /api/health`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/summary`
-- `GET /api/equipment`
-- `GET /api/borrow-requests`
-- `POST /api/borrow-requests`
-- `POST /api/borrow-requests/:id/return`
-- `PATCH /api/equipment/:id/status`
-- `GET /api/users/:id/borrow-history`
-- `GET /api/sprints`
-
-## Vue.js Frontend
-
-Frontend nằm trong thư mục `client/`.
-
-Vue.js dùng để:
-
-- Render giao diện giống Swinburne portal.
-- Hiển thị sidebar, topbar, profile dropdown và dashboard.
-- Quản lý trạng thái login bằng `localStorage`.
-- Gọi API backend qua `fetch`.
-- Hiển thị dữ liệu inventory, borrow request, return request, sprint roadmap.
-- Hiển thị Borrow History chỉ khi tài khoản có role `STUDENT`.
-- Cập nhật giao diện ngay sau khi borrow, return hoặc update status.
-
-Các màn hình/chức năng chính:
-
-- Login page.
-- Dashboard portal.
-- Equipment list.
-- Borrow equipment form.
-- Confirm return panel.
-- Update equipment status form.
-- Student borrow history.
-- Profile dropdown với My Profile, Borrow history và Sign Out.
-
-## Tính Năng Hiện Có
-
-### Chung
-
-- Login/logout.
-- Dashboard theo phong cách Swinburne.
-- Topbar có notification, lời chào và avatar.
-- Profile dropdown giống mẫu giao diện.
-- Sidebar điều hướng.
-- Sprint roadmap 4 sprint, mỗi sprint 2 tuần.
-
-### Lecturer
-
-- Xem danh sách thiết bị.
-- Mượn thiết bị cho classroom use.
-- Xác nhận thiết bị đã được trả.
-- Cập nhật trạng thái thiết bị: Available, Borrowed, Maintenance, Retired.
-- Xem request đang active.
-
-### Student
-
-- Login bằng tài khoản student.
-- Xem danh sách thiết bị.
-- Mượn thiết bị.
-- Có thêm mục Borrow History trong sidebar.
-- Có thêm mục Borrow history trong profile dropdown.
-- Có panel Borrow history trong dashboard.
-- Lecturer không thấy phần Borrow History.
-
-## Sprint Plan
-
-- Sprint 1: Classroom use, login/logout, view equipment, borrow equipment, confirm returns, update equipment status.
-- Sprint 2: Student requests, support handover, borrowing extensions, notifications.
-- Sprint 3: Inventory CRUD, user management, reporting, audit trail.
-- Sprint 4: Admin governance, role permissions, analytics, production hardening.
-
-Next meeting: 29/5, Sprint 1 demo.
+1. Open the app, pick a demo account in the Google-style chooser.
+2. The dashboard loads summary, equipment, active requests, sprint plan and history.
+3. Borrow / approve / deny / check out / return / extend / update status — all handled
+   in-browser, then the dashboard reloads from the store.
 
 ## Run
 
@@ -130,25 +36,14 @@ npm install
 npm run dev
 ```
 
-Frontend dev server:
+- Dev server: `http://127.0.0.1:5173`
+- Production build: `npm run build` (output: `client/dist`)
+- Preview the build: `npm run preview`
 
-```text
-http://127.0.0.1:5173
-```
+## Demo Login
 
-Backend:
-
-```text
-http://localhost:4000
-```
-
-Sau khi chạy `npm run build`, mở backend root cũng vào được web:
-
-```text
-http://localhost:4000
-```
-
-Demo login (click an account in the Google-style chooser — there is no password form):
+Click an account in the Google-style chooser — there is no password form. Only
+`@fpt.edu.vn` accounts can sign in.
 
 | Email | Role |
 |-------|------|
@@ -158,48 +53,39 @@ Demo login (click an account in the Google-style chooser — there is no passwor
 | `hiheho911@fpt.edu.vn` | EVENT_STAFF |
 | `dindungwork@fpt.edu.vn` | ADMIN |
 
-> The server only accepts `@fpt.edu.vn` accounts. In demo mode it just matches the email — there is no password check.
+## Features by Role
 
-## MySQL + Prisma
+### Shared
+- Login/logout, Swinburne-style dashboard, topbar notifications, profile dropdown, sidebar navigation.
+- Sprint roadmap (4 sprints).
 
-```bash
-cp .env.example .env
-npm run prisma:generate
-npm run prisma:migrate
-npm run prisma:seed
-```
+### Lecturer / Support / Admin
+- View all requests and pending approvals.
+- Approve, deny, check out, extend and edit borrow requests.
+- Confirm returns with condition checklist (sets Maintenance on damage).
+- Update equipment status: Available, Borrowed, Maintenance, Retired.
+- Admin also manages equipment inventory and user roles.
 
-Set `DATABASE_URL` trong `.env` trước khi chạy migration.
+### Student
+- Borrow equipment and view personal Borrow History.
 
-Ví dụ:
+## Sprint Plan
 
-```text
-DATABASE_URL=mysql://root:password@localhost:3306/swinburne_equipment
-```
+- Sprint 1: Classroom use, login/logout, view equipment, borrow, confirm returns, update status.
+- Sprint 2: Student requests, support handover, borrowing extensions, notifications.
+- Sprint 3: Inventory CRUD, user management, reporting, audit trail.
+- Sprint 4: Admin governance, role permissions, analytics, production hardening.
 
-### Bảo mật / Auth env (thêm vào `.env`)
-
-```text
-# Long random string. If unset, the server uses a random ephemeral secret (sessions reset on restart).
-JWT_SECRET=
-# Only needed for "Sign in with Google" (/api/auth/google). Must match the client's VITE_GOOGLE_CLIENT_ID.
-GOOGLE_CLIENT_ID=
-```
-
-## Test Nhanh
+## Quick Test
 
 ```bash
 npm run build
 ```
 
-Test thủ công:
+Manual smoke test (`npm run dev`):
 
-1. Login bằng `buidangminh23@gmail.com` (LECTURER).
-2. Borrow một thiết bị available.
-3. Confirm return thiết bị đang borrowed.
-4. Update status một thiết bị sang Maintenance.
-5. Logout.
-6. Login bằng `buidangminh.lh@gmail.com` (STUDENT).
-7. Kiểm tra sidebar/profile dropdown có Borrow History.
-8. Kiểm tra lecturer không thấy Borrow History.
-9. Login bằng `dindungwork@gmail.com` (ADMIN) để kiểm tra toàn quyền.
+1. Log in as `buidangminh23@fpt.edu.vn` (LECTURER).
+2. Borrow an available item; approve a pending request.
+3. Confirm return of a borrowed item; update an item to Maintenance.
+4. Log in as `buidangminh.lh@fpt.edu.vn` (STUDENT) and check the Borrow History.
+5. Log in as `dindungwork@fpt.edu.vn` (ADMIN) to check equipment and user management.

@@ -29,6 +29,13 @@ watch(filters, () => {
   emitFetch();
 }, { deep: true });
 
+watch(() => props.historyData.total, () => {
+  const pageCount = Math.ceil(props.historyData.total / filters.limit) || 1;
+  if (filters.page > pageCount) {
+    filters.page = 1;
+  }
+});
+
 function emitFetch() {
   emit("fetch", { ...filters });
 }

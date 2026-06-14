@@ -44,7 +44,10 @@ async function assertCanApprove(id) {
 
 export const api = {
   async login(payload) {
-    const email = String(payload?.email ?? "");
+    const email = String(payload?.email ?? "").trim();
+    if (!email.toLowerCase().endsWith(ALLOWED_DOMAIN)) {
+      return Promise.reject(new Error(`Only ${ALLOWED_DOMAIN} accounts can sign in.`));
+    }
     return store.login(email);
   },
   googleLogin() {

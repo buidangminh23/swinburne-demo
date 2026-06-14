@@ -488,6 +488,21 @@ const defaultBorrowRequests = [
   }
 ];
 
+const SEED_VERSION = "2026-06-14";
+
+(() => {
+  try {
+    if (localStorage.getItem("swin-demo-seed-version") !== SEED_VERSION) {
+      localStorage.removeItem("swin-demo-users");
+      localStorage.removeItem("swin-demo-equipment");
+      localStorage.removeItem("swin-demo-borrowRequests");
+      localStorage.setItem("swin-demo-seed-version", SEED_VERSION);
+    }
+  } catch {
+    // noop
+  }
+})();
+
 const users = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-users");
@@ -762,7 +777,7 @@ class DemoRepository {
       program: input.program ?? null,
       unitOrProject: input.unitOrProject ?? null,
       quantity,
-      startDate: input.startDate ? new Date(input.startDate).toISOString() : null,
+      startDate: start,
       recurrence: input.recurrence ?? null,
       custodyLog: JSON.stringify(custody)
     };
@@ -785,8 +800,13 @@ class DemoRepository {
     }
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
 
+    const borrowedQuantity = request.quantity ?? 1;
+    const requestedReturn = Number(input.returnedQuantity ?? borrowedQuantity);
     request.status = "RETURNED";
-    request.returnedQuantity = input.returnedQuantity ?? request.quantity;
+    request.returnedQuantity = Math.min(
+      Math.max(0, Number.isFinite(requestedReturn) ? requestedReturn : borrowedQuantity),
+      borrowedQuantity
+    );
     request.isStatusOk = input.isStatusOk !== false;
     request.damageReport = input.damageReport ?? "";
     request.returnedAt = new Date().toISOString();
@@ -846,7 +866,9 @@ class DemoRepository {
       throw error;
     }
     item.status = input.status;
-    item.conditionNotes = input.conditionNotes;
+    if (input.conditionNotes !== undefined) {
+      item.conditionNotes = input.conditionNotes;
+    }
     item.updatedAt = new Date().toISOString();
     persistState();
     return item;

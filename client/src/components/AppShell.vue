@@ -152,6 +152,9 @@ function getDisplayStatus(req) {
       return "OVERDUE";
     }
     const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    if (due < limit) {
+      return "NEAR_DUE";
+    }
   }
   return req.status;
 }

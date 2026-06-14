@@ -17,6 +17,10 @@ const returnableRequests = computed(() =>
   props.requests.filter((request) => request.status === "BORROWED")
 );
 
+const selectedRequest = computed(() =>
+  returnableRequests.value.find((request) => request.id === Number(selectedRequestId.value)) ?? null
+);
+
 const form = reactive({
   returnedQuantity: 1,
   isStatusOk: true,
@@ -81,10 +85,11 @@ function submit() {
         <div class="checklist-grid">
           <label>
             Quantity Returned:
-            <input 
-              v-model="form.returnedQuantity" 
-              type="number" 
-              min="1" 
+            <input
+              v-model="form.returnedQuantity"
+              type="number"
+              min="1"
+              :max="selectedRequest?.quantity ?? 1"
               class="qty-input"
             />
           </label>
