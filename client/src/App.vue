@@ -15,7 +15,8 @@ const state = reactive({
   borrowHistory: [],
   historyData: { data: [], total: 0, page: 1, limit: 10 },
   sprints: [],
-  notifications: []
+  notifications: [],
+  users: []
 });
 
 const isLoggedIn = computed(() => Boolean(session.value?.token));
@@ -37,6 +38,12 @@ async function loadPortal() {
     state.requests = requests;
     state.sprints = sprints;
     state.notifications = notifications;
+
+    if (user?.role === "ADMIN") {
+      state.users = await api.users().catch(() => []);
+    } else {
+      state.users = [];
+    }
 
     const historyParams = ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(user?.role) ? { userId: user.id } : {};
     const histResult = await api.history(historyParams);
@@ -73,11 +80,10 @@ async function borrowEquipment(payload) {
   state.message = "";
   state.error = "";
   try {
-    await api.borrow({ ...payload, lecturerId: session.value.user.id });
+    const body = Array.isArray(payload) ? payload : [payload];
+    await api.borrow(body);
     await loadPortal();
-    state.message = ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(session.value.user.role)
-      ? "Borrow request submitted successfully for approval."
-      : "Borrow request recorded and equipment marked as borrowed.";
+    state.message = "Borrow request submitted successfully for approval.";
   } catch (error) {
     state.error = error.message;
   }
@@ -146,6 +152,18 @@ async function extendRequest({ id, payload }) {
   }
 }
 
+async function checkOutRequest(id) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.checkOut(id);
+    await loadPortal();
+    state.message = "Equipment checked out and now in use.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
 async function editBorrow({ id, payload }) {
   state.message = "";
   state.error = "";
@@ -176,6 +194,42 @@ async function sendReminder(id) {
   try {
     const res = await api.remind(id);
     state.message = res.message;
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function addEquipment(payload) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.addEquipment(payload);
+    await loadPortal();
+    state.message = "Equipment added successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function editEquipment({ id, payload }) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.editEquipment(id, payload);
+    await loadPortal();
+    state.message = "Equipment updated successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function updateUserRole({ id, role, lecturerId }) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.updateUserRole(id, role, lecturerId);
+    await loadPortal();
+    state.message = "User updated successfully.";
   } catch (error) {
     state.error = error.message;
   }
@@ -213,9 +267,13 @@ onMounted(() => {
     @approve="approveRequest"
     @deny="denyRequest"
     @extend="extendRequest"
+    @check-out="checkOutRequest"
     @edit="editBorrow"
     @custody="logCustody"
     @remind="sendReminder"
     @fetch-history="fetchHistory"
+    @add-equipment="addEquipment"
+    @edit-equipment="editEquipment"
+    @update-user-role="updateUserRole"
   />
 </template>

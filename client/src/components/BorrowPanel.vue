@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, onMounted, watch } from "vue";
 import { ClipboardPlus, Trash2, Plus, Minus, ShoppingCart } from "@lucide/vue";
 
 const props = defineProps({
@@ -10,29 +10,64 @@ const props = defineProps({
   isStudent: {
     type: Boolean,
     default: false
+  },
+  userRole: {
+    type: String,
+    default: ""
   }
 });
 
 const emit = defineEmits(["borrow"]);
 
-const unitOptions = [
-  "COS20031.1",
-  "COS20007",
-  "COS30043",
-  "COS30049",
-  "INF20025",
-  "Research Project A",
-  "Open Day Event"
+const reasonOptions = [
+  "Teaching",
+  "Student Presentation",
+  "Exam/Quiz",
+  "Seminar/Workshop",
+  "Lab Session",
+  "Club Activity",
+  "Other"
 ];
 
+const classroomOptions = [
+  "ATC 625",
+  "ATC 628",
+  "BA 701",
+  "LIB DESK",
+  "MED DESK",
+  "EN402",
+  "EN403",
+  "Vovinam Room"
+];
+
+const vovinamEquipment = computed(() => {
+  return props.equipment.filter((item) => {
+    if (item.status !== "AVAILABLE" || cart.some(c => c.id === item.id)) {
+      return false;
+    }
+    return item.assetCode.startsWith("VOV-") || item.category === "Vovinam";
+  });
+});
+
 const availableEquipment = computed(() => {
-  return props.equipment.filter((item) => item.status === "AVAILABLE" && !cart.some(c => c.id === item.id));
+  return props.equipment.filter((item) => {
+    if (item.status !== "AVAILABLE" || cart.some(c => c.id === item.id)) {
+      return false;
+    }
+    const isVovinam = item.assetCode.startsWith("VOV-") || item.category === "Vovinam";
+
+    if (form.purpose === "VOVINAM") {
+      // If purpose is Vovinam Room, ONLY return Vovinam items
+      return isVovinam;
+    }
+    return !isVovinam;
+  });
 });
 
 const form = reactive({
-  program: "Bachelor of Computer Science",
+  program: "Swinburne",
   purpose: "CLASSROOM",
-  unitOrProject: "COS20031.1",
+  unitOrProject: "Teaching",
   classroom: "ATC 625",
   startDate: new Date().toISOString().slice(0, 16),
   dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16), // 3 hours from now
@@ -40,12 +75,42 @@ const form = reactive({
   handoverNotes: "Collected for classroom session"
 });
 
+onMounted(() => {
+  if (props.userRole === "EVENT_STAFF") {
+    form.purpose = "EVENT";
+    form.handoverNotes = "Collected for event support";
+  }
+});
+
+watch(() => form.purpose, (newVal) => {
+  if (newVal === "VOVINAM") {
+    form.classroom = "Vovinam Room";
+    form.unitOrProject = "Study";
+  } else if (newVal === "CLASSROOM") {
+    form.unitOrProject = "Teaching";
+  }
+});
+
+const filteredReasonOptions = computed(() => {
+  if (form.purpose === "VOVINAM") {
+    return ["Study", "Practice", "Group Work"];
+  }
+  return reasonOptions;
+});
+
 const search = ref("");
 const cart = reactive([]);
 
 const filteredAvailable = computed(() => {
-  return availableEquipment.value.filter(item => 
-    item.name.toLowerCase().includes(search.value.toLowerCase()) || 
+  return availableEquipment.value.filter(item =>
+    item.name.toLowerCase().includes(search.value.toLowerCase()) ||
+    item.assetCode.toLowerCase().includes(search.value.toLowerCase())
+  );
+});
+
+const filteredVovinam = computed(() => {
+  return vovinamEquipment.value.filter(item =>
+    item.name.toLowerCase().includes(search.value.toLowerCase()) ||
     item.assetCode.toLowerCase().includes(search.value.toLowerCase())
   );
 });
@@ -75,20 +140,20 @@ function submit() {
   // The parent handles single or array requests. Let's map cart into request objects:
   const requests = cart.map(item => ({
     equipmentId: item.id,
-    classroom: form.purpose === "CLASSROOM" ? form.classroom : null,
+    classroom: form.purpose === "CLASSROOM" || form.purpose === "VOVINAM" ? form.classroom : null,
     dueAt: new Date(form.dueAt).toISOString(),
     handoverNotes: form.handoverNotes,
-    purpose: form.purpose,
+    purpose: form.purpose === "VOVINAM" ? "CLASSROOM" : form.purpose,
     program: form.program,
-    unitOrProject: form.unitOrProject,
+    unitOrProject: form.purpose === "CLASSROOM" || form.purpose === "VOVINAM" ? form.unitOrProject : null,
     quantity: item.quantity,
-    startDate: form.purpose === "RESEARCH" ? new Date(form.startDate).toISOString() : null,
-    recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null
+    startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
+    recurrence: (form.purpose === "CLASSROOM" || form.purpose === "VOVINAM") && form.recurrence !== "NONE" ? form.recurrence : null
   }));
 
   // Emit either first request or all of them depending on parent capability
   emit("borrow", requests);
-  
+
   // Clear cart
   cart.length = 0;
 }
@@ -103,36 +168,37 @@ function submit() {
         <p>Record classroom/research borrowing request.</p>
       </div>
     </div>
-    
+
     <div class="stacked-form">
       <!-- Section 1: Details -->
       <div class="wizard-section">
-        <h3 class="section-title">1. Program & Purpose</h3>
+        <h3 class="section-title">1. University & Purpose</h3>
         <div class="form-grid">
           <label>
-            Program
+            University
             <select v-model="form.program">
-              <option value="Bachelor of Computer Science">Bachelor of Computer Science</option>
-              <option value="Bachelor of Information Technology">Bachelor of Information Technology</option>
-              <option value="Data Science Specialisation">Data Science Specialisation</option>
-              <option value="Research Program">Research Program</option>
+              <option value="Swinburne">Swinburne</option>
+              <option value="Asia">Asia</option>
+              <option value="FPT">FPT</option>
             </select>
           </label>
           <label>
             Purpose
             <select v-model="form.purpose">
               <option value="CLASSROOM">Classroom Use</option>
+              <option value="VOVINAM">Vovinam Room</option>
               <option value="LAB">Lab Session</option>
               <option value="RESEARCH">Research Project</option>
               <option value="EVENT">Event Support</option>
             </select>
           </label>
+        </div>
+        <div v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'" style="margin-top: 12px;">
           <label>
-            Unit or Project
-            <input v-model="form.unitOrProject" type="text" list="unit-options" placeholder="Type to select e.g. COS20031.1" />
-            <datalist id="unit-options">
-              <option v-for="unit in unitOptions" :key="unit" :value="unit" />
-            </datalist>
+            Reason of Use
+            <select v-model="form.unitOrProject">
+              <option v-for="r in filteredReasonOptions" :key="r" :value="r">{{ r }}</option>
+            </select>
           </label>
         </div>
       </div>
@@ -143,7 +209,7 @@ function submit() {
         <div class="search-wrap">
           <input v-model="search" type="text" placeholder="Search available items..." class="item-search-input" />
         </div>
-        
+
         <div class="available-items-list">
           <div v-for="item in filteredAvailable" :key="item.id" class="available-item-row">
             <span class="item-name">{{ item.assetCode }} - {{ item.name }}</span>
@@ -153,6 +219,22 @@ function submit() {
           </div>
           <div v-if="filteredAvailable.length === 0" class="empty-list-text">
             No matching available equipment.
+          </div>
+        </div>
+
+        <!-- Additional Vovinam Equipment section for all accounts -->
+        <div v-if="(form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM') && form.classroom === 'Vovinam Room'" class="vovinam-equipment-section">
+          <h4 class="vovinam-section-title">🥋 Đồ dùng phòng học võ (Martial Arts Equipment)</h4>
+          <div class="vovinam-items-list">
+            <div v-for="item in filteredVovinam" :key="item.id" class="vovinam-item-row">
+              <span class="vovinam-item-name">{{ item.assetCode }} - {{ item.name }}</span>
+              <button type="button" class="add-to-vov-btn" @click="addToCart(item)">
+                <Plus :size="12" /> Add
+              </button>
+            </div>
+            <div v-if="filteredVovinam.length === 0" class="empty-list-text">
+              Không có đồ dùng học võ khả dụng.
+            </div>
           </div>
         </div>
 
@@ -187,45 +269,35 @@ function submit() {
       <!-- Section 3: Schedule details -->
       <div class="wizard-section">
         <h3 class="section-title">3. Schedule & Notes</h3>
-        
-        <div v-if="form.purpose === 'CLASSROOM'" class="classroom-fields">
+
+        <div class="form-grid" style="margin-bottom: 12px;">
+          <label>
+            From
+            <input v-model="form.startDate" type="datetime-local" />
+          </label>
+          <label>
+            To
+            <input v-model="form.dueAt" type="datetime-local" />
+          </label>
+        </div>
+
+        <div v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'" class="classroom-fields">
           <div class="form-grid">
             <label>
               Classroom
-              <input v-model="form.classroom" type="text" />
+              <select v-model="form.classroom" :disabled="form.purpose === 'VOVINAM'">
+                <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
+              </select>
             </label>
             <label>
               Recurrence
               <select v-model="form.recurrence">
                 <option value="NONE">Single Session</option>
+                <option value="DAILY">Repeat Daily</option>
                 <option value="WEEKLY">Repeat Weekly (Within Semester)</option>
+                <option value="BIWEEKLY">Repeat Bi-weekly</option>
+                <option value="MONTHLY">Repeat Monthly</option>
               </select>
-            </label>
-            <label>
-              Due Time
-              <input v-model="form.dueAt" type="datetime-local" />
-            </label>
-          </div>
-        </div>
-
-        <div v-else-if="form.purpose === 'RESEARCH'" class="research-fields">
-          <div class="form-grid">
-            <label>
-              Start Date
-              <input v-model="form.startDate" type="datetime-local" />
-            </label>
-            <label>
-              Until (End Date)
-              <input v-model="form.dueAt" type="datetime-local" />
-            </label>
-          </div>
-        </div>
-
-        <div v-else class="event-fields">
-          <div class="form-grid">
-            <label>
-              Due Time
-              <input v-model="form.dueAt" type="datetime-local" />
             </label>
           </div>
         </div>
@@ -384,5 +456,61 @@ function submit() {
   border-radius: 4px;
   padding: 6px 8px;
   margin: 0 0 8px;
+}
+
+.vovinam-equipment-section {
+  margin-top: 16px;
+  background: #f0f7ff;
+  border: 1px solid #cce3f5;
+  border-radius: 6px;
+  padding: 12px;
+}
+.vovinam-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1d4ed8;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.vovinam-items-list {
+  max-height: 150px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 4px;
+}
+.vovinam-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 11.5px;
+}
+.vovinam-item-row:last-child {
+  border-bottom: 0;
+}
+.vovinam-item-name {
+  color: #334155;
+  font-weight: 500;
+}
+.add-to-vov-btn {
+  min-height: 22px;
+  padding: 0 8px;
+  font-size: 10px;
+  background: #2563eb;
+  color: white;
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.add-to-vov-btn:hover {
+  background: #1d4ed8;
 }
 </style>

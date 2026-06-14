@@ -17,6 +17,10 @@ const returnableRequests = computed(() =>
   props.requests.filter((request) => request.status === "BORROWED")
 );
 
+const selectedRequest = computed(() =>
+  returnableRequests.value.find((request) => request.id === Number(selectedRequestId.value)) ?? null
+);
+
 const form = reactive({
   returnedQuantity: 1,
   isStatusOk: true,
@@ -35,7 +39,7 @@ watch(selectedRequestId, (newVal) => {
 
 function submit() {
   if (!selectedRequestId.value) return;
-  
+
   emit("return", {
     id: Number(selectedRequestId.value),
     payload: {
@@ -81,10 +85,11 @@ function submit() {
         <div class="checklist-grid">
           <label>
             Quantity Returned:
-            <input 
-              v-model="form.returnedQuantity" 
-              type="number" 
-              min="1" 
+            <input
+              v-model="form.returnedQuantity"
+              type="number"
+              min="1"
+              :max="selectedRequest?.quantity ?? 1"
               class="qty-input"
             />
           </label>
@@ -92,15 +97,15 @@ function submit() {
           <div class="status-verify-wrap">
             <span class="verify-label">Status OK?</span>
             <div class="verify-buttons">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 :class="['verify-btn yes', { active: form.isStatusOk }]"
                 @click="form.isStatusOk = true"
               >
                 <Check :size="14" /> Yes
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 :class="['verify-btn no', { active: !form.isStatusOk }]"
                 @click="form.isStatusOk = false"
               >
@@ -114,9 +119,9 @@ function submit() {
         <div v-if="!form.isStatusOk" class="damage-report-wrap">
           <label class="danger-alert-label">
             <AlertTriangle :size="14" /> Damage/Incident Report:
-            <textarea 
-              v-model="form.damageReport" 
-              rows="3" 
+            <textarea
+              v-model="form.damageReport"
+              rows="3"
               placeholder="Describe damage, missing accessories, or issues..."
               required
             ></textarea>

@@ -3,14 +3,42 @@ import { ref, reactive, computed, watch, onMounted } from "vue";
 import { Calendar, Clock, ChevronLeft, ChevronRight } from "@lucide/vue";
 import { api } from "../api";
 
+const reasonOptions = [
+  "Teaching",
+  "Student Presentation",
+  "Exam/Quiz",
+  "Seminar/Workshop",
+  "Lab Session",
+  "Club Activity",
+  "Other"
+];
+
+const classroomOptions = [
+  "ATC 625",
+  "ATC 628",
+  "BA 701",
+  "LIB DESK",
+  "MED DESK",
+  "EN402",
+  "EN403",
+  "Vovinam Room"
+];
+
 const props = defineProps({
   equipment: {
     type: Array,
     default: () => []
+  },
+  session: {
+    type: Object,
+    required: true
   }
 });
 
 const emit = defineEmits(["borrow"]);
+
+import { makeTranslator } from "../translate";
+const t = makeTranslator(props.session?.user?.email);
 
 const selectedEquipmentId = ref(props.equipment[0]?.id ?? null);
 const selectedItem = computed(() => props.equipment.find((item) => item.id === selectedEquipmentId.value) ?? null);
@@ -21,6 +49,30 @@ const loading = ref(false);
 
 const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const slotHours = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+
+const showWorkingHoursOnly = ref(true);
+const filteredSlotHours = computed(() => {
+  if (showWorkingHoursOnly.value) {
+    return [8, 10, 12, 14, 16, 18, 20, 22];
+  }
+  return slotHours;
+});
+
+const statusFilters = reactive({
+  available: true,
+  reserved: true,
+  maintenance: true,
+  past: true
+});
+
+function filteredCellStatusClass(date, hour) {
+  const status = cellStatus(date, hour);
+  if (status === 'AVAILABLE' && !statusFilters.available) return 'hidden-status';
+  if (status === 'RESERVED' && !statusFilters.reserved) return 'hidden-status';
+  if (status === 'MAINTENANCE' && !statusFilters.maintenance) return 'hidden-status';
+  if (status === 'PAST' && !statusFilters.past) return 'hidden-status';
+  return status.toLowerCase();
+}
 
 function startOfWeek(offset) {
   const now = new Date();
@@ -111,10 +163,10 @@ function cellStatus(dayDate, hour) {
 const isModalOpen = ref(false);
 const submitting = ref(false);
 const bookingForm = reactive({
-  classroom: "EN402",
+  classroom: "ATC 625",
   purpose: "CLASSROOM",
-  program: "Bachelor of Computer Science",
-  unitOrProject: "COS20031.1",
+  program: "Swinburne",
+  unitOrProject: "Teaching",
   start: null,
   end: null,
   label: ""
@@ -129,15 +181,43 @@ function openBooking(dayDate, hour) {
   isModalOpen.value = true;
 }
 
+function handleCellClick(date, hour) {
+  if (cellStatus(date, hour) === 'AVAILABLE' && statusFilters.available) {
+    openBooking(date, hour);
+  }
+}
+
+watch(() => bookingForm.purpose, (newVal) => {
+  if (newVal === "VOVINAM") {
+    bookingForm.classroom = "Vovinam Room";
+    if (!["Study", "Practice", "Group Work"].includes(bookingForm.unitOrProject)) {
+      bookingForm.unitOrProject = "Study";
+    }
+  } else if (newVal === "CLASSROOM") {
+    if (bookingForm.classroom === "Vovinam Room") {
+      bookingForm.classroom = "ATC 625";
+    }
+    bookingForm.unitOrProject = "Teaching";
+  }
+});
+
+const filteredBookingReasonOptions = computed(() => {
+  if (bookingForm.purpose === "VOVINAM") {
+    return ["Study", "Practice", "Group Work"];
+  }
+  return reasonOptions;
+});
+
 async function confirmBooking() {
   submitting.value = true;
+  const isVov = bookingForm.purpose === "VOVINAM";
   try {
     emit("borrow", {
       equipmentId: selectedEquipmentId.value,
-      classroom: bookingForm.classroom,
-      purpose: bookingForm.purpose,
+      classroom: isVov ? "Vovinam Room" : bookingForm.classroom,
+      purpose: isVov ? "CLASSROOM" : bookingForm.purpose,
       program: bookingForm.program,
-      unitOrProject: bookingForm.unitOrProject,
+      unitOrProject: bookingForm.purpose === "CLASSROOM" || isVov ? bookingForm.unitOrProject : null,
       startDate: bookingForm.start,
       dueAt: bookingForm.end
     });
@@ -154,20 +234,51 @@ function fmtHour(hour) {
 function fmtDay(date) {
   return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
+
+function isToday(date) {
+  const today = new Date();
+  return date.getDate() === today.getDate() &&
+         date.getMonth() === today.getMonth() &&
+         date.getFullYear() === today.getFullYear();
+}
+
+function isCurrentSlot(date, hour) {
+  if (!isToday(date)) return false;
+  const currentHour = new Date().getHours();
+  return currentHour >= hour && currentHour < hour + 2;
+}
+
+const activeBookingNow = computed(() => {
+  if (!bookings.value.length) return null;
+  const now = new Date();
+  return bookings.value.find(b => {
+    const start = new Date(b.start);
+    const end = new Date(b.end);
+    return now >= start && now <= end;
+  });
+});
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
+}
 </script>
 
 <template>
   <section class="panel schedules-panel">
     <div class="panel-heading">
       <div>
-        <h2>Equipment Availability Schedule</h2>
-        <p>Live 24h × 7-day availability per item from real bookings. Click a green slot to reserve at that exact time.</p>
+        <h2>{{ t('Equipment Availability Schedule') }}</h2>
+        <p>{{ t('Live 24h × 7-day availability per item from real bookings. Click a green slot to reserve at that exact time.') }}</p>
       </div>
     </div>
 
     <div class="schedule-selector">
       <label>
-        Select Equipment:
+        {{ t('Select Equipment:') }}
         <select v-model="selectedEquipmentId" class="equipment-select">
           <option v-for="item in equipment" :key="item.id" :value="item.id">
             {{ item.assetCode }} - {{ item.name }}
@@ -176,36 +287,63 @@ function fmtDay(date) {
       </label>
 
       <div class="week-nav">
-        <button type="button" class="week-btn" @click="weekOffset--"><ChevronLeft :size="16" /></button>
+        <button type="button" class="week-btn" @click="weekOffset--">&#8249;</button>
         <span class="week-label">{{ weekLabel }}</span>
-        <button type="button" class="week-btn" @click="weekOffset++"><ChevronRight :size="16" /></button>
+        <button type="button" class="week-btn" @click="weekOffset++">&#8250;</button>
+
+        <label class="toggle-hours-label">
+          <input v-model="showWorkingHoursOnly" type="checkbox" />
+          <span>{{ t('Working Hours (08:00 - 22:00)') }}</span>
+        </label>
       </div>
 
       <div v-if="selectedItem" class="item-status-summary">
-        <span class="status-indicator">
-          Current Status:
-          <span :class="'status-chip ' + selectedItem.status.toLowerCase()">{{ selectedItem.status }}</span>
-        </span>
-        <span class="location-indicator">Location: <strong>{{ selectedItem.location }}</strong></span>
+        <div class="status-meta">
+          <span class="status-indicator">
+            {{ t('Current Status:') }}
+            <span :class="'status-chip ' + selectedItem.status.toLowerCase()">{{ t(selectedItem.status) }}</span>
+          </span>
+          <span class="location-indicator">{{ t('Location: ') }}<strong>{{ selectedItem.location }}</strong></span>
+        </div>
+        <div v-if="activeBookingNow" class="active-booking-details">
+          {{ t('Currently borrowed by ') }}<strong>{{ activeBookingNow.borrower }}</strong> ({{ t(activeBookingNow.purpose) }}){{ t(' until ') }}{{ formatDateTime(activeBookingNow.end) }}
+        </div>
       </div>
     </div>
 
     <div class="calendar-legend">
-      <div class="legend-item"><span class="legend-color available"></span> Available (Click to book)</div>
-      <div class="legend-item"><span class="legend-color reserved"></span> Reserved / Borrowed</div>
-      <div class="legend-item"><span class="legend-color maintenance"></span> Out of service</div>
-      <div class="legend-item"><span class="legend-color past"></span> Past</div>
+      <label class="legend-item filter-checkbox">
+        <input v-model="statusFilters.available" type="checkbox" />
+        <span class="legend-color available"></span>
+        <span>{{ t('Available (Click to book)') }}</span>
+      </label>
+      <label class="legend-item filter-checkbox">
+        <input v-model="statusFilters.reserved" type="checkbox" />
+        <span class="legend-color reserved"></span>
+        <span>{{ t('Reserved / Borrowed') }}</span>
+      </label>
+      <label class="legend-item filter-checkbox">
+        <input v-model="statusFilters.maintenance" type="checkbox" />
+        <span class="legend-color maintenance"></span>
+        <span>{{ t('Out of service') }}</span>
+      </label>
+      <label class="legend-item filter-checkbox">
+        <input v-model="statusFilters.past" type="checkbox" />
+        <span class="legend-color past"></span>
+        <span>{{ t('Past') }}</span>
+      </label>
     </div>
 
     <div class="grid-wrap">
       <div class="schedule-grid">
         <div class="grid-header-cell empty"></div>
-        <div v-for="(date, index) in weekDays" :key="index" class="grid-header-cell">
+        <div v-for="(date, index) in weekDays" :key="index" :class="['grid-header-cell', { today: isToday(date) }]">
           <span class="day-name">{{ dayNames[index] }}</span>
           <span class="day-date">{{ fmtDay(date) }}</span>
+          <span v-if="isToday(date)" class="today-badge">{{ t('Today') }}</span>
         </div>
 
-        <template v-for="hour in slotHours" :key="hour">
+        <template v-for="hour in filteredSlotHours" :key="hour">
           <div class="grid-time-cell">
             <Clock :size="12" />
             <span>{{ fmtHour(hour) }}</span>
@@ -213,14 +351,30 @@ function fmtDay(date) {
           <div
             v-for="(date, index) in weekDays"
             :key="index + '-' + hour"
-            :class="['schedule-cell', cellStatus(date, hour).toLowerCase(), { clickable: cellStatus(date, hour) === 'AVAILABLE' }]"
+            :class="[
+              'schedule-cell',
+              filteredCellStatusClass(date, hour),
+              {
+                clickable: cellStatus(date, hour) === 'AVAILABLE' && statusFilters.available,
+                'today-column': isToday(date),
+                'current-slot': isCurrentSlot(date, hour)
+              }
+            ]"
             :title="bookingFor(date, hour) ? `Booked by ${bookingFor(date, hour).borrower || 'user'} (${bookingFor(date, hour).purpose})` : ''"
-            @click="openBooking(date, hour)"
+            @click="handleCellClick(date, hour)"
           >
-            <span v-if="cellStatus(date, hour) === 'AVAILABLE'" class="cell-text available-text">Open</span>
-            <span v-else-if="cellStatus(date, hour) === 'RESERVED'" class="cell-text reserved-text">Booked</span>
-            <span v-else-if="cellStatus(date, hour) === 'MAINTENANCE'" class="cell-text maintenance-text">Out</span>
-            <span v-else class="cell-text past-text">—</span>
+            <span v-if="cellStatus(date, hour) === 'AVAILABLE'" class="cell-text available-text">
+              {{ statusFilters.available ? t('Open') : '' }}
+            </span>
+            <span v-else-if="cellStatus(date, hour) === 'RESERVED'" class="cell-text reserved-text">
+              {{ statusFilters.reserved ? t('Booked') : '' }}
+            </span>
+            <span v-else-if="cellStatus(date, hour) === 'MAINTENANCE'" class="cell-text maintenance-text">
+              {{ statusFilters.maintenance ? t('Out') : '' }}
+            </span>
+            <span v-else class="cell-text past-text">
+              {{ statusFilters.past ? '—' : '' }}
+            </span>
           </div>
         </template>
       </div>
@@ -229,7 +383,7 @@ function fmtDay(date) {
     <div v-if="isModalOpen" class="modal-overlay" @click.self="isModalOpen = false">
       <div class="modal-card">
         <header class="modal-header">
-          <h3>Reserve {{ selectedItem?.name }}</h3>
+          <h3>{{ t('Reserve ') }}{{ selectedItem?.name }}</h3>
           <button type="button" class="close-btn" @click="isModalOpen = false">&times;</button>
         </header>
         <form class="modal-form" @submit.prevent="confirmBooking">
@@ -238,30 +392,40 @@ function fmtDay(date) {
             <span>{{ bookingForm.label }}</span>
           </div>
           <label>
-            Classroom:
-            <input v-model="bookingForm.classroom" type="text" required placeholder="e.g. EN402" />
-          </label>
-          <label>
-            Purpose:
-            <select v-model="bookingForm.purpose">
-              <option value="CLASSROOM">Classroom Instruction</option>
-              <option value="LAB">Lab Session</option>
-              <option value="RESEARCH">Research Work</option>
-              <option value="EVENT">Swinburne Event</option>
+            {{ t('Classroom') }}:
+            <select v-model="bookingForm.classroom" :disabled="bookingForm.purpose === 'VOVINAM'">
+              <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
             </select>
           </label>
           <label>
-            Program:
-            <input v-model="bookingForm.program" type="text" placeholder="e.g. Bachelor of Computer Science" />
+            {{ t('Purpose') }}:
+            <select v-model="bookingForm.purpose">
+              <option value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
+              <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
+              <option value="LAB">{{ t('Lab Session') }}</option>
+              <option value="RESEARCH">{{ t('Research Work') }}</option>
+              <option value="EVENT">{{ t('Swinburne Event') }}</option>
+            </select>
+          </label>
+          <label v-if="bookingForm.purpose === 'CLASSROOM' || bookingForm.purpose === 'VOVINAM'">
+            {{ t('Reason of Use:') }}
+            <select v-model="bookingForm.unitOrProject">
+              <option v-for="r in filteredBookingReasonOptions" :key="r" :value="r">{{ t(r) }}</option>
+            </select>
           </label>
           <label>
-            Unit or Project Name:
-            <input v-model="bookingForm.unitOrProject" type="text" placeholder="e.g. COS30043" />
+            {{ t('University:') }}
+            <select v-model="bookingForm.program">
+              <option value="Swinburne">{{ t('Swinburne') }}</option>
+              <option value="Asia">{{ t('Asia') }}</option>
+              <option value="FPT">{{ t('FPT') }}</option>
+            </select>
           </label>
+
           <div class="modal-actions">
-            <button type="button" class="btn-cancel" @click="isModalOpen = false">Cancel</button>
+            <button type="button" class="btn-cancel" @click="isModalOpen = false">{{ t('Cancel') }}</button>
             <button type="submit" class="btn-confirm" :disabled="submitting">
-              {{ submitting ? "Reserving..." : "Confirm Reservation" }}
+              {{ submitting ? t('Reserving...') : t('Confirm Reservation') }}
             </button>
           </div>
         </form>
@@ -294,13 +458,25 @@ function fmtDay(date) {
 .week-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid #d8d8e4;
+  border: 1px solid #d1d5db;
   background: #ffffff;
   border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #4b5563;
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+  padding-bottom: 2px;
+  transition: all 0.2s ease;
+}
+.week-btn:hover {
+  background: #fafafa;
+  border-color: #5f63ff;
+  color: #5f63ff;
+  box-shadow: 0 2px 8px rgba(95, 99, 255, 0.15);
 }
 .week-label {
   font-size: 13px;
@@ -504,5 +680,93 @@ function fmtDay(date) {
 .btn-confirm:disabled {
   opacity: 0.7;
   cursor: wait;
+}
+
+.toggle-hours-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #727285;
+  margin-left: 14px;
+}
+.toggle-hours-label input {
+  cursor: pointer;
+}
+.item-status-summary {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.status-meta {
+  display: flex;
+  gap: 18px;
+}
+.active-booking-details {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c66b00;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  padding: 6px 12px;
+  border-radius: 4px;
+  width: 100%;
+}
+.grid-header-cell.today {
+  background: #e0e7ff;
+  border-bottom: 2px solid #5f63ff;
+  position: relative;
+}
+.today-badge {
+  font-size: 9px;
+  font-weight: 800;
+  background: #5f63ff;
+  color: #ffffff;
+  padding: 1px 4px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.schedule-cell.today-column {
+  background: #fdfdff;
+}
+.schedule-cell.today-column.available {
+  background: #ecfdf5;
+}
+.schedule-cell.today-column.available.clickable:hover {
+  background: #d1fae5;
+}
+.schedule-cell.current-slot {
+  box-shadow: inset 0 0 0 2px #5f63ff;
+  position: relative;
+  z-index: 1;
+}
+
+.legend-item.filter-checkbox {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+.legend-item.filter-checkbox:hover {
+  background: #f1f1f5;
+}
+.legend-item.filter-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+.schedule-cell.hidden-status {
+  background: #ffffff;
+  color: #eeeeef;
+  cursor: not-allowed;
 }
 </style>

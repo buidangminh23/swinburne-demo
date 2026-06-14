@@ -1,15 +1,43 @@
 <script setup>
-import { reactive, watch } from "vue";
+import { reactive, watch, computed } from "vue";
 import { Pencil } from "@lucide/vue";
+
+const reasonOptions = [
+  "Teaching",
+  "Student Presentation",
+  "Exam/Quiz",
+  "Seminar/Workshop",
+  "Lab Session",
+  "Club Activity",
+  "Other"
+];
+
+const classroomOptions = [
+  "ATC 625",
+  "ATC 628",
+  "BA 701",
+  "LIB DESK",
+  "MED DESK",
+  "EN402",
+  "EN403",
+  "Vovinam Room"
+];
 
 const props = defineProps({
   request: {
     type: Object,
     default: null
+  },
+  session: {
+    type: Object,
+    required: true
   }
 });
 
 const emit = defineEmits(["save", "close"]);
+
+import { makeTranslator } from "../translate";
+const t = makeTranslator(props.session?.user?.email);
 
 const form = reactive({
   purpose: "CLASSROOM",
@@ -35,10 +63,11 @@ watch(
   () => props.request,
   (request) => {
     if (!request) return;
-    form.purpose = request.purpose ?? "CLASSROOM";
+    const isVovinam = request.purpose === "CLASSROOM" && request.classroom === "Vovinam Room";
+    form.purpose = isVovinam ? "VOVINAM" : (request.purpose ?? "CLASSROOM");
     form.program = request.program ?? "";
-    form.unitOrProject = request.unitOrProject ?? "";
-    form.classroom = request.classroom ?? "";
+    form.unitOrProject = request.unitOrProject || (isVovinam ? "Study" : "Teaching");
+    form.classroom = request.classroom ?? "ATC 625";
     form.dueAt = toLocalInput(request.dueAt);
     form.startDate = toLocalInput(request.startDate);
     form.recurrence = request.recurrence ?? "NONE";
@@ -48,16 +77,38 @@ watch(
   { immediate: true }
 );
 
+watch(() => form.purpose, (newVal) => {
+  if (newVal === "VOVINAM") {
+    form.classroom = "Vovinam Room";
+    if (!["Study", "Practice", "Group Work"].includes(form.unitOrProject)) {
+      form.unitOrProject = "Study";
+    }
+  } else if (newVal === "CLASSROOM") {
+    if (form.classroom === "Vovinam Room") {
+      form.classroom = "ATC 625";
+    }
+    form.unitOrProject = "Teaching";
+  }
+});
+
+const filteredReasonOptions = computed(() => {
+  if (form.purpose === "VOVINAM") {
+    return ["Study", "Practice", "Group Work"];
+  }
+  return reasonOptions;
+});
+
 function submit() {
+  const isVov = form.purpose === "VOVINAM";
   const payload = {
-    purpose: form.purpose,
+    purpose: isVov ? "CLASSROOM" : form.purpose,
     program: form.program || null,
-    unitOrProject: form.unitOrProject || null,
-    classroom: form.classroom || null,
+    unitOrProject: form.purpose === "CLASSROOM" || isVov ? form.unitOrProject : null,
+    classroom: isVov ? "Vovinam Room" : (form.classroom || null),
     dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : undefined,
     quantity: Number(form.quantity) || 1,
-    recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null,
-    startDate: form.purpose === "RESEARCH" && form.startDate ? new Date(form.startDate).toISOString() : null,
+    recurrence: (form.purpose === "CLASSROOM" || isVov) && form.recurrence !== "NONE" ? form.recurrence : null,
+    startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
     handoverNotes: form.handoverNotes || null
   };
   emit("save", { id: props.request.id, payload });
@@ -68,57 +119,73 @@ function submit() {
   <div v-if="request" class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-card">
       <header class="modal-header">
-        <h3><Pencil :size="16" /> Edit borrowing — {{ request.equipment?.name }}</h3>
+        <h3><Pencil :size="16" /> {{ t('Modify Borrow Request') }} — {{ request.equipment?.name }}</h3>
         <button type="button" class="close-btn" @click="$emit('close')">&times;</button>
       </header>
       <form class="modal-form" @submit.prevent="submit">
         <label>
-          Purpose
+          {{ t('Purpose') }}
           <select v-model="form.purpose">
-            <option value="CLASSROOM">Classroom Use</option>
-            <option value="LAB">Lab Session</option>
-            <option value="RESEARCH">Research Project</option>
-            <option value="EVENT">Event Support</option>
+            <option value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
+            <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
+            <option value="LAB">{{ t('Lab Session') }}</option>
+            <option value="RESEARCH">{{ t('Research Work') }}</option>
+            <option value="EVENT">{{ t('Swinburne Event') }}</option>
           </select>
         </label>
         <label>
-          Program
-          <input v-model="form.program" type="text" />
+          {{ t('University:') }}
+          <select v-model="form.program">
+            <option value="Swinburne">{{ t('Swinburne') }}</option>
+            <option value="Asia">{{ t('Asia') }}</option>
+            <option value="FPT">{{ t('FPT') }}</option>
+          </select>
         </label>
-        <label>
-          Unit or Project
-          <input v-model="form.unitOrProject" type="text" />
+
+        <label v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'">
+          {{ t('Classroom') }}
+          <select v-model="form.classroom" :disabled="form.purpose === 'VOVINAM'">
+            <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
+          </select>
         </label>
-        <label v-if="form.purpose === 'CLASSROOM'">
-          Classroom
-          <input v-model="form.classroom" type="text" />
+
+        <label v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'">
+          {{ t('Reason of Use:') }}
+          <select v-model="form.unitOrProject">
+            <option v-for="r in filteredReasonOptions" :key="r" :value="r">{{ t(r) }}</option>
+          </select>
         </label>
-        <label v-if="form.purpose === 'RESEARCH'">
-          Start Date
-          <input v-model="form.startDate" type="datetime-local" />
-        </label>
-        <label>
-          Due
-          <input v-model="form.dueAt" type="datetime-local" />
-        </label>
-        <label v-if="form.purpose === 'CLASSROOM'">
-          Recurrence
+        <div class="form-row">
+          <label>
+            {{ t('From') }}
+            <input v-model="form.startDate" type="datetime-local" />
+          </label>
+          <label>
+            {{ t('To') }}
+            <input v-model="form.dueAt" type="datetime-local" />
+          </label>
+        </div>
+        <label v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'">
+          {{ t('Recurrence') }}
           <select v-model="form.recurrence">
-            <option value="NONE">Single Session</option>
-            <option value="WEEKLY">Repeat Weekly (Within Semester)</option>
+            <option value="NONE">{{ t('Single Session') }}</option>
+            <option value="DAILY">{{ t('Repeat Daily') }}</option>
+            <option value="WEEKLY">{{ t('Repeat Weekly (Within Semester)') }}</option>
+            <option value="BIWEEKLY">{{ t('Repeat Bi-weekly') }}</option>
+            <option value="MONTHLY">{{ t('Repeat Monthly') }}</option>
           </select>
         </label>
         <label>
-          Quantity
+          {{ t('Quantity') }}
           <input v-model="form.quantity" type="number" min="1" />
         </label>
         <label>
-          Handover Notes
+          {{ t('Handover Notes') }}
           <textarea v-model="form.handoverNotes" rows="2"></textarea>
         </label>
         <div class="modal-actions">
-          <button type="button" class="btn-cancel" @click="$emit('close')">Cancel</button>
-          <button type="submit" class="btn-confirm">Save changes</button>
+          <button type="button" class="btn-cancel" @click="$emit('close')">{{ t('Cancel') }}</button>
+          <button type="submit" class="btn-confirm">{{ t('Save Changes') }}</button>
         </div>
       </form>
     </div>
@@ -196,6 +263,11 @@ function submit() {
   padding: 8px 10px;
   font-size: 13px;
   outline: none;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 .modal-actions {
   display: flex;

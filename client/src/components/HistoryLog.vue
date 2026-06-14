@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch, onMounted } from "vue";
+import { reactive, watch, onMounted, computed } from "vue";
 import { Search, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight } from "@lucide/vue";
 
 const props = defineProps({
@@ -29,6 +29,13 @@ watch(filters, () => {
   emitFetch();
 }, { deep: true });
 
+watch(() => props.historyData.total, () => {
+  const pageCount = Math.ceil(props.historyData.total / filters.limit) || 1;
+  if (filters.page > pageCount) {
+    filters.page = 1;
+  }
+});
+
 function emitFetch() {
   emit("fetch", { ...filters });
 }
@@ -46,6 +53,12 @@ function nextPage() {
   }
 }
 
+function changePage(p) {
+  if (p !== "...") {
+    filters.page = p;
+  }
+}
+
 function formatDateTime(dateStr) {
   if (!dateStr) return "-";
   const date = new Date(dateStr);
@@ -59,9 +72,53 @@ function formatDateTime(dateStr) {
   return `${hours}:${minutes} ${day}/${month}/${year}`;
 }
 
-function statusClass(status) {
-  return `status-chip ${status.toLowerCase()}`;
+function getDisplayStatus(request) {
+  if (request.status === "BORROWED") {
+    const now = new Date();
+    const due = new Date(request.dueAt);
+    if (due < now) {
+      return "OVERDUE";
+    }
+    const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    if (due < limit) {
+      return "NEAR_DUE";
+    }
+  }
+  return request.status;
 }
+
+function statusClass(status) {
+  return `status-chip ${status.toLowerCase().replace('_', '-')}`;
+}
+
+const totalPages = computed(() => Math.ceil(props.historyData.total / filters.limit) || 1);
+
+const visiblePages = computed(() => {
+  const total = totalPages.value;
+  const current = filters.page;
+  const pages = [];
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+  } else {
+    pages.push(1);
+    if (current > 3) {
+      pages.push("...");
+    }
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) {
+      pages.push("...");
+    }
+    pages.push(total);
+  }
+  return pages;
+});
 
 onMounted(() => {
   if (["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(props.session.user.role)) {
@@ -69,14 +126,17 @@ onMounted(() => {
   }
   emitFetch();
 });
+
+import { makeTranslator } from "../translate";
+const t = makeTranslator(props.session?.user?.email);
 </script>
 
 <template>
   <section class="panel history-log-panel">
     <div class="panel-heading">
       <div>
-        <h2>Borrowing History Log</h2>
-        <p>Search, filter, and view past and active borrow requests.</p>
+        <h2>{{ t('Borrowing History Log') }}</h2>
+        <p>{{ t('Search, filter, and view past and active borrow requests.') }}</p>
       </div>
     </div>
 
@@ -84,10 +144,10 @@ onMounted(() => {
     <div class="filters-bar">
       <div class="filter-group search-box">
         <Search :size="16" class="filter-icon" />
-        <input 
-          v-model="filters.search" 
-          type="text" 
-          placeholder="Search items, users, classroom..." 
+        <input
+          v-model="filters.search"
+          type="text"
+          :placeholder="t('Search items, users, classroom...')"
           class="filter-input"
         />
       </div>
@@ -95,42 +155,46 @@ onMounted(() => {
       <div class="filter-group">
         <Filter :size="16" class="filter-icon" />
         <select v-model="filters.status" class="filter-select">
-          <option value="">All Statuses</option>
-          <option value="REQUESTED">Requested</option>
-          <option value="APPROVED">Approved</option>
-          <option value="BORROWED">Borrowed</option>
-          <option value="RETURNED">Returned</option>
-          <option value="CANCELLED">Cancelled</option>
+          <option value="">{{ t('All Statuses') }}</option>
+          <option value="REQUESTED">{{ t('Requested') }}</option>
+          <option value="APPROVED">{{ t('Approved') }}</option>
+          <option value="BORROWED">{{ t('Borrowed') }}</option>
+          <option value="NEAR_DUE">{{ t('Near Due Date') }}</option>
+          <option value="OVERDUE">{{ t('Overdue') }}</option>
+          <option value="RETURNED">{{ t('Returned') }}</option>
+          <option value="CANCELLED">{{ t('Cancelled') }}</option>
         </select>
       </div>
 
       <div class="filter-group">
         <select v-model="filters.purpose" class="filter-select">
-          <option value="">All Purposes</option>
-          <option value="CLASSROOM">Classroom</option>
-          <option value="LAB">Lab</option>
-          <option value="RESEARCH">Research</option>
-          <option value="EVENT">Event</option>
+          <option value="">{{ t('All Purposes') }}</option>
+          <option value="CLASSROOM">{{ t('Classroom') }}</option>
+          <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
+          <option value="LAB">{{ t('Lab') }}</option>
+          <option value="RESEARCH">{{ t('Research') }}</option>
+          <option value="EVENT">{{ t('Event') }}</option>
         </select>
       </div>
 
       <div class="filter-group">
         <select v-model="filters.sortBy" class="filter-select">
-          <option value="createdAt">Date Created</option>
-          <option value="dueAt">Due Date</option>
-          <option value="returnedAt">Returned Date</option>
+          <option value="createdAt">{{ t('Date Created') }}</option>
+          <option value="startDate">{{ t('Start Date') }}</option>
+          <option value="dueAt">{{ t('Due Date') }}</option>
+          <option value="returnedAt">{{ t('Returned Date') }}</option>
         </select>
       </div>
 
       <div class="filter-group toggle-sort">
-        <button 
-          type="button" 
+        <button
+          type="button"
           class="sort-toggle-btn"
           @click="filters.sortOrder = filters.sortOrder === 'asc' ? 'desc' : 'asc'"
         >
           <SortAsc v-if="filters.sortOrder === 'asc'" :size="16" />
           <SortDesc v-else :size="16" />
-          {{ filters.sortOrder === 'asc' ? 'Ascending' : 'Descending' }}
+          {{ filters.sortOrder === 'asc' ? t('Ascending') : t('Descending') }}
         </button>
       </div>
     </div>
@@ -140,18 +204,22 @@ onMounted(() => {
       <table>
         <thead>
           <tr>
-            <th>User</th>
-            <th>Equipment</th>
-            <th>Purpose</th>
-            <th>Classroom / Program</th>
-            <th>Borrowed At</th>
-            <th>Due At</th>
-            <th>Returned At</th>
-            <th>Status</th>
+            <th style="width: 60px;">{{ t('No.') }}</th>
+            <th>{{ t('User') }}</th>
+            <th>{{ t('Equipment') }}</th>
+            <th>{{ t('Purpose') }}</th>
+            <th>{{ t('Classroom / University') }}</th>
+            <th>{{ t('Borrowed At') }}</th>
+            <th>{{ t('Due At') }}</th>
+            <th>{{ t('Returned At') }}</th>
+            <th>{{ t('Status') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="request in historyData.data" :key="request.id">
+          <tr v-for="(request, index) in historyData.data" :key="request.id">
+            <td style="color: #727285; font-weight: 600;">
+              {{ (filters.page - 1) * filters.limit + index + 1 }}
+            </td>
             <td>
               <strong>{{ request.lecturer?.name }}</strong>
               <span class="user-sub">{{ request.lecturer?.email }}</span>
@@ -161,7 +229,7 @@ onMounted(() => {
               <span class="asset-sub">{{ request.equipment?.assetCode }}</span>
             </td>
             <td>
-              <span class="purpose-badge">{{ request.purpose }}</span>
+              <span class="purpose-badge">{{ t(request.purpose) }}</span>
             </td>
             <td>
               <span v-if="request.classroom">Room: {{ request.classroom }}</span>
@@ -171,11 +239,11 @@ onMounted(() => {
             <td>{{ formatDateTime(request.dueAt) }}</td>
             <td>{{ request.returnedAt ? formatDateTime(request.returnedAt) : "-" }}</td>
             <td>
-              <span :class="statusClass(request.status)">{{ request.status }}</span>
+              <span :class="statusClass(getDisplayStatus(request))">{{ t(getDisplayStatus(request)).replace('_', ' ') }}</span>
             </td>
           </tr>
           <tr v-if="historyData.data.length === 0">
-            <td colspan="8" class="empty-row-text">No borrow history records match filters.</td>
+            <td colspan="9" class="empty-row-text">{{ t('No borrow history records match filters.') }}</td>
           </tr>
         </tbody>
       </table>
@@ -184,25 +252,36 @@ onMounted(() => {
     <!-- Pagination Footer -->
     <div class="pagination-footer">
       <div class="pagination-info">
-        Showing {{ historyData.data.length }} of {{ historyData.total }} records
+        {{ t('Showing ') }}{{ historyData.data.length }}{{ t(' of ') }}{{ historyData.total }}{{ t(' records') }}
       </div>
       <div class="pagination-actions">
-        <button 
-          type="button" 
+        <button
+          type="button"
           class="pagination-btn"
           :disabled="filters.page <= 1"
           @click="prevPage"
         >
-          <ChevronLeft :size="16" /> Previous
+          <ChevronLeft :size="16" /> {{ t('Previous') }}
         </button>
-        <span class="page-indicator">Page {{ filters.page }} of {{ Math.ceil(historyData.total / filters.limit) || 1 }}</span>
-        <button 
-          type="button" 
+        <div class="page-numbers">
+          <button
+            v-for="(p, idx) in visiblePages"
+            :key="idx"
+            type="button"
+            :class="['page-num-btn', { active: p === filters.page, ellipsis: p === '...' }]"
+            :disabled="p === '...'"
+            @click="changePage(p)"
+          >
+            {{ p }}
+          </button>
+        </div>
+        <button
+          type="button"
           class="pagination-btn"
-          :disabled="filters.page >= Math.ceil(historyData.total / filters.limit)"
+          :disabled="filters.page >= totalPages"
           @click="nextPage"
         >
-          Next <ChevronRight :size="16" />
+          {{ t('Next') }} <ChevronRight :size="16" />
         </button>
       </div>
     </div>
@@ -313,9 +392,38 @@ onMounted(() => {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.page-indicator {
-  font-size: 13px;
-  font-weight: 600;
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.page-num-btn {
+  background: #ffffff;
+  border: 1px solid #d8d8e4;
   color: #3e3e4a;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0 6px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+.page-num-btn:hover:not(:disabled):not(.ellipsis) {
+  background: #fafafa;
+  border-color: #b5b5c9;
+}
+.page-num-btn.active {
+  background: #5f63ff;
+  border-color: #5f63ff;
+  color: #ffffff;
+}
+.page-num-btn.ellipsis {
+  border: 0;
+  background: transparent;
+  cursor: default;
 }
 </style>

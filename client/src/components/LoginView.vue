@@ -19,21 +19,24 @@ const showError = ref(false);
 const busy = ref(false);
 
 const locations = [
-  { value: "HN", label: "Swinburne Hà Nội" },
+  { value: "HN", label: "Swinburne Hanoi" },
   { value: "HO", label: "Swinburne HO" },
   { value: "HCM", label: "Swinburne HCM" },
-  { value: "DN", label: "Swinburne ĐN" },
+  { value: "DN", label: "Swinburne Da Nang" },
   { value: "CT", label: "Swinburne CT" }
 ];
 
 const accounts = [
-  { name: "Minh Bùi Đăng", email: "buidangminh23@gmail.com", isDemo: true, color: "#4e5b66" },
-  { name: "Đăng Minh Bùi", email: "buidangminh.lh@gmail.com", isDemo: true, photo: avatarDangMinh },
-  { name: "hihi", email: "hiheho911@gmail.com", isDemo: true, color: "#3f51b5" },
-  { name: "minh anh", email: "taolaminhanh1@gmail.com", isDemo: true, color: "#d84315" },
-  { name: "cặc cặc", email: "cacc80077@gmail.com", isDemo: false, color: "#00796b" },
-  { name: "Minh", email: "buidangminhcontentcreator@gmail.com", isDemo: false, color: "#c62828" },
-  { name: "Đinh Dũng", email: "dindungwork@gmail.com", isDemo: true, photo: avatarDinhDung }
+  { name: "LECTURER", email: "buidangminh23@fpt.edu.vn", isDemo: true, color: "#4e5b66" },
+  { name: "VOVINAM TEACHER", email: "vovinamteacher@fpt.edu.vn", isDemo: true, color: "#10b981" },
+  { name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", isDemo: true, photo: avatarDangMinh },
+  { name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", isDemo: true, color: "#3f51b5" },
+  { name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", isDemo: true, color: "#d84315" },
+  { name: "Test Account", email: "cacc80077@fpt.edu.vn", isDemo: false, color: "#00796b" },
+  { name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", isDemo: false, color: "#c62828" },
+  { name: "ADMIN", email: "dindungwork@fpt.edu.vn", isDemo: true, photo: avatarDinhDung },
+  { name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", isDemo: true, color: "#4338ca" },
+  { name: "STUDENT 2", email: "student2@fpt.edu.vn", isDemo: true, color: "#0891b2" }
 ];
 
 const loginError = ref("");
@@ -61,7 +64,7 @@ function handleGoogleClick() {
     showError.value = true;
     return;
   }
-  
+
   showError.value = false;
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -74,11 +77,11 @@ function handleGoogleClick() {
         callback: async (response) => {
           if (response.error) {
             busy.value = false;
-            loginError.value = "Đăng nhập Google thất bại: " + response.error;
+            loginError.value = "Google sign-in failed: " + response.error;
             step.value = "google";
             return;
           }
-          
+
           try {
             await emit("login", {
               accessToken: response.access_token
@@ -105,10 +108,10 @@ function handleGoogleClick() {
 
 async function selectAccount(account) {
   if (!account.isDemo) {
-    loginError.value = "Tài khoản này chưa được cấp quyền truy cập hệ thống Swinburne Equipment Portal.";
+    loginError.value = "This account has not been granted access to Swinburne Equipment Portal.";
     return;
   }
-  
+
   loginError.value = "";
   busy.value = true;
   try {
@@ -129,7 +132,7 @@ async function submitCustomEmail() {
       email: customEmail.value
     });
   } catch (err) {
-    loginError.value = err.message || "Đăng nhập thất bại.";
+    loginError.value = err.message || "Login failed.";
   } finally {
     busy.value = false;
   }
@@ -151,7 +154,7 @@ function getInitial(name) {
     <!-- STEP 1: CHOOSE LOCATION -->
     <section v-if="step === 'location'" class="location-card">
       <img class="logo-img" :src="swinburneLogo" alt="Swinburne Vietnam logo" />
-      
+
       <div class="dropdown-wrap" :class="{ 'has-error': showError }">
         <select v-model="selectedLocation" class="location-dropdown">
           <option value="" disabled selected>Choose location</option>
@@ -166,9 +169,9 @@ function getInitial(name) {
       </div>
       <p v-if="showError" class="facility-error-msg">You have not selected the facility</p>
 
-      <button 
-        type="button" 
-        class="google-btn-red" 
+      <button
+        type="button"
+        class="google-btn-red"
         :disabled="busy"
         @click="handleGoogleClick"
       >
@@ -192,29 +195,29 @@ function getInitial(name) {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
           </svg>
-          <span>Đăng nhập bằng Google</span>
+          <span>Sign in with Google</span>
         </div>
       </header>
 
       <div class="google-body">
         <!-- Left column -->
         <div class="google-left-col">
-          <button type="button" class="back-arrow-btn" :disabled="busy" @click="step = 'location'; selectedLocation = '';" title="Thay đổi phân hiệu">
+          <button type="button" class="back-arrow-btn" :disabled="busy" @click="step = 'location'; selectedLocation = '';" title="Change location">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
               <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
             </svg>
           </button>
-          <h1>Chọn tài khoản</h1>
-          <p>Tiếp tục tới <span class="accent-link">swin.edu.vn</span></p>
+          <h1>Choose an account</h1>
+          <p>to continue to <span class="accent-link">swin.edu.vn</span></p>
         </div>
 
         <!-- Right column -->
         <div class="google-right-col">
           <div v-if="!showCustomInput" class="accounts-list">
-            <button 
-              v-for="acc in accounts" 
-              :key="acc.email" 
-              type="button" 
+            <button
+              v-for="acc in accounts"
+              :key="acc.email"
+              type="button"
               class="account-row"
               :disabled="busy"
               @click="selectAccount(acc)"
@@ -240,7 +243,7 @@ function getInitial(name) {
                 </svg>
               </div>
               <div class="account-details">
-                <span class="account-name">Sử dụng một tài khoản khác</span>
+                <span class="account-name">Use another account</span>
               </div>
             </button>
           </div>
@@ -248,12 +251,12 @@ function getInitial(name) {
           <div v-else class="custom-email-input-wrap">
             <form class="custom-email-form" @submit.prevent="submitCustomEmail">
               <label class="custom-email-label">
-                Địa chỉ email
-                <input v-model="customEmail" type="email" placeholder="example@swin.edu.vn" required class="custom-email-input" :disabled="busy" />
+                Email address
+                <input v-model="customEmail" type="email" placeholder="username@fpt.edu.vn" required class="custom-email-input" :disabled="busy" />
               </label>
               <div class="custom-email-actions">
-                <button type="button" class="custom-email-back-btn" @click="showCustomInput = false" :disabled="busy">Quay lại</button>
-                <button type="submit" class="custom-email-submit-btn" :disabled="busy">Đăng nhập</button>
+                <button type="button" class="custom-email-back-btn" @click="showCustomInput = false" :disabled="busy">Back</button>
+                <button type="submit" class="custom-email-submit-btn" :disabled="busy">Sign In</button>
               </div>
             </form>
           </div>
@@ -262,20 +265,20 @@ function getInitial(name) {
           <p v-if="error" class="google-error-msg">{{ error }}</p>
         </div>
       </div>
-      
+
       <!-- Footer bar for the Google screen -->
       <footer class="google-footer">
         <div class="footer-content">
           <span class="language-dropdown-text">
-            Tiếng Việt
+            English
             <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" class="dropdown-caret">
               <path d="M7 10l5 5 5-5z" />
             </svg>
           </span>
           <div class="footer-links">
-            <a href="#" class="footer-link">Trợ giúp</a>
-            <a href="#" class="footer-link">Quyền riêng tư</a>
-            <a href="#" class="footer-link">Điều khoản</a>
+            <a href="#" class="footer-link">Help</a>
+            <a href="#" class="footer-link">Privacy</a>
+            <a href="#" class="footer-link">Terms</a>
           </div>
         </div>
       </footer>

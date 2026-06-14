@@ -20,6 +20,10 @@ function submit() {
   if (!form.id) {
     return;
   }
+  if (!form.conditionNotes || form.conditionNotes.trim().length < 2) {
+    alert("Please enter a condition note (at least 2 characters).");
+    return;
+  }
   emit("status", {
     ...form,
     id: Number(form.id)
@@ -57,7 +61,7 @@ function submit() {
       </label>
       <label>
         Notes
-        <textarea v-model="form.conditionNotes" rows="3"></textarea>
+        <textarea v-model="form.conditionNotes" rows="3" required minlength="2"></textarea>
       </label>
       <button type="submit">Update equipment status</button>
     </form>
