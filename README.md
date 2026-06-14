@@ -4,9 +4,10 @@ Web portal for managing classroom equipment borrowing and returns — Sprint 1 d
 
 ## Tech Stack
 
-- Frontend: Vue 3 + Vite (single-page app)
-- Data: in-browser store persisted to `localStorage` — no backend
-- Deploy: Vercel (static SPA)
+- **Frontend: Vue.js** (Vue 3 + Vite) — single-page app, runs in the browser
+- **Backend: Node.js** (Express + Prisma + MySQL) — optional, enabled with `VITE_USE_REAL_API=true` + `VITE_API_BASE`; off by default (the app then uses an in-browser `localStorage` store)
+- Build tool: Node.js (Vite/npm) — build/dev time only
+- Deploy: Vercel (static frontend; backend hosted separately)
 
 ## How It Works
 
@@ -14,9 +15,10 @@ This is a client-only SPA. All data (users, equipment, borrow requests) lives in
 `client/src/store.js` and is persisted to the browser's `localStorage`
 (keys `swin-demo-users`, `swin-demo-equipment`, `swin-demo-borrowRequests`).
 
-There is no server and no real authentication — it is a demo. `client/src/api.js`
-delegates every call to the in-browser store, so the UI behaves as if it were
-talking to a backend.
+By default there is no server — `client/src/api.js` delegates every call to the
+in-browser store, so the UI behaves as if it were talking to a backend. Setting
+`VITE_USE_REAL_API=true` (with `VITE_API_BASE`) switches `api.js` to the real
+Node.js/Express backend in `server/` instead.
 
 The store seeds default data on first load. Bumping `SEED_VERSION` in
 `client/src/store.js` clears stale `localStorage` on the next visit, so the demo
