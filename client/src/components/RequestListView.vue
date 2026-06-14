@@ -41,7 +41,7 @@ const isSupportOrAdmin = computed(() => ["SUPPORT", "ADMIN"].includes(props.sess
 function canActOn(req) {
   const role = props.session.user.role;
   if (role === "LECTURER") {
-    return req.lecturer?.role === "STUDENT";
+    return req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
   }
   return ["SUPPORT", "ADMIN"].includes(role);
 }

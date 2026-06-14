@@ -591,7 +591,7 @@ function canApproveRequest(actorId, request) {
   }
   if (actor.role === "LECTURER") {
     const requester = users.find((candidate) => candidate.id === request.lecturerId);
-    return requester?.role === "STUDENT";
+    return requester?.role === "STUDENT" && requester.lecturerId === actor.id;
   }
   return APPROVER_ROLES.includes(actor.role);
 }

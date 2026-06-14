@@ -111,7 +111,7 @@ const avatarLetter = computed(() => props.session.user.name.trim().split(/\s+/).
 const pendingRequests = computed(() => {
   const list = props.state.requests.filter(r => r.status === "REQUESTED");
   if (props.session.user.role === "LECTURER") {
-    return list.filter(r => r.lecturer?.role === "STUDENT");
+    return list.filter(r => r.lecturer?.role === "STUDENT" && r.lecturer?.lecturerId === props.session.user.id);
   }
   return list;
 });
