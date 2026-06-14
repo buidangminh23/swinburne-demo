@@ -55,11 +55,6 @@ async function staffEmails() {
 
 const itemName = (request) => request?.equipment?.name ?? "equipment";
 
-async function assertCanApprove(id) {
-  // Bypassed security for demo
-  return;
-}
-
 export const api = {
   async login(payload) {
     const email = String(payload?.email ?? "").trim();
@@ -120,7 +115,6 @@ export const api = {
     return store.sprintPlan();
   },
   async approve(id, userId) {
-    await assertCanApprove(id);
     const updated = await store.approveRequest(Number(id), userId ?? currentUser()?.id);
     pushNotification({
       to: updated.lecturer?.email,
@@ -131,7 +125,6 @@ export const api = {
     return updated;
   },
   async deny(id, userId) {
-    await assertCanApprove(id);
     const updated = await store.denyRequest(Number(id), userId ?? currentUser()?.id);
     pushNotification({
       to: updated.lecturer?.email,

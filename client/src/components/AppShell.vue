@@ -109,7 +109,11 @@ const avatarLetter = computed(() => props.session.user.name.trim().split(/\s+/).
 
 // Dashboard computed lists
 const pendingRequests = computed(() => {
-  return props.state.requests.filter(r => r.status === "REQUESTED");
+  const list = props.state.requests.filter(r => r.status === "REQUESTED");
+  if (props.session.user.role === "LECTURER") {
+    return list.filter(r => r.lecturer?.role === "STUDENT");
+  }
+  return list;
 });
 
 const overdueRequests = computed(() => {

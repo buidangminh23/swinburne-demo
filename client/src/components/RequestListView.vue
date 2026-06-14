@@ -37,7 +37,14 @@ const purposeFilter = ref("ALL");
 
 const isStudent = computed(() => props.session.user.role === "STUDENT");
 const isSupportOrAdmin = computed(() => ["SUPPORT", "ADMIN"].includes(props.session.user.role));
-const canApproveOrDeny = computed(() => ["SUPPORT", "ADMIN", "LECTURER"].includes(props.session.user.role));
+
+function canActOn(req) {
+  const role = props.session.user.role;
+  if (role === "LECTURER") {
+    return req.lecturer?.role === "STUDENT";
+  }
+  return ["SUPPORT", "ADMIN"].includes(role);
+}
 
 function getPriorityScore(req) {
   const now = new Date();
@@ -271,7 +278,7 @@ const t = makeTranslator(props.session?.user?.email);
             <td class="action-cell">
               <div class="actions-wrapper">
                  <!-- Approval Actions (Support/Admin/Lecturers) -->
-                <template v-if="req.status === 'REQUESTED' && canApproveOrDeny">
+                <template v-if="req.status === 'REQUESTED' && canActOn(req)">
                   <button 
                     class="action-btn approve" 
                     @click="emit('approve', req.id)"

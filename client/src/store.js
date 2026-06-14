@@ -582,6 +582,20 @@ function attachEquipment(request) {
   return { ...request, equipment: item, lecturer };
 }
 
+const APPROVER_ROLES = ["ADMIN", "SUPPORT", "OPERATIONS", "EVENT_STAFF"];
+
+function canApproveRequest(actorId, request) {
+  const actor = users.find((candidate) => candidate.id === actorId);
+  if (!actor) {
+    return false;
+  }
+  if (actor.role === "LECTURER") {
+    const requester = users.find((candidate) => candidate.id === request.lecturerId);
+    return requester?.role === "STUDENT";
+  }
+  return APPROVER_ROLES.includes(actor.role);
+}
+
 function nextId(rows) {
   return rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
 }
@@ -882,6 +896,11 @@ class DemoRepository {
       error.status = 404;
       throw error;
     }
+    if (!canApproveRequest(userId, request)) {
+      const error = new Error("Lecturers can only approve borrow requests submitted by students.");
+      error.status = 403;
+      throw error;
+    }
     if (request.status !== "REQUESTED") {
       const error = new Error("Only pending requests can be approved");
       error.status = 409;
@@ -911,6 +930,11 @@ class DemoRepository {
     if (!request) {
       const error = new Error("Request not found");
       error.status = 404;
+      throw error;
+    }
+    if (!canApproveRequest(userId, request)) {
+      const error = new Error("Lecturers can only deny borrow requests submitted by students.");
+      error.status = 403;
       throw error;
     }
     if (!["REQUESTED", "RESERVED", "BORROWED"].includes(request.status)) {
