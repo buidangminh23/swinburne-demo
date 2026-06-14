@@ -282,14 +282,14 @@ const activeTabDisplay = computed(() => {
             </div>
             <div class="smart-alert-list">
               <div v-for="alert in state.smartAlerts.slice(0, 6)" :key="alert.id" :class="'smart-alert ' + alert.severity">
-                <strong>{{ alert.title }}</strong>
-                <span>{{ alert.message }}</span>
+                <strong>{{ t(alert.title) }}</strong>
+                <span>{{ t(alert.message) }}</span>
               </div>
             </div>
           </div>
           <div class="dashboard-widgets-grid">
             <!-- 1. PENDING APPROVALS (Lecturer/Support/Admin only) -->
-            <div v-if="!isStudent && !isVovinamTeacher" class="dashboard-widget panel">
+            <div v-if="!isStudent" class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2>{{ t('Pending Approval Requests') }} ({{ pendingRequests.length }})</h2>
               </div>
@@ -327,7 +327,7 @@ const activeTabDisplay = computed(() => {
             </div>
 
             <!-- 2. OVERDUE RETURNS (Lecturer/Support/Admin only) -->
-            <div v-if="!isStudent && !isVovinamTeacher && overdueRequests.length > 0" class="dashboard-widget panel">
+            <div v-if="!isStudent && overdueRequests.length > 0" class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2 class="text-danger">⚠️ {{ t('Overdue Returns') }} ({{ overdueRequests.length }})</h2>
               </div>
@@ -359,7 +359,7 @@ const activeTabDisplay = computed(() => {
             </div>
 
             <!-- 3. NEAR DUE BORROWED EQUIPMENT -->
-            <div v-if="!isStudent && !isVovinamTeacher && nearDueRequests.length > 0" class="dashboard-widget panel">
+            <div v-if="!isStudent && nearDueRequests.length > 0" class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2 class="text-warning">🕒 {{ t('Near Due Borrowed Equipment') }} ({{ nearDueRequests.length }})</h2>
               </div>

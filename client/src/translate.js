@@ -262,15 +262,62 @@ const translations = {
   "Before Photo URL": "URL ảnh trước",
   "After Photo URL": "URL ảnh sau",
   "Damage/Incident Report:": "Báo cáo hư hỏng/sự cố:",
-  "Describe damage, missing accessories, or issues...": "Mô tả hư hỏng, thiếu phụ kiện hoặc sự cố..."
+  "Describe damage, missing accessories, or issues...": "Mô tả hư hỏng, thiếu phụ kiện hoặc sự cố...",
+
+  // Alerts & Equipment Names
+  "Smart Dashboard Alerts": "Cảnh báo bảng điều khiển",
+  "Overdue return": "Trả quá hạn",
+  "Return due soon": "Sắp đến hạn trả",
+  "Partial return open": "Trả lại một phần",
+  "Maintenance item": "Thiết bị bảo trì",
+  "Fully booked": "Đã đặt hết",
+  "Logitech Rally Camera Kit": "Bộ Camera Logitech Rally",
+  "Wireless Presentation Clicker": "Bút trình chiếu không dây",
+  "Portable Projector": "Máy chiếu di động",
+  "HDMI Capture Adapter": "Cáp chuyển đổi HDMI Capture",
+  "Lapel Microphone Set": "Bộ micro cài áo",
+  "Vovinam Protective Gear": "Giáp bảo hộ Vovinam",
+  "Boxing Gloves": "Găng tay đấm bốc",
+  "Vovinam Training Mat": "Thảm tập Vovinam",
+  "Martial Arts Target Pad": "Bia đỡ đòn võ thuật"
 };
 
 export function makeTranslator(email) {
   const isVovinam = email === "vovinamteacher@fpt.edu.vn";
-  return (text) => {
+  
+  const translateFn = (text) => {
     if (!isVovinam) return text;
     if (typeof text !== "string") return text;
     const clean = text.trim();
-    return translations[clean] || translations[clean.toLowerCase()] || text;
+    if (translations[clean]) return translations[clean];
+    if (translations[clean.toLowerCase()]) return translations[clean.toLowerCase()];
+
+    // Dynamic pattern matching for alerts
+    if (clean.endsWith(" is overdue.")) {
+      const item = clean.slice(0, -12);
+      return `${translateFn(item)} đã quá hạn trả.`;
+    }
+    if (clean.endsWith(" is due within 24 hours.")) {
+      const item = clean.slice(0, -24);
+      return `${translateFn(item)} cần trả trong vòng 24 giờ.`;
+    }
+    if (clean.endsWith(" needs staff attention.")) {
+      const item = clean.slice(0, -23);
+      return `${translateFn(item)} cần sự kiểm tra của nhân viên.`;
+    }
+    if (clean.endsWith(" has no free units right now.")) {
+      const item = clean.slice(0, -29);
+      return `${translateFn(item)} hiện tại đã hết thiết bị trống.`;
+    }
+    if (clean.includes(" still has ") && clean.endsWith(" unit(s) pending return.")) {
+      const parts = clean.split(" still has ");
+      const item = parts[0];
+      const qty = parts[1].replace(" unit(s) pending return.", "");
+      return `${translateFn(item)} vẫn còn ${qty} thiết bị chưa trả.`;
+    }
+
+    return text;
   };
+
+  return translateFn;
 }
