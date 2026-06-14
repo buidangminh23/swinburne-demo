@@ -24,16 +24,37 @@ const selectedRequest = computed(() =>
 const form = reactive({
   returnedQuantity: 1,
   isStatusOk: true,
-  damageReport: ""
+  damageReport: "",
+  conditionBefore: "",
+  conditionAfter: "",
+  photoBeforeUrl: "",
+  photoAfterUrl: "",
+  accessoryChecks: {}
+});
+
+const expectedAccessories = computed(() => selectedRequest.value?.equipment?.accessories ?? []);
+
+const selectedRemainingQuantity = computed(() => {
+  const req = selectedRequest.value;
+  if (!req) return 1;
+  return req.remainingQuantity ?? Math.max(1, (req.quantity ?? 1) - (req.returnedQuantity ?? 0));
 });
 
 // Watch selected request to update default returned quantity
 watch(selectedRequestId, (newVal) => {
   const req = returnableRequests.value.find(r => r.id === Number(newVal));
   if (req) {
-    form.returnedQuantity = req.quantity ?? 1;
+    form.returnedQuantity = selectedRemainingQuantity.value;
     form.isStatusOk = true;
     form.damageReport = "";
+    form.conditionBefore = req.equipment?.conditionNotes ?? "";
+    form.conditionAfter = "";
+    form.photoBeforeUrl = req.photoBeforeUrl ?? "";
+    form.photoAfterUrl = "";
+    form.accessoryChecks = {};
+    for (const accessory of req.equipment?.accessories ?? []) {
+      form.accessoryChecks[accessory] = true;
+    }
   }
 });
 
@@ -45,7 +66,13 @@ function submit() {
     payload: {
       returnedQuantity: Number(form.returnedQuantity),
       isStatusOk: form.isStatusOk,
-      damageReport: form.isStatusOk ? "" : form.damageReport
+      damageReport: form.isStatusOk ? "" : form.damageReport,
+      conditionBefore: form.conditionBefore,
+      conditionAfter: form.conditionAfter,
+      photoBeforeUrl: form.photoBeforeUrl,
+      photoAfterUrl: form.photoAfterUrl,
+      accessoriesReturned: expectedAccessories.value.filter((item) => form.accessoryChecks[item]),
+      accessoriesMissing: expectedAccessories.value.filter((item) => !form.accessoryChecks[item])
     }
   });
 
@@ -89,9 +116,10 @@ function submit() {
               v-model="form.returnedQuantity"
               type="number"
               min="1"
-              :max="selectedRequest?.quantity ?? 1"
+              :max="selectedRemainingQuantity"
               class="qty-input"
             />
+            <small class="field-hint">Remaining: {{ selectedRemainingQuantity }} / original {{ selectedRequest?.quantity ?? 1 }}</small>
           </label>
 
           <div class="status-verify-wrap">
@@ -113,6 +141,33 @@ function submit() {
               </button>
             </div>
           </div>
+        </div>
+
+        <div v-if="expectedAccessories.length" class="accessory-checklist">
+          <span class="verify-label">Accessory Checklist</span>
+          <label v-for="accessory in expectedAccessories" :key="accessory" class="accessory-row">
+            <input v-model="form.accessoryChecks[accessory]" type="checkbox" />
+            <span>{{ accessory }}</span>
+          </label>
+        </div>
+
+        <div class="condition-grid">
+          <label>
+            Condition Before
+            <textarea v-model="form.conditionBefore" rows="2" placeholder="Condition before handover..."></textarea>
+          </label>
+          <label>
+            Condition After
+            <textarea v-model="form.conditionAfter" rows="2" placeholder="Condition after return..."></textarea>
+          </label>
+          <label>
+            Before Photo URL
+            <input v-model="form.photoBeforeUrl" type="url" placeholder="https://..." />
+          </label>
+          <label>
+            After Photo URL
+            <input v-model="form.photoAfterUrl" type="url" placeholder="https://..." />
+          </label>
         </div>
 
         <!-- Damage Report Form -->
@@ -162,6 +217,12 @@ function submit() {
 .qty-input {
   width: 100%;
 }
+.field-hint {
+  color: #727285;
+  font-size: 11px;
+  margin-top: 4px;
+  display: block;
+}
 .status-verify-wrap {
   display: flex;
   flex-direction: column;
@@ -207,6 +268,37 @@ function submit() {
   border: 1px solid #fec0cb;
   border-radius: 3px;
   padding: 10px;
+}
+.accessory-checklist {
+  border: 1px solid #d8d8e4;
+  border-radius: 4px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.accessory-checklist .verify-label {
+  grid-column: 1 / -1;
+}
+.accessory-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #474753;
+}
+.condition-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.condition-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #474753;
 }
 .danger-alert-label {
   color: #b91c1c;

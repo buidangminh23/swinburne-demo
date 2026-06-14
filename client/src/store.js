@@ -1,4 +1,10 @@
 import { isProductionMode } from "./config";
+import {
+  analyzeBorrowRequest,
+  applyPartialReturnSnapshot,
+  buildEquipmentTimelines,
+  buildSmartAlerts
+} from "./demoOperations";
 
 const DAY = 24 * 60 * 60 * 1000;
 const fromNow = (ms) => new Date(Date.now() + ms).toISOString();
@@ -31,17 +37,17 @@ function isImmediateStart(startDate) {
 }
 
 const defaultUsers = [
-  { id: 1, name: "LECTURER", email: "buidangminh23@fpt.edu.vn", role: "LECTURER" },
-  { id: 2, name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT" },
-  { id: 3, name: "ADMIN", email: "dindungwork@fpt.edu.vn", role: "ADMIN" },
-  { id: 4, name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", lecturerId: 1 },
-  { id: 5, name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF" },
-  { id: 7, name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT" },
-  { id: 8, name: "VOVINAM TEACHER", email: "vovinamteacher@fpt.edu.vn", role: "LECTURER" },
-  { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER" },
-  { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER" },
-  { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS" },
-  { id: 12, name: "STUDENT 2", email: "student2@fpt.edu.vn", role: "STUDENT", lecturerId: 1 }
+  { id: 1, name: "LECTURER", email: "buidangminh23@fpt.edu.vn", role: "LECTURER", groupName: "Teaching Team", className: "COS20031" },
+  { id: 2, name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT", groupName: "IT Support", className: "Support Desk" },
+  { id: 3, name: "ADMIN", email: "dindungwork@fpt.edu.vn", role: "ADMIN", groupName: "Admin", className: "Operations" },
+  { id: 4, name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", lecturerId: 1, groupName: "Student Cohort", className: "SE Class" },
+  { id: 5, name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", groupName: "Event Team", className: "Campus Events" },
+  { id: 7, name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT", groupName: "IT Support", className: "Front Desk" },
+  { id: 8, name: "VOVINAM TEACHER", email: "vovinamteacher@fpt.edu.vn", role: "LECTURER", groupName: "Physical Education", className: "Vovinam" },
+  { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER", groupName: "Teaching Team", className: "Demo Class" },
+  { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER", groupName: "Media Team", className: "Content Lab" },
+  { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS", groupName: "Operations", className: "Asset Control" },
+  { id: 12, name: "STUDENT 2", email: "student2@fpt.edu.vn", role: "STUDENT", lecturerId: 1, groupName: "Student Cohort", className: "SE Class" }
 ];
 
 const defaultEquipment = [
@@ -53,6 +59,7 @@ const defaultEquipment = [
     location: "HN-ATC-625",
     status: "AVAILABLE",
     conditionNotes: "Ready for classroom recording",
+    accessories: ["HDMI cable", "USB-C cable", "Remote", "Tripod mount"],
     updatedAt: new Date("2026-05-27T08:30:00.000Z").toISOString()
   },
   {
@@ -63,6 +70,7 @@ const defaultEquipment = [
     location: "HN-LIB-DESK",
     status: "BORROWED",
     conditionNotes: "Borrowed for tutorial room HN-ATC-625",
+    accessories: ["USB receiver", "AAA batteries", "Carry pouch"],
     updatedAt: new Date("2026-05-27T09:10:00.000Z").toISOString()
   },
   {
@@ -73,6 +81,7 @@ const defaultEquipment = [
     location: "HN-BA-701",
     status: "MAINTENANCE",
     conditionNotes: "Lamp replacement required",
+    accessories: ["Power cable", "HDMI cable", "Remote"],
     updatedAt: new Date("2026-05-26T17:15:00.000Z").toISOString()
   },
   {
@@ -83,6 +92,7 @@ const defaultEquipment = [
     location: "HN-ATC-628",
     status: "AVAILABLE",
     conditionNotes: "Checked by support staff",
+    accessories: ["HDMI cable", "USB cable"],
     updatedAt: new Date("2026-05-27T07:45:00.000Z").toISOString()
   },
   {
@@ -93,57 +103,8 @@ const defaultEquipment = [
     location: "HN-MED-DESK",
     status: "AVAILABLE",
     conditionNotes: "Batteries replaced",
+    accessories: ["2 lapel mics", "Receiver", "Charging cable", "Carry case"],
     updatedAt: new Date("2026-05-27T10:20:00.000Z").toISOString()
-  },
-  {
-    id: 6,
-    assetCode: "VOV-GIA-006",
-    name: "Vovinam Protective Gear",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "Standard size L, good condition",
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 7,
-    assetCode: "VOV-GAN-007",
-    name: "Boxing Gloves",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "12oz, red colour",
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 8,
-    assetCode: "VOV-CON-008",
-    name: "Wooden Nunchaku",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "Linked with cord, polished",
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 9,
-    assetCode: "VOV-THA-009",
-    name: "Training Mat",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "EVA foam, blue/red reversible",
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 10,
-    assetCode: "VOV-KIE-010",
-    name: "Wooden Sword",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "Bokken type, oak wood",
-    updatedAt: new Date().toISOString()
   }
 ];
 
@@ -456,7 +417,29 @@ const defaultBorrowRequests = [
   }
 ];
 
-const SEED_VERSION = "2026-06-16";
+const SEED_VERSION = "2026-06-17-smart-ops";
+const AUDIT_KEY = "swin-demo-audit-log";
+const PREF_KEY = "swin-demo-notification-preferences";
+const REMINDER_KEY = "swin-demo-reminder-rules";
+
+const defaultNotificationPreferences = {
+  enabledTypes: [
+    "BORROW_REQUEST",
+    "REQUEST_APPROVED",
+    "REQUEST_DENIED",
+    "EQUIPMENT_CHECKED_OUT",
+    "EQUIPMENT_RETURNED",
+    "OVERDUE_REMINDER",
+    "MAINTENANCE_ALERT"
+  ],
+  channels: ["inApp"],
+  quietHours: false
+};
+
+const defaultReminderRules = [
+  { id: 1, type: "NEAR_DUE", enabled: true, offsetHours: 24 },
+  { id: 2, type: "OVERDUE", enabled: true, offsetHours: 0 }
+];
 
 (() => {
   try {
@@ -465,6 +448,9 @@ const SEED_VERSION = "2026-06-16";
       localStorage.removeItem("swin-demo-equipment");
       localStorage.removeItem("swin-demo-borrowRequests");
       localStorage.removeItem("swin-demo-notifications");
+      localStorage.removeItem(AUDIT_KEY);
+      localStorage.removeItem(PREF_KEY);
+      localStorage.removeItem(REMINDER_KEY);
       localStorage.setItem("swin-demo-seed-version", SEED_VERSION);
     }
   } catch {
@@ -493,9 +479,39 @@ const equipment = (() => {
 const borrowRequests = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-borrowRequests");
-    return saved ? JSON.parse(saved) : (isProductionMode ? [] : defaultBorrowRequests);
+    const validEquipmentIds = new Set(defaultEquipment.map((item) => item.id));
+    const seeded = defaultBorrowRequests.filter((request) => validEquipmentIds.has(request.equipmentId));
+    return saved ? JSON.parse(saved) : (isProductionMode ? [] : seeded);
   } catch {
-    return isProductionMode ? [] : defaultBorrowRequests;
+    const validEquipmentIds = new Set(defaultEquipment.map((item) => item.id));
+    return isProductionMode ? [] : defaultBorrowRequests.filter((request) => validEquipmentIds.has(request.equipmentId));
+  }
+})();
+
+const auditLog = (() => {
+  try {
+    const saved = localStorage.getItem(AUDIT_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+})();
+
+const notificationPreferences = (() => {
+  try {
+    const saved = localStorage.getItem(PREF_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+})();
+
+const reminderRules = (() => {
+  try {
+    const saved = localStorage.getItem(REMINDER_KEY);
+    return saved ? JSON.parse(saved) : defaultReminderRules;
+  } catch {
+    return defaultReminderRules;
   }
 })();
 
@@ -504,6 +520,9 @@ function persistState() {
     localStorage.setItem("swin-demo-users", JSON.stringify(users));
     localStorage.setItem("swin-demo-equipment", JSON.stringify(equipment));
     localStorage.setItem("swin-demo-borrowRequests", JSON.stringify(borrowRequests));
+    localStorage.setItem(AUDIT_KEY, JSON.stringify(auditLog));
+    localStorage.setItem(PREF_KEY, JSON.stringify(notificationPreferences));
+    localStorage.setItem(REMINDER_KEY, JSON.stringify(reminderRules));
   } catch (e) {
     console.error("Failed to persist state", e);
   }
@@ -566,6 +585,26 @@ function canApproveRequest(actorId, request) {
 
 function nextId(rows) {
   return rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
+}
+
+function recordAudit({ action, actorId = null, actorName = "", entityType, entityId, details = {} }) {
+  const actor = actorId ? users.find((candidate) => candidate.id === actorId) : null;
+  const entry = {
+    id: nextId(auditLog),
+    action,
+    actorId,
+    actorName: actor?.email ?? actor?.name ?? actorName,
+    actor,
+    entityType,
+    entityId,
+    details,
+    createdAt: new Date().toISOString()
+  };
+  auditLog.unshift(entry);
+  if (auditLog.length > 250) {
+    auditLog.length = 250;
+  }
+  return entry;
 }
 
 function parseCustody(value) {
@@ -659,7 +698,9 @@ class DemoRepository {
         id: newId,
         name: namePart.toUpperCase(),
         email: email.toLowerCase(),
-        role: role
+        role: role,
+        groupName: role === "STUDENT" ? "Student Cohort" : "Demo Users",
+        className: role === "STUDENT" ? "Unassigned Class" : "Staff"
       };
       users.push(candidate);
       persistState();
@@ -680,6 +721,7 @@ class DemoRepository {
       const availableNow = demoAvailableUnits(item.id, { start: now, end: now });
       return {
         ...item,
+        accessories: item.accessories ?? [],
         totalQuantity: item.totalQuantity ?? 1,
         availableNow: Math.max(0, availableNow),
         displayStatus: computeDisplayStatus(item, availableNow),
@@ -700,6 +742,16 @@ class DemoRepository {
       .filter((request) => request.lecturerId === userId)
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
       .map(attachEquipment);
+  }
+
+  async analyzeBorrow(input, requesterId = null) {
+    return analyzeBorrowRequest({
+      equipment,
+      users,
+      requests: borrowRequests,
+      payload: input,
+      requesterId: requesterId ?? input.lecturerId
+    });
   }
 
   async borrowEquipment(input) {
@@ -730,6 +782,7 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
+    const preflight = await this.analyzeBorrow(input, input.lecturerId);
 
     const user = users.find((candidate) => candidate.id === input.lecturerId);
     const status = "REQUESTED";
@@ -765,6 +818,19 @@ class DemoRepository {
       custodyLog: JSON.stringify(custody)
     };
     borrowRequests.push(request);
+    recordAudit({
+      action: "BORROW_REQUEST_CREATED",
+      actorId: input.lecturerId,
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: {
+        equipmentId: item.id,
+        quantity,
+        startDate: start,
+        dueAt: end,
+        duplicates: preflight.duplicates.length
+      }
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -788,32 +854,35 @@ class DemoRepository {
     }
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
 
-    const borrowedQuantity = request.quantity ?? 1;
-    const requestedReturn = Number(input.returnedQuantity ?? borrowedQuantity);
-    request.status = "RETURNED";
-    request.returnedQuantity = Math.min(
-      Math.max(0, Number.isFinite(requestedReturn) ? requestedReturn : borrowedQuantity),
-      borrowedQuantity
-    );
-    request.isStatusOk = input.isStatusOk !== false;
-    request.damageReport = input.damageReport ?? "";
-    request.returnedAt = new Date().toISOString();
-    request.updatedAt = new Date().toISOString();
+    Object.assign(request, applyPartialReturnSnapshot(request, {
+      ...input,
+      at: new Date().toISOString()
+    }));
 
-    if (item && !request.isStatusOk) {
-      item.status = "MAINTENANCE";
-      item.conditionNotes = `Returned damaged: ${request.damageReport}`;
+    if (item) {
+      if (!request.isStatusOk) {
+        item.status = "MAINTENANCE";
+        item.conditionNotes = `Returned with issue: ${request.damageReport || request.conditionAfter || "Accessory or condition issue"}`;
+      } else if (request.status === "RETURNED") {
+        item.status = "AVAILABLE";
+        item.conditionNotes = request.conditionAfter || "Returned and confirmed OK";
+      }
       item.updatedAt = new Date().toISOString();
     }
 
-    const custody = parseCustody(request.custodyLog);
-    custody.push({
-      at: request.returnedAt,
-      action: request.isStatusOk ? "RETURNED_OK" : "RETURNED_DAMAGED",
-      actor: input.actorName ?? "Staff",
-      notes: request.damageReport || ""
+    recordAudit({
+      action: request.status === "RETURNED" ? "RETURN_CONFIRMED" : "PARTIAL_RETURN_RECORDED",
+      actorId: input.actorId ?? null,
+      actorName: input.actorName ?? "Staff",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: {
+        returnedQuantity: request.returnedQuantity,
+        remainingQuantity: request.remainingQuantity,
+        receiptId: request.latestReceipt?.id,
+        accessoriesMissing: request.accessoriesMissing ?? []
+      }
     });
-    request.custodyLog = JSON.stringify(custody);
     persistState();
     return attachEquipment(request);
   }
@@ -832,6 +901,19 @@ class DemoRepository {
     }
     request.status = "BORROWED";
     request.updatedAt = new Date().toISOString();
+    request.latestReceipt = {
+      id: `RCPT-${request.id}-${Date.now()}`,
+      type: "HANDOVER",
+      requestId: request.id,
+      equipmentId: request.equipmentId,
+      lecturerId: request.lecturerId,
+      actorName: input.actorName ?? "Staff",
+      conditionBefore: input.conditionBefore ?? "",
+      photoBeforeUrl: input.photoBeforeUrl ?? "",
+      accessoriesReturned: [],
+      accessoriesMissing: [],
+      createdAt: request.updatedAt
+    };
     if (request.purpose === "EVENT") {
       const log = parseCustody(request.custodyLog);
       log.push({
@@ -842,6 +924,13 @@ class DemoRepository {
       });
       request.custodyLog = JSON.stringify(log);
     }
+    recordAudit({
+      action: "EQUIPMENT_CHECKED_OUT",
+      actorName: input.actorName ?? "Staff",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: { receiptId: request.latestReceipt.id }
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -858,6 +947,14 @@ class DemoRepository {
       item.conditionNotes = input.conditionNotes;
     }
     item.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "EQUIPMENT_STATUS_UPDATED",
+      actorId: input.actorId ?? null,
+      actorName: input.actorName ?? "",
+      entityType: "equipment",
+      entityId: item.id,
+      details: { status: item.status, conditionNotes: item.conditionNotes }
+    });
     persistState();
     return item;
   }
@@ -894,6 +991,13 @@ class DemoRepository {
     request.status = isImmediateStart(request.startDate) ? "BORROWED" : "RESERVED";
     request.approvedById = userId;
     request.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "REQUEST_APPROVED",
+      actorId: userId,
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: { status: request.status }
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -918,6 +1022,13 @@ class DemoRepository {
     request.status = "CANCELLED";
     request.deniedById = userId;
     request.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "REQUEST_DENIED",
+      actorId: userId,
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: { status: request.status }
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -939,6 +1050,14 @@ class DemoRepository {
     const newDue = input.dueAt ? new Date(input.dueAt) : new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
     request.dueAt = newDue.toISOString();
     request.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "REQUEST_EXTENDED",
+      actorId: input.actorId ?? null,
+      actorName: input.actorName ?? "",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: { dueAt: request.dueAt }
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -1046,6 +1165,14 @@ class DemoRepository {
     const data = buildEditData(input, { toDate: (value) => new Date(value).toISOString() });
     Object.assign(request, data);
     request.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "REQUEST_EDITED",
+      actorId: input.actorId ?? null,
+      actorName: input.actorName ?? "",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: data
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -1066,6 +1193,13 @@ class DemoRepository {
     });
     request.custodyLog = JSON.stringify(log);
     request.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "CUSTODY_LOGGED",
+      actorName: entry.actor ?? "Unknown",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: log.at(-1)
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -1135,8 +1269,77 @@ class DemoRepository {
       pendingRequests: borrowRequests.filter((r) => r.status === "REQUESTED").length,
       reservations: borrowRequests.filter((r) => r.status === "RESERVED").length,
       currentBorrowing: borrowRequests.filter((r) => r.status === "BORROWED").length,
+      smartAlerts: buildSmartAlerts({
+        equipment: await this.listEquipment(),
+        requests: borrowRequests.map(attachEquipment),
+        now
+      }).length,
       nextMeeting: "29/5 Sprint 1 demo"
     };
+  }
+
+  async smartAlerts() {
+    return buildSmartAlerts({
+      equipment: await this.listEquipment(),
+      requests: borrowRequests.map(attachEquipment)
+    });
+  }
+
+  async equipmentTimelines() {
+    return buildEquipmentTimelines({
+      equipment: await this.listEquipment(),
+      requests: borrowRequests.map(attachEquipment),
+      auditLog,
+      users
+    });
+  }
+
+  async listAuditLog() {
+    return auditLog.map((entry) => ({
+      ...entry,
+      actor: entry.actorId ? users.find((user) => user.id === entry.actorId) ?? entry.actor : entry.actor
+    }));
+  }
+
+  async notificationPreferences(userId) {
+    const key = String(userId ?? "default");
+    return {
+      ...defaultNotificationPreferences,
+      ...(notificationPreferences[key] ?? {})
+    };
+  }
+
+  async updateNotificationPreferences(userId, input = {}) {
+    const key = String(userId ?? "default");
+    notificationPreferences[key] = {
+      ...(notificationPreferences[key] ?? defaultNotificationPreferences),
+      ...input
+    };
+    recordAudit({
+      action: "NOTIFICATION_PREFERENCES_UPDATED",
+      actorId: userId ?? null,
+      entityType: "user",
+      entityId: userId ?? 0,
+      details: notificationPreferences[key]
+    });
+    persistState();
+    return this.notificationPreferences(userId);
+  }
+
+  async listReminderRules() {
+    return reminderRules;
+  }
+
+  async updateReminderRules(rules = []) {
+    reminderRules.splice(0, reminderRules.length, ...rules);
+    recordAudit({
+      action: "REMINDER_RULES_UPDATED",
+      entityType: "system",
+      entityId: 0,
+      details: { count: reminderRules.length }
+    });
+    persistState();
+    return reminderRules;
   }
 
   async sprintPlan() {
@@ -1150,7 +1353,7 @@ class DemoRepository {
     }));
   }
 
-  async updateUserRole(id, role, lecturerId = undefined) {
+  async updateUserRole(id, role, lecturerId = undefined, profile = {}) {
     const user = users.find((u) => u.id === id);
     if (!user) {
       const error = new Error("User not found");
@@ -1161,6 +1364,24 @@ class DemoRepository {
     if (lecturerId !== undefined) {
       user.lecturerId = lecturerId;
     }
+    if (profile.groupName !== undefined) {
+      user.groupName = profile.groupName;
+    }
+    if (profile.className !== undefined) {
+      user.className = profile.className;
+    }
+    recordAudit({
+      action: "USER_ACCESS_UPDATED",
+      actorId: profile.actorId ?? null,
+      entityType: "user",
+      entityId: user.id,
+      details: {
+        role: user.role,
+        lecturerId: user.lecturerId ?? null,
+        groupName: user.groupName ?? "",
+        className: user.className ?? ""
+      }
+    });
     persistState();
     return {
       ...user,
@@ -1178,10 +1399,17 @@ class DemoRepository {
       location: input.location,
       status: input.status ?? "AVAILABLE",
       conditionNotes: input.conditionNotes ?? "",
+      accessories: input.accessories ?? [],
       totalQuantity: input.totalQuantity ?? 1,
       updatedAt: new Date().toISOString()
     };
     equipment.push(item);
+    recordAudit({
+      action: "EQUIPMENT_CREATED",
+      entityType: "equipment",
+      entityId: item.id,
+      details: { assetCode: item.assetCode, name: item.name }
+    });
     persistState();
     return item;
   }
@@ -1198,8 +1426,15 @@ class DemoRepository {
     item.location = input.location ?? item.location;
     item.status = input.status ?? item.status;
     item.conditionNotes = input.conditionNotes !== undefined ? input.conditionNotes : item.conditionNotes;
+    item.accessories = input.accessories ?? item.accessories ?? [];
     item.totalQuantity = input.totalQuantity ?? item.totalQuantity;
     item.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "EQUIPMENT_UPDATED",
+      entityType: "equipment",
+      entityId: item.id,
+      details: { assetCode: item.assetCode, name: item.name }
+    });
     persistState();
     return item;
   }

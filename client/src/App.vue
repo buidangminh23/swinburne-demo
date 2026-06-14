@@ -16,7 +16,12 @@ const state = reactive({
   historyData: { data: [], total: 0, page: 1, limit: 10 },
   sprints: [],
   notifications: [],
-  users: []
+  users: [],
+  smartAlerts: [],
+  auditLog: [],
+  notificationPreferences: null,
+  reminderRules: [],
+  equipmentTimelines: []
 });
 
 const isLoggedIn = computed(() => Boolean(session.value?.token));
@@ -26,18 +31,29 @@ async function loadPortal() {
   state.error = "";
   try {
     const user = session.value?.user;
-    const [summary, equipment, requests, sprints, notifications] = await Promise.all([
+    await api.runAutoReminders?.().catch(() => null);
+    const [summary, equipment, requests, sprints, notifications, smartAlerts, auditLog, notificationPreferences, reminderRules, equipmentTimelines] = await Promise.all([
       api.summary(),
       api.equipment(),
       api.borrowRequests(),
       api.sprints(),
-      api.notifications().catch(() => [])
+      api.notifications().catch(() => []),
+      api.smartAlerts?.().catch(() => []),
+      api.auditLog?.().catch(() => []),
+      api.notificationPreferences?.().catch(() => null),
+      api.reminderRules?.().catch(() => []),
+      api.equipmentTimelines?.().catch(() => [])
     ]);
     state.summary = summary;
     state.equipment = equipment;
     state.requests = requests;
     state.sprints = sprints;
     state.notifications = notifications;
+    state.smartAlerts = smartAlerts;
+    state.auditLog = auditLog;
+    state.notificationPreferences = notificationPreferences;
+    state.reminderRules = reminderRules;
+    state.equipmentTimelines = equipmentTimelines;
 
     if (user?.role === "ADMIN") {
       state.users = await api.users().catch(() => []);
@@ -223,13 +239,46 @@ async function editEquipment({ id, payload }) {
   }
 }
 
-async function updateUserRole({ id, role, lecturerId }) {
+async function updateUserRole({ id, role, lecturerId, groupName, className }) {
   state.message = "";
   state.error = "";
   try {
-    await api.updateUserRole(id, role, lecturerId);
+    await api.updateUserRole(id, role, lecturerId, { groupName, className });
     await loadPortal();
     state.message = "User updated successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function updateNotificationPreferences(payload) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.updateNotificationPreferences(payload);
+    await loadPortal();
+    state.message = "Notification preferences updated.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function updateReminderRules(rules) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.updateReminderRules(rules);
+    await loadPortal();
+    state.message = "Auto reminder rules updated.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function markNotificationRead(id) {
+  try {
+    await api.markNotificationRead(id);
+    state.notifications = await api.notifications().catch(() => state.notifications);
   } catch (error) {
     state.error = error.message;
   }
@@ -275,5 +324,8 @@ onMounted(() => {
     @add-equipment="addEquipment"
     @edit-equipment="editEquipment"
     @update-user-role="updateUserRole"
+    @update-notification-preferences="updateNotificationPreferences"
+    @update-reminder-rules="updateReminderRules"
+    @mark-notification-read="markNotificationRead"
   />
 </template>

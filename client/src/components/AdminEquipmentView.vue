@@ -13,13 +13,13 @@ const isEditing = ref(false);
 const editTarget = ref(null);
 const form = reactive({
   assetCode: "", name: "", category: "", location: "",
-  status: "AVAILABLE", conditionNotes: "", totalQuantity: 1
+  status: "AVAILABLE", conditionNotes: "", totalQuantity: 1, accessoriesText: ""
 });
 
 function openAdd() {
   isEditing.value = false;
   editTarget.value = null;
-  Object.assign(form, { assetCode: "", name: "", category: "", location: "", status: "AVAILABLE", conditionNotes: "", totalQuantity: 1 });
+  Object.assign(form, { assetCode: "", name: "", category: "", location: "", status: "AVAILABLE", conditionNotes: "", totalQuantity: 1, accessoriesText: "" });
   showModal.value = true;
 }
 
@@ -33,14 +33,19 @@ function openEdit(item) {
     location: item.location,
     status: item.status,
     conditionNotes: item.conditionNotes || "",
-    totalQuantity: item.totalQuantity ?? 1
+    totalQuantity: item.totalQuantity ?? 1,
+    accessoriesText: (item.accessories ?? []).join(", ")
   });
   showModal.value = true;
 }
 
 function submitForm() {
   if (!form.assetCode || !form.name || !form.category || !form.location) return;
-  const payload = { ...form, totalQuantity: Number(form.totalQuantity) || 1 };
+  const payload = {
+    ...form,
+    totalQuantity: Number(form.totalQuantity) || 1,
+    accessories: form.accessoriesText.split(",").map((item) => item.trim()).filter(Boolean)
+  };
   if (isEditing.value) {
     emit("edit-equipment", { id: editTarget.value.id, payload });
   } else {
@@ -183,6 +188,10 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
           <label>
             Condition Notes
             <textarea v-model="form.conditionNotes" rows="2" placeholder="Optional notes about equipment condition…"></textarea>
+          </label>
+          <label>
+            Accessory Checklist <span class="hint">comma separated</span>
+            <textarea v-model="form.accessoriesText" rows="2" placeholder="HDMI cable, Remote, Carry case"></textarea>
           </label>
           <div class="form-actions">
             <button type="button" class="btn-cancel" @click="showModal = false">Cancel</button>

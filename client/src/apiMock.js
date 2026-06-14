@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { filterNotifications } from "./demoOperations";
 
 const ALLOWED_DOMAIN = "@fpt.edu.vn";
 
@@ -31,8 +32,16 @@ function persistNotifications() {
   }
 }
 
-function pushNotification({ to, type, subject, message }) {
+function pushNotification({ to, type, subject, message, meta = {} }) {
   const recipients = (Array.isArray(to) ? to : [to]).filter(Boolean);
+  const duplicate = notifications.some((notification) =>
+    notification.type === type &&
+    notification.subject === subject &&
+    JSON.stringify(notification.meta ?? {}) === JSON.stringify(meta)
+  );
+  if (duplicate) {
+    return;
+  }
   notifications.unshift({
     id: ++notifSeq,
     to: recipients,
@@ -40,6 +49,8 @@ function pushNotification({ to, type, subject, message }) {
     subject,
     message,
     channel: "logged",
+    readAt: null,
+    meta,
     createdAt: new Date().toISOString()
   });
   if (notifications.length > 100) {
@@ -97,6 +108,15 @@ export const apiMock = {
     }
     return Array.isArray(payload) ? results : results[0];
   },
+  async borrowPreflight(payload) {
+    const user = currentUser();
+    const list = Array.isArray(payload) ? payload : [payload];
+    const results = [];
+    for (const item of list) {
+      results.push(await store.analyzeBorrow({ ...item, lecturerId: user?.id }, user?.id));
+    }
+    return Array.isArray(payload) ? results : results[0];
+  },
   async confirmReturn(id, payload = {}) {
     const user = currentUser();
     const updated = await store.confirmReturn(Number(id), { ...payload, actorId: user?.id, actorName: user?.email });
@@ -109,7 +129,8 @@ export const apiMock = {
     return updated;
   },
   updateStatus(id, payload) {
-    return store.updateEquipmentStatus(Number(id), payload);
+    const user = currentUser();
+    return store.updateEquipmentStatus(Number(id), { ...payload, actorId: user?.id, actorName: user?.email });
   },
   sprints() {
     return store.sprintPlan();
@@ -135,7 +156,8 @@ export const apiMock = {
     return updated;
   },
   async extend(id, payload = {}) {
-    const updated = await store.extendRequest(Number(id), payload);
+    const user = currentUser();
+    const updated = await store.extendRequest(Number(id), { ...payload, actorId: user?.id, actorName: user?.email });
     pushNotification({
       to: updated.lecturer?.email,
       type: "BORROW_EXTENDED",
@@ -176,7 +198,8 @@ export const apiMock = {
     return store.listAllHistory(query);
   },
   editRequest(id, payload) {
-    return store.editRequest(Number(id), payload);
+    const user = currentUser();
+    return store.editRequest(Number(id), { ...payload, actorId: user?.id, actorName: user?.email });
   },
   custody(id, payload = {}) {
     const user = currentUser();
@@ -185,19 +208,68 @@ export const apiMock = {
   schedule(equipmentId) {
     return store.getEquipmentSchedule(Number(equipmentId));
   },
-  notifications(limit = 20) {
+  async runAutoReminders() {
+    const alerts = await store.smartAlerts();
+    const staff = await staffEmails();
+    for (const alert of alerts) {
+      if (alert.type === "OVERDUE" || alert.type === "NEAR_DUE") {
+        pushNotification({
+          to: staff,
+          type: alert.type === "OVERDUE" ? "OVERDUE_REMINDER" : "RETURN_DUE_SOON",
+          subject: alert.title,
+          message: alert.message,
+          meta: { alertId: alert.id, requestId: alert.requestId }
+        });
+      }
+    }
+    return { success: true };
+  },
+  async notifications(limit = 20, filters = {}) {
     const user = currentUser();
     const lower = String(user?.email ?? "").toLowerCase();
+    const preferences = await store.notificationPreferences(user?.id);
     const list = user
       ? notifications.filter((n) => n.to.some((addr) => String(addr).toLowerCase() === lower))
       : [];
-    return Promise.resolve(list.slice(0, Math.max(0, limit)));
+    return filterNotifications(list, filters, preferences).slice(0, Math.max(0, limit));
+  },
+  markNotificationRead(id) {
+    const notification = notifications.find((item) => item.id === Number(id));
+    if (notification) {
+      notification.readAt = new Date().toISOString();
+      persistNotifications();
+    }
+    return Promise.resolve(notification ?? null);
+  },
+  notificationPreferences() {
+    const user = currentUser();
+    return store.notificationPreferences(user?.id);
+  },
+  updateNotificationPreferences(payload) {
+    const user = currentUser();
+    return store.updateNotificationPreferences(user?.id, payload);
+  },
+  reminderRules() {
+    return store.listReminderRules();
+  },
+  updateReminderRules(rules) {
+    return store.updateReminderRules(rules);
+  },
+  smartAlerts() {
+    return store.smartAlerts();
+  },
+  equipmentTimelines() {
+    return store.equipmentTimelines();
+  },
+  auditLog() {
+    return store.listAuditLog();
   },
   users() {
     return store.listAllUsers();
   },
-  updateUserRole(id, role, lecturerId = null) {
-    return store.updateUserRole(Number(id), role, lecturerId);
+  updateUserRole(id, role, lecturerId = null, profile = {}) {
+    const user = currentUser();
+    return store.updateUserRole(Number(id), role, lecturerId, { ...profile, actorId: user?.id });
   },
   addEquipment(payload) {
     return store.createEquipment(payload);

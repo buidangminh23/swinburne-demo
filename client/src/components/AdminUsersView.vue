@@ -12,6 +12,9 @@ const emit = defineEmits(["update-user-role"]);
 // ── Search & Filter ─────────────────────────────────────────────
 const search = ref("");
 const filterRole = ref("ALL");
+const filterGroup = ref("ALL");
+
+const groups = computed(() => [...new Set(props.users.map((u) => u.groupName).filter(Boolean))]);
 
 const filteredUsers = computed(() => {
   let list = [...props.users];
@@ -25,19 +28,27 @@ const filteredUsers = computed(() => {
   if (filterRole.value !== "ALL") {
     list = list.filter(u => u.role === filterRole.value);
   }
+  if (filterGroup.value !== "ALL") {
+    list = list.filter(u => u.groupName === filterGroup.value);
+  }
   return list;
 });
 
 // ── Pending role & lecturer map ───────────────────────────────────
 const pendingMap = ref(new Map());
 const pendingLecturerMap = ref(new Map());
+const pendingGroupMap = ref(new Map());
+const pendingClassMap = ref(new Map());
 
 const lecturers = computed(() => {
   return props.users.filter(u => u.role === "LECTURER");
 });
 
 function hasPending(userId) {
-  return pendingMap.value.has(userId) || pendingLecturerMap.value.has(userId);
+  return pendingMap.value.has(userId) ||
+    pendingLecturerMap.value.has(userId) ||
+    pendingGroupMap.value.has(userId) ||
+    pendingClassMap.value.has(userId);
 }
 
 function getPending(userId, fallback) {
@@ -46,6 +57,14 @@ function getPending(userId, fallback) {
 
 function getPendingLecturer(userId, fallback) {
   return pendingLecturerMap.value.has(userId) ? pendingLecturerMap.value.get(userId) : fallback;
+}
+
+function getPendingGroup(userId, fallback) {
+  return pendingGroupMap.value.has(userId) ? pendingGroupMap.value.get(userId) : fallback;
+}
+
+function getPendingClass(userId, fallback) {
+  return pendingClassMap.value.has(userId) ? pendingClassMap.value.get(userId) : fallback;
 }
 
 function stageRole(user, event) {
@@ -70,6 +89,28 @@ function stageLecturer(user, event) {
   pendingLecturerMap.value = next;
 }
 
+function stageGroup(user, event) {
+  const val = event.target.value;
+  const next = new Map(pendingGroupMap.value);
+  if (val === (user.groupName ?? "")) {
+    next.delete(user.id);
+  } else {
+    next.set(user.id, val);
+  }
+  pendingGroupMap.value = next;
+}
+
+function stageClass(user, event) {
+  const val = event.target.value;
+  const next = new Map(pendingClassMap.value);
+  if (val === (user.className ?? "")) {
+    next.delete(user.id);
+  } else {
+    next.set(user.id, val);
+  }
+  pendingClassMap.value = next;
+}
+
 function applyRole(user) {
   if (user.id === props.currentUser?.id) {
     alert("You cannot change your own role!");
@@ -78,8 +119,10 @@ function applyRole(user) {
   }
   const newRole = pendingMap.value.get(user.id) || user.role;
   const newLecturerId = pendingLecturerMap.value.has(user.id) ? pendingLecturerMap.value.get(user.id) : user.lecturerId;
+  const groupName = getPendingGroup(user.id, user.groupName ?? "");
+  const className = getPendingClass(user.id, user.className ?? "");
 
-  emit("update-user-role", { id: user.id, role: newRole, lecturerId: newLecturerId });
+  emit("update-user-role", { id: user.id, role: newRole, lecturerId: newLecturerId, groupName, className });
 
   const next = new Map(pendingMap.value);
   next.delete(user.id);
@@ -88,6 +131,14 @@ function applyRole(user) {
   const nextLec = new Map(pendingLecturerMap.value);
   nextLec.delete(user.id);
   pendingLecturerMap.value = nextLec;
+
+  const nextGroup = new Map(pendingGroupMap.value);
+  nextGroup.delete(user.id);
+  pendingGroupMap.value = nextGroup;
+
+  const nextClass = new Map(pendingClassMap.value);
+  nextClass.delete(user.id);
+  pendingClassMap.value = nextClass;
 }
 
 function cancelRole(user) {
@@ -98,6 +149,14 @@ function cancelRole(user) {
   const nextLec = new Map(pendingLecturerMap.value);
   nextLec.delete(user.id);
   pendingLecturerMap.value = nextLec;
+
+  const nextGroup = new Map(pendingGroupMap.value);
+  nextGroup.delete(user.id);
+  pendingGroupMap.value = nextGroup;
+
+  const nextClass = new Map(pendingClassMap.value);
+  nextClass.delete(user.id);
+  pendingClassMap.value = nextClass;
 }
 
 // ── Lookup tables ───────────────────────────────────────────────
@@ -140,6 +199,10 @@ const roleIcons = {
           <option value="ALL">All Roles</option>
           <option v-for="(label, role) in roleLabels" :key="role" :value="role">{{ label }}</option>
         </select>
+        <select v-model="filterGroup" class="filter-sel">
+          <option value="ALL">All Groups</option>
+          <option v-for="group in groups" :key="group" :value="group">{{ group }}</option>
+        </select>
       </div>
     </div>
 
@@ -152,6 +215,7 @@ const roleIcons = {
               <th>User Details</th>
               <th>Email Address</th>
               <th>Current Role</th>
+              <th>Group / Class</th>
               <th>Managing Lecturer</th>
               <th class="actions-head">Change Permission</th>
             </tr>
@@ -184,6 +248,22 @@ const roleIcons = {
                   <component :is="roleIcons[user.role]" :size="12" />
                   {{ roleLabels[user.role] || user.role }}
                 </span>
+              </td>
+              <td>
+                <div class="group-class-cell">
+                  <input
+                    :value="getPendingGroup(user.id, user.groupName ?? '')"
+                    :class="{ 'role-select--dirty': pendingGroupMap.has(user.id) }"
+                    placeholder="Group"
+                    @input="stageGroup(user, $event)"
+                  />
+                  <input
+                    :value="getPendingClass(user.id, user.className ?? '')"
+                    :class="{ 'role-select--dirty': pendingClassMap.has(user.id) }"
+                    placeholder="Class"
+                    @input="stageClass(user, $event)"
+                  />
+                </div>
               </td>
               <td>
                 <div v-if="user.role === 'STUDENT'" class="lecturer-select-wrap">
@@ -234,7 +314,7 @@ const roleIcons = {
               </td>
             </tr>
             <tr v-if="filteredUsers.length === 0">
-              <td colspan="5" class="empty-cell">No users found matching your filters.</td>
+              <td colspan="6" class="empty-cell">No users found matching your filters.</td>
             </tr>
           </tbody>
         </table>
@@ -278,6 +358,20 @@ const roleIcons = {
 .role-badge.student { background: #f3f4f6; color: #374151; }
 .role-badge.event_staff { background: #fdf2f8; color: #be185d; }
 .role-badge.operations { background: #fff7ed; color: #c2410c; }
+
+.group-class-cell {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.group-class-cell input {
+  min-height: 28px;
+  border: 1px solid #d8d8e4;
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: #3e3e4a;
+}
 
 .actions-cell { min-width: 220px; }
 .role-edit-group { display: flex; align-items: center; gap: 6px; }

@@ -1,12 +1,14 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import {
+  AlertTriangle,
   Bell,
   Boxes,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ClipboardList,
+  Clock3,
   History,
   Home,
   Pencil,
@@ -30,6 +32,9 @@ import RequestListView from "./RequestListView.vue";
 import AdminEquipmentView from "./AdminEquipmentView.vue";
 import AdminUsersView from "./AdminUsersView.vue";
 import ProfileView from "./ProfileView.vue";
+import EquipmentTimelineView from "./EquipmentTimelineView.vue";
+import NotificationCenterView from "./NotificationCenterView.vue";
+import AuditLogView from "./AuditLogView.vue";
 
 const props = defineProps({
   session: {
@@ -44,7 +49,8 @@ const props = defineProps({
 
 const emit = defineEmits([
   "logout", "borrow", "return", "status", "approve", "deny", "extend", "edit",
-  "custody", "remind", "check-out", "fetch-history", "add-equipment", "edit-equipment", "update-user-role"
+  "custody", "remind", "check-out", "fetch-history", "add-equipment", "edit-equipment", "update-user-role",
+  "update-notification-preferences", "update-reminder-rules", "mark-notification-read"
 ]);
 
 const profileOpen = ref(false);
@@ -86,12 +92,13 @@ function confirmDeny(id) {
   }
 }
 
-const isStudent = computed(() => ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(props.session.user.role));
+const isStudent = computed(() => props.session.user.role === "STUDENT");
 const isAdmin = computed(() => props.session.user.role === "ADMIN");
-const isSupport = computed(() => false);
+const isSupport = computed(() => props.session.user.role === "SUPPORT");
 const isLecturer = computed(() => props.session.user.role === "LECTURER");
-const isEventStaff = computed(() => false);
+const isEventStaff = computed(() => props.session.user.role === "EVENT_STAFF");
 const isOperations = computed(() => props.session.user.role === "OPERATIONS");
+const isStaff = computed(() => ["ADMIN", "SUPPORT", "OPERATIONS", "LECTURER", "EVENT_STAFF"].includes(props.session.user.role));
 const displayEmail = computed(() => props.session.user.email);
 const displayName = computed(() => props.session.user.name);
 
@@ -173,6 +180,9 @@ const activeTabDisplay = computed(() => {
   if (activeTab.value === 'borrow') return t('Borrow Equipment');
   if (activeTab.value === 'history') return t('History Log');
   if (activeTab.value === 'schedules') return t('Schedules');
+  if (activeTab.value === 'timeline') return 'Equipment Timeline';
+  if (activeTab.value === 'notifications') return 'Notification Center';
+  if (activeTab.value === 'audit-log') return 'Audit Log';
   if (activeTab.value === 'faq') return t('FAQ');
   if (activeTab.value === 'profile') return t('My Profile');
   return activeTab.value;
@@ -198,6 +208,9 @@ const activeTabDisplay = computed(() => {
         <a v-if="!isAdmin && session.user.email !== 'vovinamteacher@fpt.edu.vn'" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="activeTab = 'borrow'"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="activeTab = 'history'"><History :size="18" /> {{ t('History Log') }}</a>
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="activeTab = 'schedules'"><CalendarDays :size="18" /> {{ t('Schedules') }}</a>
+        <a v-if="isStaff" :class="{ active: activeTab === 'timeline' }" href="#" @click.prevent="activeTab = 'timeline'"><Clock3 :size="18" /> Equipment Timeline</a>
+        <a :class="{ active: activeTab === 'notifications' }" href="#" @click.prevent="activeTab = 'notifications'"><Bell :size="18" /> Notification Center</a>
+        <a v-if="isStaff" :class="{ active: activeTab === 'audit-log' }" href="#" @click.prevent="activeTab = 'audit-log'"><ScrollText :size="18" /> Audit Log</a>
         <a v-if="isSupport || isAdmin || isOperations" :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> Confirm Return</a>
         <a v-if="isAdmin || isSupport || isLecturer || isOperations" :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> Update Status</a>
         <a :class="{ active: activeTab === 'faq' }" href="#" @click.prevent="activeTab = 'faq'"><HelpCircle :size="18" /> {{ t('FAQ') }}</a>
@@ -259,6 +272,19 @@ const activeTabDisplay = computed(() => {
 
         <!-- Render depending on activeTab -->
         <template v-if="activeTab === 'dashboard'">
+          <div v-if="state.smartAlerts?.length" class="smart-alert-strip panel">
+            <div class="smart-alert-head">
+              <AlertTriangle :size="18" />
+              <strong>Smart Dashboard Alerts</strong>
+              <span>{{ state.smartAlerts.length }}</span>
+            </div>
+            <div class="smart-alert-list">
+              <div v-for="alert in state.smartAlerts.slice(0, 6)" :key="alert.id" :class="'smart-alert ' + alert.severity">
+                <strong>{{ alert.title }}</strong>
+                <span>{{ alert.message }}</span>
+              </div>
+            </div>
+          </div>
           <div class="dashboard-widgets-grid">
             <!-- 1. PENDING APPROVALS (Lecturer/Support/Admin only) -->
             <div v-if="!isStudent" class="dashboard-widget panel">
@@ -438,7 +464,7 @@ const activeTabDisplay = computed(() => {
         </template>
 
         <template v-else-if="activeTab === 'borrow'">
-          <BorrowPanel :equipment="state.equipment" :is-student="isStudent" :user-role="session.user.role" :session="session" @borrow="$emit('borrow', $event)" />
+          <BorrowPanel :equipment="state.equipment" :requests="state.requests" :is-student="isStudent" :user-role="session.user.role" :session="session" @borrow="$emit('borrow', $event)" />
         </template>
 
         <template v-else-if="activeTab === 'returns' && (isSupport || isAdmin || isOperations)">
@@ -451,6 +477,25 @@ const activeTabDisplay = computed(() => {
 
         <template v-else-if="activeTab === 'schedules'">
           <SchedulesView :equipment="state.equipment" :session="session" @borrow="$emit('borrow', $event)" />
+        </template>
+
+        <template v-else-if="activeTab === 'timeline' && isStaff">
+          <EquipmentTimelineView :timelines="state.equipmentTimelines" />
+        </template>
+
+        <template v-else-if="activeTab === 'notifications'">
+          <NotificationCenterView
+            :notifications="state.notifications"
+            :preferences="state.notificationPreferences"
+            :reminder-rules="state.reminderRules"
+            @update-preferences="$emit('update-notification-preferences', $event)"
+            @update-rules="$emit('update-reminder-rules', $event)"
+            @mark-read="$emit('mark-notification-read', $event)"
+          />
+        </template>
+
+        <template v-else-if="activeTab === 'audit-log' && isStaff">
+          <AuditLogView :entries="state.auditLog" />
         </template>
 
         <template v-else-if="activeTab === 'status'">
@@ -529,6 +574,52 @@ const activeTabDisplay = computed(() => {
 </template>
 
 <style scoped>
+.smart-alert-strip {
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 3px solid #f59e0b;
+}
+.smart-alert-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #3e3e4a;
+}
+.smart-alert-head span {
+  margin-left: auto;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+.smart-alert-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+.smart-alert {
+  border: 1px solid #ececf3;
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #fff;
+}
+.smart-alert.critical { border-color: #fec0cb; background: #fff1f2; }
+.smart-alert.warning { border-color: #fed7aa; background: #fff7ed; }
+.smart-alert.info { border-color: #bfdbfe; background: #eff6ff; }
+.smart-alert strong { font-size: 12.5px; color: #2d2d3a; }
+.smart-alert span { font-size: 12px; color: #5d5d6f; }
 .dashboard-widgets-grid {
   display: grid;
   grid-template-columns: 1fr;

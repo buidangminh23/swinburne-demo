@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, onMounted, watch } from "vue";
 import { ClipboardPlus, Trash2, Plus, Minus, ShoppingCart } from "@lucide/vue";
+import { analyzeBorrowRequest } from "../demoOperations";
 
 const props = defineProps({
   equipment: {
@@ -14,6 +15,14 @@ const props = defineProps({
   userRole: {
     type: String,
     default: ""
+  },
+  requests: {
+    type: Array,
+    default: () => []
+  },
+  session: {
+    type: Object,
+    default: null
   }
 });
 
@@ -101,6 +110,23 @@ const filteredReasonOptions = computed(() => {
 const search = ref("");
 const cart = reactive([]);
 
+const preflightResults = computed(() => {
+  return cart.map((item) => analyzeBorrowRequest({
+    equipment: props.equipment,
+    requests: props.requests,
+    payload: {
+      equipmentId: item.id,
+      lecturerId: props.session?.user?.id,
+      startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
+      dueAt: new Date(form.dueAt).toISOString(),
+      quantity: item.quantity
+    },
+    requesterId: props.session?.user?.id
+  }));
+});
+
+const hasBlockingConflict = computed(() => preflightResults.value.some((result) => !result.canSubmit));
+
 const filteredAvailable = computed(() => {
   return availableEquipment.value.filter(item =>
     item.name.toLowerCase().includes(search.value.toLowerCase()) ||
@@ -133,6 +159,10 @@ function adjustQty(item, amount) {
 function submit() {
   if (cart.length === 0) {
     alert("Please add at least one item to borrow.");
+    return;
+  }
+  if (hasBlockingConflict.value) {
+    alert("Resolve schedule conflicts before submitting this borrow request.");
     return;
   }
 
@@ -313,7 +343,29 @@ function submit() {
         </div>
       </div>
 
-      <button type="button" class="submit-wizard-btn" :disabled="cart.length === 0" @click="submit">
+      <div v-if="preflightResults.length > 0" class="preflight-panel">
+        <h3 class="section-title">Smart Duplicate & Conflict Check</h3>
+        <div v-for="(result, index) in preflightResults" :key="cart[index]?.id" :class="['preflight-card', { blocked: !result.canSubmit }]">
+          <strong>{{ cart[index]?.assetCode }} - {{ cart[index]?.name }}</strong>
+          <span v-if="result.canSubmit" class="preflight-ok">Available for selected time.</span>
+          <span v-for="message in result.messages" :key="message" class="preflight-message">{{ message }}</span>
+          <span v-if="result.duplicates.length" class="preflight-warning">Possible duplicate request from this lecturer.</span>
+          <div v-if="result.replacements.length" class="replacement-list">
+            <span>Replacement suggestion:</span>
+            <button
+              v-for="replacement in result.replacements.slice(0, 3)"
+              :key="replacement.id"
+              type="button"
+              class="replacement-chip"
+              @click="addToCart(replacement)"
+            >
+              {{ replacement.assetCode }} · {{ replacement.availableUnits }} free
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="submit-wizard-btn" :disabled="cart.length === 0 || hasBlockingConflict" @click="submit">
         {{ isStudent ? "Submit Request" : "Submit Borrow Request" }}
       </button>
     </div>
@@ -378,6 +430,54 @@ function submit() {
   border: 1px solid #dcd8fc;
   border-radius: 3px;
   padding: 10px;
+}
+.preflight-panel {
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.preflight-card {
+  background: #fff;
+  border: 1px solid #ececf3;
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+}
+.preflight-card.blocked {
+  border-color: #fec0cb;
+  background: #fff1f2;
+}
+.preflight-ok {
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+}
+.preflight-message,
+.preflight-warning {
+  color: #b91c1c;
+  font-size: 12px;
+}
+.replacement-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.replacement-chip {
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  font-size: 11px;
 }
 .cart-header {
   display: flex;
