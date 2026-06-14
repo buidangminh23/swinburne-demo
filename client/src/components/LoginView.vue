@@ -35,7 +35,6 @@ const accounts = [
   { name: "Test Account", email: "cacc80077@fpt.edu.vn", isDemo: false, color: "#00796b" },
   { name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", isDemo: false, color: "#c62828" },
   { name: "ADMIN", email: "dindungwork@fpt.edu.vn", isDemo: true, photo: avatarDinhDung },
-  { name: "LECTURER", email: "linhnt89@fpt.edu.vn", isDemo: true, color: "#0f766e" },
   { name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", isDemo: true, color: "#4338ca" },
   { name: "STUDENT 2", email: "student2@fpt.edu.vn", isDemo: true, color: "#0891b2" }
 ];

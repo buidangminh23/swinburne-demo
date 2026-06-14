@@ -34,13 +34,12 @@ const defaultUsers = [
   { id: 3, name: "ADMIN", email: "dindungwork@fpt.edu.vn", role: "ADMIN" },
   { id: 4, name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", lecturerId: 1 },
   { id: 5, name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF" },
-  { id: 6, name: "LECTURER", email: "linhnt89@fpt.edu.vn", role: "LECTURER" },
   { id: 7, name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT" },
   { id: 8, name: "VOVINAM TEACHER", email: "vovinamteacher@fpt.edu.vn", role: "LECTURER" },
   { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER" },
   { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER" },
   { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS" },
-  { id: 12, name: "STUDENT 2", email: "student2@fpt.edu.vn", role: "STUDENT", lecturerId: 6 }
+  { id: 12, name: "STUDENT 2", email: "student2@fpt.edu.vn", role: "STUDENT", lecturerId: 1 }
 ];
 
 const defaultEquipment = [
@@ -170,23 +169,6 @@ const defaultBorrowRequests = [
     unitOrProject: "Teaching",
     quantity: 1
   },
-  {
-    id: 2,
-    equipmentId: 1,
-    lecturerId: 6,
-    classroom: "ATC 625",
-    startDate: relativeDate(1, 10),
-    dueAt: relativeDate(1, 12),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Scheduled for guest seminar",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "Bachelor of Computer Science",
-    unitOrProject: "Seminar",
-    quantity: 1
-  },
   // Equipment 2: Wireless Presentation Clicker
   {
     id: 3,
@@ -203,23 +185,6 @@ const defaultBorrowRequests = [
     purpose: "CLASSROOM",
     program: "Bachelor of Computer Science",
     unitOrProject: "COS20031.1",
-    quantity: 1
-  },
-  {
-    id: 4,
-    equipmentId: 2,
-    lecturerId: 6,
-    classroom: "BA 701",
-    startDate: relativeDate(2, 14),
-    dueAt: relativeDate(2, 16),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Requested for weekly presentation",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "Bachelor of Computer Science",
-    unitOrProject: "Student Presentation",
     quantity: 1
   },
   // Equipment 4: HDMI Capture Adapter
@@ -437,23 +402,6 @@ const defaultBorrowRequests = [
     quantity: 3
   },
   {
-    id: 17,
-    equipmentId: 2,
-    lecturerId: 6,
-    classroom: "BA 701",
-    startDate: relativeDate(2, 9),
-    dueAt: relativeDate(2, 11),
-    returnedAt: null,
-    status: "REQUESTED",
-    handoverNotes: "Clicker for student presentation session",
-    createdAt: relativeDate(0, -3),
-    updatedAt: relativeDate(0, -3),
-    purpose: "CLASSROOM",
-    program: "Bachelor of Computer Science",
-    unitOrProject: "COS20031.1",
-    quantity: 1
-  },
-  {
     id: 18,
     equipmentId: 4,
     lecturerId: 10,
@@ -506,7 +454,7 @@ const defaultBorrowRequests = [
   }
 ];
 
-const SEED_VERSION = "2026-06-15";
+const SEED_VERSION = "2026-06-16";
 
 (() => {
   try {
