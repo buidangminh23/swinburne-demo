@@ -99,7 +99,7 @@ export const api = {
   },
   async confirmReturn(id, payload = {}) {
     const user = currentUser();
-    const updated = await store.confirmReturn(Number(id), { ...payload, actorName: user?.email });
+    const updated = await store.confirmReturn(Number(id), { ...payload, actorId: user?.id, actorName: user?.email });
     pushNotification({
       to: updated.lecturer?.email,
       type: "EQUIPMENT_RETURNED",

@@ -779,6 +779,11 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
+    if (input.actorId != null && input.actorId === request.lecturerId) {
+      const error = new Error("A different staff member must confirm this return (separation of duties).");
+      error.status = 403;
+      throw error;
+    }
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
 
     const borrowedQuantity = request.quantity ?? 1;

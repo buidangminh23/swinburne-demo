@@ -390,7 +390,7 @@ const activeTabDisplay = computed(() => {
                       </td>
                       <td class="action-cell">
                         <button class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> {{ t('Edit') }}</button>
-                        <button v-if="req.status === 'BORROWED'" class="widget-btn return-btn" @click="activeTab = 'returns'">{{ t('Return') }}</button>
+                        <button v-if="req.status === 'BORROWED' && (isSupport || isAdmin || isOperations)" class="widget-btn return-btn" @click="activeTab = 'returns'">{{ t('Return') }}</button>
                         <button v-if="req.status === 'RESERVED' && !isStudent" class="widget-btn approve-btn" @click="$emit('check-out', req.id)">{{ t('Check Out') }}</button>
                         <button v-if="req.status === 'BORROWED' && req.purpose === 'RESEARCH'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
                         <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> {{ t('Custody') }}</button>
@@ -441,7 +441,7 @@ const activeTabDisplay = computed(() => {
           <BorrowPanel :equipment="state.equipment" :is-student="isStudent" :user-role="session.user.role" :session="session" @borrow="$emit('borrow', $event)" />
         </template>
         
-        <template v-else-if="activeTab === 'returns'">
+        <template v-else-if="activeTab === 'returns' && (isSupport || isAdmin || isOperations)">
           <ReturnPanel :requests="state.requests" @return="$emit('return', $event)" />
         </template>
         
