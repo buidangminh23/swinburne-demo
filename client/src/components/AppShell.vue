@@ -490,10 +490,21 @@ const activeTabDisplay = computed(() => {
           />
         </template>
 
-        <template v-else-if="activeTab === 'audit-log' && isStaff">
+        <template v-else-if="activeTab === 'admin-equipment'">
+          <AdminEquipmentView
+            :equipment="state.equipment"
+            @add-equipment="$emit('add-equipment', $event)"
             @edit-equipment="$emit('edit-equipment', $event)"
             @status="$emit('status', $event)"
           />
+        </template>
+
+        <template v-else-if="activeTab === 'status'">
+          <StatusPanel :equipment="state.equipment" :session="session" @status="$emit('status', $event)" />
+        </template>
+
+        <template v-else-if="activeTab === 'audit-log' && isStaff">
+          <AuditLogView :entries="state.auditLog" :session="session" />
         </template>
 
         <template v-else-if="activeTab === 'admin-users'">
