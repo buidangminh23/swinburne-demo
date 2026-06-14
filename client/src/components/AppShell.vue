@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronLeft,
   ClipboardList,
-  Clock3,
   History,
   Home,
   Pencil,
@@ -32,7 +31,6 @@ import RequestListView from "./RequestListView.vue";
 import AdminEquipmentView from "./AdminEquipmentView.vue";
 import AdminUsersView from "./AdminUsersView.vue";
 import ProfileView from "./ProfileView.vue";
-import EquipmentTimelineView from "./EquipmentTimelineView.vue";
 import NotificationCenterView from "./NotificationCenterView.vue";
 import AuditLogView from "./AuditLogView.vue";
 
@@ -180,7 +178,6 @@ const activeTabDisplay = computed(() => {
   if (activeTab.value === 'borrow') return t('Borrow Equipment');
   if (activeTab.value === 'history') return t('History Log');
   if (activeTab.value === 'schedules') return t('Schedules');
-  if (activeTab.value === 'timeline') return t('Equipment Timeline');
   if (activeTab.value === 'notifications') return t('Notification Center');
   if (activeTab.value === 'audit-log') return t('Audit Log');
   if (activeTab.value === 'returns') return t('Confirm Return');
@@ -210,7 +207,6 @@ const activeTabDisplay = computed(() => {
         <a v-if="!isAdmin && !isSupport && !isOperations" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="activeTab = 'borrow'"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="activeTab = 'history'"><History :size="18" /> {{ t('History Log') }}</a>
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="activeTab = 'schedules'"><CalendarDays :size="18" /> {{ t('Schedules') }}</a>
-        <a v-if="isStaff" :class="{ active: activeTab === 'timeline' }" href="#" @click.prevent="activeTab = 'timeline'"><Clock3 :size="18" /> {{ t('Equipment Timeline') }}</a>
         <a :class="{ active: activeTab === 'notifications' }" href="#" @click.prevent="activeTab = 'notifications'"><Bell :size="18" /> {{ t('Notification Center') }}</a>
         <a v-if="isStaff" :class="{ active: activeTab === 'audit-log' }" href="#" @click.prevent="activeTab = 'audit-log'"><ScrollText :size="18" /> {{ t('Audit Log') }}</a>
         <a v-if="isSupport || isAdmin || isOperations" :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> {{ t('Confirm Return') }}</a>
@@ -481,10 +477,6 @@ const activeTabDisplay = computed(() => {
 
         <template v-else-if="activeTab === 'schedules'">
           <SchedulesView :equipment="state.equipment" :session="session" @borrow="$emit('borrow', $event)" />
-        </template>
-
-        <template v-else-if="activeTab === 'timeline' && isStaff">
-          <EquipmentTimelineView :timelines="state.equipmentTimelines" :session="session" />
         </template>
 
         <template v-else-if="activeTab === 'notifications'">
