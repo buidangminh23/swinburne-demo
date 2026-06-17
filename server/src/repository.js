@@ -1,11 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 
 const users = [
-  { id: 1, name: "Minh Bùi Đăng", email: "buidangminh23@gmail.com", role: "LECTURER" },
-  { id: 2, name: "minh anh", email: "taolaminhanh1@gmail.com", role: "SUPPORT" },
-  { id: 3, name: "Đinh Dũng", email: "dindungwork@gmail.com", role: "ADMIN" },
-  { id: 4, name: "Đăng Minh Bùi", email: "buidangminh.lh@gmail.com", role: "STUDENT" },
-  { id: 5, name: "hihi", email: "hiheho911@gmail.com", role: "EVENT_STAFF" }
+  { id: 1, name: "Minh Bùi Đăng", email: "buidangminh23@fpt.edu.vn", role: "LECTURER" },
+  { id: 2, name: "minh anh", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT" },
+  { id: 3, name: "Đinh Dũng", email: "dindungwork@fpt.edu.vn", role: "ADMIN" },
+  { id: 4, name: "Đăng Minh Bùi", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT" },
+  { id: 5, name: "hihi", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF" },
+  { id: 6, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS" }
 ];
 
 const equipment = [
@@ -201,6 +202,47 @@ function buildEditData(input, { toDate }) {
   return data;
 }
 
+const SORTABLE_FIELDS = ["createdAt", "dueAt", "returnedAt", "updatedAt", "startDate"];
+
+function normalizeSort(query) {
+  const sortBy = SORTABLE_FIELDS.includes(query.sortBy) ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
+  return { sortBy, sortOrder };
+}
+
+function parsePageLimit(query) {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
+  return { page, limit };
+}
+
+function toValidDate(value) {
+  if (value == null) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const error = new Error("Invalid date value");
+    error.status = 400;
+    throw error;
+  }
+  return date;
+}
+
+function clampReturnedQuantity(input, quantity) {
+  const total = Number(quantity ?? 1);
+  if (input.returnedQuantity == null) {
+    return total;
+  }
+  const value = Number(input.returnedQuantity);
+  if (!Number.isInteger(value) || value < 0 || value > total) {
+    const error = new Error("returnedQuantity must be an integer between 0 and the borrowed quantity");
+    error.status = 400;
+    throw error;
+  }
+  return value;
+}
+
 class DemoRepository {
   async login(email) {
     const user = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
@@ -209,7 +251,7 @@ class DemoRepository {
       error.status = 401;
       throw error;
     }
-    return { user, token: `demo-token-${user.id}` };
+    return { user, token: `token-${user.id}` };
   }
 
   async listEquipment() {
@@ -263,12 +305,13 @@ class DemoRepository {
 
     const status = isStudent ? "REQUESTED" : "BORROWED";
     const purpose = input.purpose ?? "CLASSROOM";
-
-    if (!isStudent) {
-      item.status = "BORROWED";
-      item.conditionNotes = `Borrowed for ${input.classroom || purpose}`;
-      item.updatedAt = new Date().toISOString();
+    const dueAt = toValidDate(input.dueAt);
+    if (!dueAt) {
+      const error = new Error("dueAt is required");
+      error.status = 400;
+      throw error;
     }
+    const startDate = toValidDate(input.startDate);
 
     const custody = [];
     if (purpose === "EVENT") {
@@ -280,25 +323,32 @@ class DemoRepository {
       });
     }
 
+    const now = new Date().toISOString();
     const request = {
       id: nextId(borrowRequests),
       equipmentId: item.id,
       lecturerId: input.lecturerId,
       classroom: input.classroom ?? null,
-      dueAt: new Date(input.dueAt).toISOString(),
+      dueAt: dueAt.toISOString(),
       returnedAt: null,
       status,
       handoverNotes: input.handoverNotes ?? "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       purpose,
       program: input.program ?? null,
       unitOrProject: input.unitOrProject ?? null,
       quantity: input.quantity ?? 1,
-      startDate: input.startDate ? new Date(input.startDate).toISOString() : null,
+      startDate: startDate ? startDate.toISOString() : null,
       recurrence: input.recurrence ?? null,
       custodyLog: JSON.stringify(custody)
     };
+
+    if (!isStudent) {
+      item.status = "BORROWED";
+      item.conditionNotes = `Borrowed for ${input.classroom || purpose}`;
+      item.updatedAt = now;
+    }
     borrowRequests.push(request);
     return attachEquipment(request);
   }
@@ -320,10 +370,11 @@ class DemoRepository {
       error.status = 403;
       throw error;
     }
+    const returnedQuantity = clampReturnedQuantity(input, request.quantity);
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
 
     request.status = "RETURNED";
-    request.returnedQuantity = input.returnedQuantity ?? request.quantity;
+    request.returnedQuantity = returnedQuantity;
     request.isStatusOk = input.isStatusOk !== false;
     request.damageReport = input.damageReport ?? "";
     request.returnedAt = new Date().toISOString();
@@ -431,13 +482,8 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
-    if (request.purpose !== "RESEARCH" && request.classroom !== "Vovinam Room" && request.lecturerId !== 8) {
-      const error = new Error("Extensions are only available for research borrowings");
-      error.status = 409;
-      throw error;
-    }
     const currentDue = new Date(request.dueAt);
-    const newDue = input.dueAt ? new Date(input.dueAt) : new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const newDue = toValidDate(input.dueAt) ?? new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
     request.dueAt = newDue.toISOString();
     request.updatedAt = new Date().toISOString();
     return attachEquipment(request);
@@ -472,16 +518,14 @@ class DemoRepository {
       });
     }
 
-    const sortField = query.sortBy ?? "createdAt";
-    const sortOrder = query.sortOrder ?? "desc";
+    const { sortBy, sortOrder } = normalizeSort(query);
     list.sort((left, right) => {
-      const lVal = left[sortField] ? new Date(left[sortField]).getTime() : 0;
-      const rVal = right[sortField] ? new Date(right[sortField]).getTime() : 0;
+      const lVal = left[sortBy] ? new Date(left[sortBy]).getTime() : 0;
+      const rVal = right[sortBy] ? new Date(right[sortBy]).getTime() : 0;
       return sortOrder === "desc" ? rVal - lVal : lVal - rVal;
     });
 
-    const page = Number(query.page ?? 1);
-    const limit = Number(query.limit ?? 10);
+    const { page, limit } = parsePageLimit(query);
     const startIndex = (page - 1) * limit;
     const paginated = list.slice(startIndex, startIndex + limit);
 
@@ -563,6 +607,57 @@ class DemoRepository {
     return request ? attachEquipment(request) : null;
   }
 
+  async createEquipment(input) {
+    if (equipment.some((candidate) => candidate.assetCode === input.assetCode)) {
+      const error = new Error("Asset code already exists");
+      error.status = 409;
+      throw error;
+    }
+    const item = {
+      id: nextId(equipment),
+      assetCode: input.assetCode,
+      name: input.name,
+      category: input.category,
+      location: input.location,
+      status: input.status ?? "AVAILABLE",
+      conditionNotes: input.conditionNotes ?? null,
+      updatedAt: new Date().toISOString()
+    };
+    equipment.push(item);
+    return item;
+  }
+
+  async updateEquipment(id, input) {
+    const item = equipment.find((candidate) => candidate.id === id);
+    if (!item) {
+      const error = new Error("Equipment not found");
+      error.status = 404;
+      throw error;
+    }
+    for (const key of ["assetCode", "name", "category", "location", "status", "conditionNotes"]) {
+      if (input[key] !== undefined) {
+        item[key] = input[key];
+      }
+    }
+    item.updatedAt = new Date().toISOString();
+    return item;
+  }
+
+  async listAllUsers() {
+    return users;
+  }
+
+  async updateUserRole(id, role) {
+    const user = users.find((candidate) => candidate.id === id);
+    if (!user) {
+      const error = new Error("User not found");
+      error.status = 404;
+      throw error;
+    }
+    user.role = role;
+    return user;
+  }
+
   async summary() {
     const counts = equipment.reduce(
       (accumulator, item) => ({ ...accumulator, [item.status]: (accumulator[item.status] ?? 0) + 1 }),
@@ -589,13 +684,13 @@ class PrismaRepository {
   }
 
   async login(email) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({ where: { email: String(email).toLowerCase() } });
     if (!user) {
       const error = new Error("Invalid login");
       error.status = 401;
       throw error;
     }
-    return { user, token: `mysql-token-${user.id}` };
+    return { user, token: `token-${user.id}` };
   }
 
   async listEquipment() {
@@ -622,7 +717,7 @@ class PrismaRepository {
     return this.prisma.borrowRequest.findMany({
       where: { status: { notIn: ["RETURNED", "CANCELLED"] } },
       include: { equipment: true, lecturer: true },
-      orderBy: { createdAt: "desc" }
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }]
     });
   }
 
@@ -630,7 +725,7 @@ class PrismaRepository {
     return this.prisma.borrowRequest.findMany({
       where: { lecturerId: userId },
       include: { equipment: true, lecturer: true },
-      orderBy: { createdAt: "desc" }
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }]
     });
   }
 
@@ -660,15 +755,27 @@ class PrismaRepository {
 
       const status = isStudent ? "REQUESTED" : "BORROWED";
       const purpose = input.purpose ?? "CLASSROOM";
+      const dueAt = toValidDate(input.dueAt);
+      if (!dueAt) {
+        const error = new Error("dueAt is required");
+        error.status = 400;
+        throw error;
+      }
+      const startDate = toValidDate(input.startDate);
 
       if (!isStudent) {
-        await tx.equipment.update({
-          where: { id: input.equipmentId },
+        const flipped = await tx.equipment.updateMany({
+          where: { id: input.equipmentId, status: "AVAILABLE" },
           data: {
             status: "BORROWED",
             conditionNotes: `Borrowed for ${input.classroom || purpose}`
           }
         });
+        if (flipped.count === 0) {
+          const error = new Error("Equipment is not available");
+          error.status = 409;
+          throw error;
+        }
       }
 
       const custody = [];
@@ -686,14 +793,14 @@ class PrismaRepository {
           equipmentId: input.equipmentId,
           lecturerId: input.lecturerId,
           classroom: input.classroom ?? null,
-          dueAt: new Date(input.dueAt),
+          dueAt,
           status,
           handoverNotes: input.handoverNotes ?? "",
           purpose,
           program: input.program ?? null,
           unitOrProject: input.unitOrProject ?? null,
           quantity: input.quantity ?? 1,
-          startDate: input.startDate ? new Date(input.startDate) : null,
+          startDate,
           recurrence: input.recurrence ?? null,
           custodyLog: JSON.stringify(custody)
         },
@@ -724,7 +831,7 @@ class PrismaRepository {
 
       const isStatusOk = input.isStatusOk !== false;
       const damageReport = input.damageReport ?? "";
-      const returnedQuantity = input.returnedQuantity ?? request.quantity;
+      const returnedQuantity = clampReturnedQuantity(input, request.quantity);
 
       await tx.equipment.update({
         where: { id: request.equipmentId },
@@ -780,19 +887,18 @@ class PrismaRepository {
         error.status = 409;
         throw error;
       }
-      const item = await tx.equipment.findUnique({ where: { id: request.equipmentId } });
-      if (!item || item.status !== "AVAILABLE") {
-        const error = new Error("Equipment is no longer available to approve");
-        error.status = 409;
-        throw error;
-      }
-      await tx.equipment.update({
-        where: { id: request.equipmentId },
+      const flipped = await tx.equipment.updateMany({
+        where: { id: request.equipmentId, status: "AVAILABLE" },
         data: {
           status: "BORROWED",
           conditionNotes: `Approved borrow for ${request.classroom || request.purpose}`
         }
       });
+      if (flipped.count === 0) {
+        const error = new Error("Equipment is no longer available to approve");
+        error.status = 409;
+        throw error;
+      }
       return tx.borrowRequest.update({
         where: { id },
         data: {
@@ -838,36 +944,33 @@ class PrismaRepository {
   }
 
   async extendRequest(id, input = {}) {
-    const request = await this.prisma.borrowRequest.findUnique({ where: { id } });
-    if (!request) {
-      const error = new Error("Request not found");
-      error.status = 404;
-      throw error;
-    }
-    if (request.status !== "BORROWED") {
-      const error = new Error("Only borrowed equipment can be extended");
-      error.status = 409;
-      throw error;
-    }
-    if (request.purpose !== "RESEARCH" && request.classroom !== "Vovinam Room" && request.lecturerId !== 8) {
-      const error = new Error("Extensions are only available for research borrowings");
-      error.status = 409;
-      throw error;
-    }
-    const currentDue = new Date(request.dueAt);
-    const newDue = input.dueAt ? new Date(input.dueAt) : new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return this.prisma.borrowRequest.update({
-      where: { id },
-      data: {
-        dueAt: newDue
-      },
-      include: { equipment: true, lecturer: true }
+    const newDueInput = toValidDate(input.dueAt);
+    return this.prisma.$transaction(async (tx) => {
+      const request = await tx.borrowRequest.findUnique({ where: { id } });
+      if (!request) {
+        const error = new Error("Request not found");
+        error.status = 404;
+        throw error;
+      }
+      if (request.status !== "BORROWED") {
+        const error = new Error("Only borrowed equipment can be extended");
+        error.status = 409;
+        throw error;
+      }
+      const currentDue = new Date(request.dueAt);
+      const newDue = newDueInput ?? new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return tx.borrowRequest.update({
+        where: { id },
+        data: {
+          dueAt: newDue
+        },
+        include: { equipment: true, lecturer: true }
+      });
     });
   }
 
   async listAllHistory(query = {}) {
-    const page = Number(query.page ?? 1);
-    const limit = Number(query.limit ?? 10);
+    const { page, limit } = parsePageLimit(query);
     const skip = (page - 1) * limit;
 
     const where = {};
@@ -889,14 +992,13 @@ class PrismaRepository {
       ];
     }
 
-    const sortBy = query.sortBy ?? "createdAt";
-    const sortOrder = query.sortOrder ?? "desc";
+    const { sortBy, sortOrder } = normalizeSort(query);
 
-    const [data, total] = await Promise.all([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.borrowRequest.findMany({
         where,
         include: { equipment: true, lecturer: true },
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: [{ [sortBy]: sortOrder }, { id: "desc" }],
         skip,
         take: limit
       }),
@@ -987,6 +1089,37 @@ class PrismaRepository {
       where: { id },
       include: { equipment: true, lecturer: true }
     });
+  }
+
+  async createEquipment(input) {
+    return this.prisma.equipment.create({
+      data: {
+        assetCode: input.assetCode,
+        name: input.name,
+        category: input.category,
+        location: input.location,
+        status: input.status ?? "AVAILABLE",
+        conditionNotes: input.conditionNotes ?? null
+      }
+    });
+  }
+
+  async updateEquipment(id, input) {
+    const data = {};
+    for (const key of ["assetCode", "name", "category", "location", "status", "conditionNotes"]) {
+      if (input[key] !== undefined) {
+        data[key] = input[key];
+      }
+    }
+    return this.prisma.equipment.update({ where: { id }, data });
+  }
+
+  async listAllUsers() {
+    return this.prisma.user.findMany({ orderBy: { id: "asc" } });
+  }
+
+  async updateUserRole(id, role) {
+    return this.prisma.user.update({ where: { id }, data: { role } });
   }
 
   async summary() {

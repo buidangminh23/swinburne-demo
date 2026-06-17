@@ -11,6 +11,7 @@ const emit = defineEmits(["add-equipment", "edit-equipment", "status"]);
 const showModal = ref(false);
 const isEditing = ref(false);
 const editTarget = ref(null);
+const formError = ref("");
 const form = reactive({
   assetCode: "", name: "", category: "", location: "",
   status: "AVAILABLE", conditionNotes: "", totalQuantity: 1, accessoriesText: ""
@@ -19,6 +20,7 @@ const form = reactive({
 function openAdd() {
   isEditing.value = false;
   editTarget.value = null;
+  formError.value = "";
   Object.assign(form, { assetCode: "", name: "", category: "", location: "", status: "AVAILABLE", conditionNotes: "", totalQuantity: 1, accessoriesText: "" });
   showModal.value = true;
 }
@@ -26,6 +28,7 @@ function openAdd() {
 function openEdit(item) {
   isEditing.value = true;
   editTarget.value = item;
+  formError.value = "";
   Object.assign(form, {
     assetCode: item.assetCode,
     name: item.name,
@@ -41,8 +44,14 @@ function openEdit(item) {
 
 function submitForm() {
   if (!form.assetCode || !form.name || !form.category || !form.location) return;
+  if (form.conditionNotes.trim().length < 2) {
+    formError.value = "Condition notes are required (at least 2 characters).";
+    return;
+  }
+  formError.value = "";
   const payload = {
     ...form,
+    conditionNotes: form.conditionNotes.trim(),
     totalQuantity: Number(form.totalQuantity) || 1,
     accessories: form.accessoriesText.split(",").map((item) => item.trim()).filter(Boolean)
   };
@@ -136,10 +145,16 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
 
         <!-- Actions -->
         <div class="eq-actions">
-          <button class="eq-btn edit" @click="openEdit(item)"><Pencil :size="13" /> Edit</button>
-          <button v-if="item.status !== 'AVAILABLE'" class="eq-btn avail" @click="setStatus(item, 'AVAILABLE')">✓ Available</button>
-          <button v-if="item.status !== 'MAINTENANCE'" class="eq-btn maint" @click="setStatus(item, 'MAINTENANCE')"><Wrench :size="12" /> Maintenance</button>
-          <button v-if="item.status !== 'RETIRED'" class="eq-btn retire" @click="setStatus(item, 'RETIRED')"><Archive :size="12" /> Retire</button>
+          <template v-if="item.status === 'RETIRED'">
+            <span class="retired-note"><Archive :size="12" /> Retired — actions disabled</span>
+            <button class="eq-btn avail" @click="setStatus(item, 'AVAILABLE')"><RefreshCw :size="12" /> Reactivate</button>
+          </template>
+          <template v-else>
+            <button class="eq-btn edit" @click="openEdit(item)"><Pencil :size="13" /> Edit</button>
+            <button v-if="item.status !== 'AVAILABLE'" class="eq-btn avail" @click="setStatus(item, 'AVAILABLE')">✓ Available</button>
+            <button v-if="item.status !== 'MAINTENANCE'" class="eq-btn maint" @click="setStatus(item, 'MAINTENANCE')"><Wrench :size="12" /> Maintenance</button>
+            <button class="eq-btn retire" @click="setStatus(item, 'RETIRED')"><Archive :size="12" /> Retire</button>
+          </template>
         </div>
       </div>
       <div v-if="filtered.length === 0" class="eq-empty">
@@ -161,16 +176,16 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
           </label>
           <label>
             Equipment Name
-            <input v-model="form.name" required placeholder="e.g. Logitech Rally Camera Kit" />
+            <input v-model="form.name" required maxlength="120" placeholder="e.g. Logitech Rally Camera Kit" />
           </label>
           <div class="form-row">
             <label>
               Category
-              <input v-model="form.category" required placeholder="Video / Audio / Display…" />
+              <input v-model="form.category" required maxlength="60" placeholder="Video / Audio / Display…" />
             </label>
             <label>
               Location <span class="hint">Campus-Building-Room</span>
-              <input v-model="form.location" required placeholder="HN-ATC-625" />
+              <input v-model="form.location" required maxlength="120" placeholder="HN-ATC-625" />
             </label>
           </div>
           <label>
@@ -186,9 +201,10 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
             </select>
           </label>
           <label>
-            Condition Notes
-            <textarea v-model="form.conditionNotes" rows="2" placeholder="Optional notes about equipment condition…"></textarea>
+            Condition Notes <span class="hint">required, 2–240 characters</span>
+            <textarea v-model="form.conditionNotes" rows="2" required minlength="2" maxlength="240" placeholder="Required notes about equipment condition…"></textarea>
           </label>
+          <p v-if="formError" class="form-error">{{ formError }}</p>
           <label>
             Accessory Checklist <span class="hint">comma separated</span>
             <textarea v-model="form.accessoriesText" rows="2" placeholder="HDMI cable, Remote, Carry case"></textarea>
@@ -246,6 +262,7 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
 .eq-btn.maint:hover { background: #c2410c; color: #fff; }
 .eq-btn.retire { background: #f9fafb; color: #6b7280; border: 1px solid #d1d5db; }
 .eq-btn.retire:hover { background: #6b7280; color: #fff; }
+.retired-note { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; font-style: italic; color: #9ca3af; }
 
 .eq-empty { grid-column: 1/-1; text-align: center; padding: 40px; color: #9ca3af; font-style: italic; font-size: 13.5px; }
 
@@ -259,6 +276,7 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
 .eq-form { display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; }
 .eq-form label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; color: #474753; }
 .hint { font-weight: 400; color: #9ca3af; font-size: 11px; }
+.form-error { margin: 0; font-size: 12px; font-weight: 700; color: #dc2626; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
 .btn-cancel { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; font-size: 13px; min-height: 36px; padding: 0 16px; border-radius: 4px; }

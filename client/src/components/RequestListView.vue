@@ -57,15 +57,12 @@ const searchText = ref("");
 const statusFilter = ref(props.initialStatus || "ALL");
 const purposeFilter = ref("ALL");
 
-const isStudent = computed(() => props.session.user.role === "STUDENT");
-const isSupportOrAdmin = computed(() => ["SUPPORT", "ADMIN"].includes(props.session.user.role));
+const APPROVER_ROLES = ["LECTURER", "EVENT_STAFF", "SUPPORT", "OPERATIONS", "ADMIN"];
 
-function canActOn(req) {
-  const role = props.session.user.role;
-  if (role === "LECTURER") {
-    return req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
-  }
-  return ["SUPPORT", "ADMIN"].includes(role);
+const isStudent = computed(() => props.session.user.role === "STUDENT");
+
+function canActOn() {
+  return APPROVER_ROLES.includes(props.session.user.role);
 }
 
 function getPriorityScore(req) {
@@ -321,7 +318,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
                 <!-- General actions -->
                 <button
-                  v-if="['REQUESTED', 'BORROWED'].includes(req.status) && (session.user.id === req.lecturerId || isSupportOrAdmin || canActOn(req))"
+                  v-if="['REQUESTED', 'BORROWED'].includes(req.status) && (session.user.id === req.lecturerId || canActOn(req))"
                   class="action-btn edit"
                   @click="emit('edit', req)"
                   :title="t('Edit')"
@@ -341,7 +338,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
                 <!-- Extend action -->
                 <button
-                  v-if="req.status === 'BORROWED' && (session.user.id === req.lecturerId || isSupportOrAdmin || canActOn(req))"
+                  v-if="req.status === 'BORROWED' && (session.user.id === req.lecturerId || canActOn(req))"
                   class="action-btn extend"
                   @click="emit('extend', { id: req.id, payload: {} })"
                   :title="t('Extend borrowing by 7 days')"
@@ -361,7 +358,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
                 <!-- Reminder email action (Staff only, for overdue or near due) -->
                 <button
-                  v-if="req.status === 'BORROWED' && !isStudent && (isOverdue(req) || isNearDue(req))"
+                  v-if="req.status === 'BORROWED' && canActOn(req) && (isOverdue(req) || isNearDue(req))"
                   class="action-btn remind"
                   @click="emit('remind', req.id)"
                   :title="t('Send email reminder to borrower')"

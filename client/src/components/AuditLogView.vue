@@ -29,6 +29,20 @@ function formatDate(value) {
   if (!value) return "-";
   return new Date(value).toLocaleString("en-GB", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
 }
+
+function parseDetails(value) {
+  if (value == null) return {};
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return [];
+  }
+}
+
+function formatDetails(value) {
+  return JSON.stringify(parseDetails(value));
+}
 </script>
 
 <template>
@@ -62,12 +76,12 @@ function formatDate(value) {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="entry in filteredEntries" :key="entry.id">
+          <tr v-for="entry in filteredEntries" :key="entry.id ?? (entry.action + '-' + entry.createdAt)">
             <td>{{ formatDate(entry.createdAt) }}</td>
             <td><span class="action-badge">{{ entry.action }}</span></td>
             <td>{{ entry.actor?.email || entry.actorName || "System" }}</td>
             <td>{{ entry.entityType }} #{{ entry.entityId }}</td>
-            <td class="details-cell">{{ JSON.stringify(entry.details ?? {}) }}</td>
+            <td class="details-cell">{{ formatDetails(entry.details) }}</td>
           </tr>
           <tr v-if="filteredEntries.length === 0">
             <td colspan="5" class="empty-state">{{ t('No audit entries match the filters.') }}</td>

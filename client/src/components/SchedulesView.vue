@@ -140,6 +140,7 @@ function bookingFor(dayDate, hour) {
   const { start, end } = cellRange(dayDate, hour);
   return (
     bookings.value.find((booking) => {
+      if (!["RESERVED", "BORROWED"].includes(booking.status)) return false;
       const bookingStart = new Date(booking.start).getTime();
       const bookingEnd = new Date(booking.end).getTime();
       return bookingStart < end.getTime() && bookingEnd > start.getTime();
@@ -148,13 +149,13 @@ function bookingFor(dayDate, hour) {
 }
 
 function cellStatus(dayDate, hour) {
-  const item = selectedItem.value;
-  if (item && ["MAINTENANCE", "RETIRED"].includes(item.status)) {
-    return "MAINTENANCE";
-  }
   const { end } = cellRange(dayDate, hour);
   if (end.getTime() <= Date.now()) {
     return "PAST";
+  }
+  const item = selectedItem.value;
+  if (item && ["MAINTENANCE", "RETIRED"].includes(item.status)) {
+    return "MAINTENANCE";
   }
   return bookingFor(dayDate, hour) ? "RESERVED" : "AVAILABLE";
 }
@@ -286,12 +287,12 @@ function formatDateTime(dateStr) {
         <div class="status-meta">
           <span class="status-indicator">
             {{ t('Current Status:') }}
-            <span :class="'status-chip ' + selectedItem.status.toLowerCase()">{{ t(selectedItem.status) }}</span>
+            <span :class="'status-chip ' + (selectedItem.status?.toLowerCase() ?? 'unknown')">{{ t(selectedItem.status ?? 'Unknown') }}</span>
           </span>
           <span class="location-indicator">{{ t('Location: ') }}<strong>{{ selectedItem.location }}</strong></span>
         </div>
         <div v-if="activeBookingNow" class="active-booking-details">
-          {{ t('Currently borrowed by ') }}<strong>{{ activeBookingNow.borrower }}</strong> ({{ t(activeBookingNow.purpose) }}){{ t(' until ') }}{{ formatDateTime(activeBookingNow.end) }}
+          {{ t('Currently borrowed by ') }}<strong>{{ activeBookingNow.borrower || t('a user') }}</strong><template v-if="activeBookingNow.purpose"> ({{ t(activeBookingNow.purpose) }})</template>{{ t(' until ') }}{{ formatDateTime(activeBookingNow.end) }}
         </div>
       </div>
     </div>
@@ -322,7 +323,7 @@ function formatDateTime(dateStr) {
     <div class="grid-wrap">
       <div class="schedule-grid">
         <div class="grid-header-cell empty"></div>
-        <div v-for="(date, index) in weekDays" :key="index" :class="['grid-header-cell', { today: isToday(date) }]">
+        <div v-for="(date, index) in weekDays" :key="date.toISOString()" :class="['grid-header-cell', { today: isToday(date) }]">
           <span class="day-name">{{ dayNames[index] }}</span>
           <span class="day-date">{{ fmtDay(date) }}</span>
           <span v-if="isToday(date)" class="today-badge">{{ t('Today') }}</span>
@@ -334,8 +335,8 @@ function formatDateTime(dateStr) {
             <span>{{ fmtHour(hour) }}</span>
           </div>
           <div
-            v-for="(date, index) in weekDays"
-            :key="index + '-' + hour"
+            v-for="date in weekDays"
+            :key="date.toISOString() + '-' + hour"
             :class="[
               'schedule-cell',
               filteredCellStatusClass(date, hour),
@@ -345,7 +346,7 @@ function formatDateTime(dateStr) {
                 'current-slot': isCurrentSlot(date, hour)
               }
             ]"
-            :title="bookingFor(date, hour) ? `Booked by ${bookingFor(date, hour).borrower || 'user'} (${bookingFor(date, hour).purpose})` : ''"
+            :title="bookingFor(date, hour) ? `Booked by ${bookingFor(date, hour).borrower || 'a user'}${bookingFor(date, hour).purpose ? ' (' + bookingFor(date, hour).purpose + ')' : ''}` : ''"
             @click="handleCellClick(date, hour)"
           >
             <span v-if="cellStatus(date, hour) === 'AVAILABLE'" class="cell-text available-text">

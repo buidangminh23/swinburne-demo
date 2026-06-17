@@ -35,12 +35,12 @@ async function tokenFor(email) {
 }
 
 test("auth: wrong password is rejected (no bypass)", async () => {
-  const res = await login("dindungwork@gmail.com", "not-the-password");
+  const res = await login("dindungwork@fpt.edu.vn", "not-the-password");
   assert.equal(res.status, 401);
 });
 
 test("auth: correct demo password succeeds in non-production and never leaks a hash", async () => {
-  const res = await login("dindungwork@gmail.com", "demo");
+  const res = await login("dindungwork@fpt.edu.vn", "demo");
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.ok(body.token);
@@ -50,7 +50,7 @@ test("auth: correct demo password succeeds in non-production and never leaks a h
 
 test("jwt: a token forged with the old hardcoded secret is rejected", async () => {
   const forged = jwt.sign(
-    { id: 3, email: "dindungwork@gmail.com", role: "ADMIN" },
+    { id: 3, email: "dindungwork@fpt.edu.vn", role: "ADMIN" },
     "fallback-swinburne-secret-key-998877",
     { expiresIn: "7d" }
   );
@@ -61,7 +61,7 @@ test("jwt: a token forged with the old hardcoded secret is rejected", async () =
 });
 
 test("rbac: a lecturer cannot change equipment status", async () => {
-  const token = await tokenFor("buidangminh23@gmail.com");
+  const token = await tokenFor("buidangminh23@fpt.edu.vn");
   const res = await fetch(`${base}/api/equipment/4/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -71,7 +71,7 @@ test("rbac: a lecturer cannot change equipment status", async () => {
 });
 
 test("rbac: support can change equipment status", async () => {
-  const token = await tokenFor("taolaminhanh1@gmail.com");
+  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
   const res = await fetch(`${base}/api/equipment/4/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -81,7 +81,7 @@ test("rbac: support can change equipment status", async () => {
 });
 
 test("sod: a borrower cannot confirm the return of their own item", async () => {
-  const token = await tokenFor("buidangminh23@gmail.com");
+  const token = await tokenFor("buidangminh23@fpt.edu.vn");
   const res = await fetch(`${base}/api/borrow-requests/1/return`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -91,11 +91,116 @@ test("sod: a borrower cannot confirm the return of their own item", async () => 
 });
 
 test("sod: a different staff member can confirm the return", async () => {
-  const token = await tokenFor("taolaminhanh1@gmail.com");
+  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
   const res = await fetch(`${base}/api/borrow-requests/1/return`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ isStatusOk: true })
   });
   assert.equal(res.status, 200);
+});
+
+function authFetch(token, path, options = {}) {
+  return fetch(`${base}${path}`, {
+    ...options,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(options.headers ?? {}) }
+  });
+}
+
+test("idor: a lecturer without MANAGE_REQUEST cannot edit another user's request", async () => {
+  const token = await tokenFor("buidangminh23@fpt.edu.vn");
+  const res = await authFetch(token, "/api/borrow-requests/3", {
+    method: "PATCH",
+    body: JSON.stringify({ classroom: "Hacked" })
+  });
+  assert.equal(res.status, 403);
+});
+
+test("idor: support with MANAGE_REQUEST can edit another user's request", async () => {
+  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const res = await authFetch(token, "/api/borrow-requests/3", {
+    method: "PATCH",
+    body: JSON.stringify({ classroom: "Lab 1" })
+  });
+  assert.equal(res.status, 200);
+});
+
+test("sod: a user cannot approve their own borrow request", async () => {
+  const token = await tokenFor("buidangminh23@fpt.edu.vn");
+  const res = await authFetch(token, "/api/borrow-requests/1/approve", { method: "POST", body: "{}" });
+  assert.equal(res.status, 403);
+});
+
+test("idor: a lecturer cannot read another user's borrow history", async () => {
+  const token = await tokenFor("buidangminh23@fpt.edu.vn");
+  const res = await authFetch(token, "/api/users/4/borrow-history");
+  assert.equal(res.status, 403);
+});
+
+test("rbac: support with VIEW_ANY_HISTORY can read another user's borrow history", async () => {
+  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const res = await authFetch(token, "/api/users/4/borrow-history");
+  assert.equal(res.status, 200);
+});
+
+test("validation: an invalid sortBy is rejected, never a 500", async () => {
+  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const res = await authFetch(token, "/api/borrow-history?sortBy=hacker&sortOrder=evil");
+  assert.notEqual(res.status, 500);
+  assert.equal(res.status, 400);
+});
+
+test("validation: returnedQuantity greater than the borrowed quantity is rejected", async () => {
+  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const res = await authFetch(token, "/api/borrow-requests/3/return", {
+    method: "POST",
+    body: JSON.stringify({ returnedQuantity: 99 })
+  });
+  assert.equal(res.status, 400);
+});
+
+test("validation: a non-numeric id returns 400, not a 404 lookup", async () => {
+  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const res = await authFetch(token, "/api/equipment/abc/schedule");
+  assert.equal(res.status, 400);
+});
+
+test("rbac: support can create equipment", async () => {
+  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const res = await authFetch(token, "/api/equipment", {
+    method: "POST",
+    body: JSON.stringify({ assetCode: "SW-EQ-TEST", name: "Test Rig", category: "Video", location: "ATC 600" })
+  });
+  assert.equal(res.status, 201);
+});
+
+test("rbac: a lecturer cannot create equipment", async () => {
+  const token = await tokenFor("buidangminh23@fpt.edu.vn");
+  const res = await authFetch(token, "/api/equipment", {
+    method: "POST",
+    body: JSON.stringify({ assetCode: "SW-EQ-NOPE", name: "Nope", category: "Video", location: "ATC 600" })
+  });
+  assert.equal(res.status, 403);
+});
+
+test("rbac: only an admin can list users", async () => {
+  const adminToken = await tokenFor("dindungwork@fpt.edu.vn");
+  const adminRes = await authFetch(adminToken, "/api/users");
+  assert.equal(adminRes.status, 200);
+
+  const supportToken = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const supportRes = await authFetch(supportToken, "/api/users");
+  assert.equal(supportRes.status, 403);
+});
+
+test("privacy: a student only sees notifications addressed to them", async () => {
+  const token = await tokenFor("buidangminh.lh@fpt.edu.vn");
+  const res = await authFetch(token, "/api/notifications");
+  assert.equal(res.status, 200);
+  const list = await res.json();
+  const studentEmail = "buidangminh.lh@fpt.edu.vn";
+  assert.ok(
+    list.every((entry) => entry.to.map((address) => address.toLowerCase()).includes(studentEmail)),
+    "every returned notification must be addressed to the requesting student"
+  );
 });

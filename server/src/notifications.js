@@ -39,7 +39,9 @@ export async function sendNotification({ to, type, subject, message, meta = {} }
     subject,
     message,
     meta,
-    channel: liveSmtp ? "smtp" : "logged",
+    channel: "logged",
+    delivered: false,
+    readAt: null,
     createdAt: new Date().toISOString()
   };
   record(entry);
@@ -48,20 +50,60 @@ export async function sendNotification({ to, type, subject, message, meta = {} }
     return entry;
   }
 
-  try {
-    await transport.sendMail({
-      from: fromAddress,
-      to: recipients.join(", "),
-      subject,
-      text: message
-    });
-  } catch (error) {
-    console.error(`[notification] delivery failed for ${type}: ${error.message}`);
+  if (liveSmtp) {
+    try {
+      await transport.sendMail({
+        from: fromAddress,
+        to: recipients.join(", "),
+        subject,
+        text: message
+      });
+      entry.channel = "smtp";
+      entry.delivered = true;
+    } catch (error) {
+      console.error(`[notification] delivery failed for ${type}: ${error.message}`);
+    }
+  } else {
+    entry.delivered = true;
   }
   console.log(`[notification:${type}] -> ${recipients.join(", ")} :: ${subject}`);
   return entry;
 }
 
-export function listNotifications(limit = 20) {
-  return history.slice(0, Math.max(0, limit));
+function matchesRecipient(entry, recipient) {
+  if (!recipient) {
+    return true;
+  }
+  const target = String(recipient).toLowerCase();
+  return entry.to.some((address) => String(address).toLowerCase() === target);
+}
+
+export function listNotifications(limit = 20, { recipient, type, status, search } = {}) {
+  let entries = history.filter((entry) => matchesRecipient(entry, recipient));
+  if (type && type !== "ALL") {
+    entries = entries.filter((entry) => entry.type === type);
+  }
+  if (status === "unread") {
+    entries = entries.filter((entry) => !entry.readAt);
+  } else if (status === "read") {
+    entries = entries.filter((entry) => entry.readAt);
+  }
+  if (search) {
+    const needle = String(search).toLowerCase();
+    entries = entries.filter((entry) =>
+      `${entry.subject ?? ""} ${entry.message ?? ""}`.toLowerCase().includes(needle)
+    );
+  }
+  return entries.slice(0, Math.max(0, limit));
+}
+
+export function markNotificationRead(id, recipient) {
+  const entry = history.find(
+    (candidate) => candidate.id === Number(id) && matchesRecipient(candidate, recipient)
+  );
+  if (!entry) {
+    return null;
+  }
+  entry.readAt = entry.readAt ?? new Date().toISOString();
+  return entry;
 }

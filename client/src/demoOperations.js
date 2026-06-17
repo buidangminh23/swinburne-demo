@@ -1,21 +1,29 @@
 const ACTIVE_REQUEST_STATUSES = ["REQUESTED", "APPROVED", "RESERVED", "BORROWED"];
 const STAFF_ROLES = ["ADMIN", "SUPPORT", "OPERATIONS", "LECTURER", "EVENT_STAFF"];
 
-function toMillis(value) {
-  if (!value) return 0;
+function toMillis(value, fallback = 0) {
+  if (!value) return fallback;
   const time = new Date(value).getTime();
-  return Number.isFinite(time) ? time : 0;
+  return Number.isFinite(time) ? time : fallback;
+}
+
+function windowStartMs(value) {
+  return toMillis(value, Number.NEGATIVE_INFINITY);
+}
+
+function windowEndMs(value) {
+  return toMillis(value, Number.POSITIVE_INFINITY);
 }
 
 function requestWindow(request) {
   return {
-    start: request.startDate ?? request.createdAt ?? request.dueAt,
-    end: request.dueAt
+    start: request.startDate ?? request.createdAt ?? null,
+    end: request.dueAt ?? null
   };
 }
 
 function rangesOverlap(leftStart, leftEnd, rightStart, rightEnd) {
-  return toMillis(leftStart) < toMillis(rightEnd) && toMillis(rightStart) < toMillis(leftEnd);
+  return windowStartMs(leftStart) < windowEndMs(rightEnd) && windowStartMs(rightStart) < windowEndMs(leftEnd);
 }
 
 function parseJsonList(value) {
@@ -50,7 +58,7 @@ function activeRequestsForEquipment(requests, equipmentId, window, excludeReques
   );
 }
 
-function availableUnitsForEquipment(equipment, requests, equipmentId, window, excludeRequestId = null) {
+export function availableUnitsForEquipment(equipment, requests, equipmentId, window, excludeRequestId = null) {
   const item = equipment.find((candidate) => candidate.id === equipmentId);
   if (!item || ["MAINTENANCE", "RETIRED"].includes(item.status)) {
     return 0;
@@ -214,7 +222,8 @@ export function buildSmartAlerts({ equipment = [], requests = [], now = new Date
     if (
       request.status === "BORROWED" &&
       Number(request.remainingQuantity ?? 0) > 0 &&
-      (request.remainingQuantity !== undefined || Number(request.returnedQuantity ?? 0) > 0)
+      (Number(request.returnedQuantity ?? 0) > 0 ||
+        Number(request.remainingQuantity) < Number(request.quantity ?? Number.POSITIVE_INFINITY))
     ) {
       alerts.push({
         id: `partial-${request.id}`,
@@ -239,7 +248,8 @@ export function buildSmartAlerts({ equipment = [], requests = [], now = new Date
         equipmentId: item.id
       });
     }
-    if (item.status === "AVAILABLE" && Number(item.availableNow ?? item.totalQuantity ?? 1) === 0) {
+    const freeNow = availableUnitsForEquipment(equipment, requests, item.id, { start: now, end: now });
+    if (item.status === "AVAILABLE" && freeNow <= 0) {
       alerts.push({
         id: `stock-${item.id}`,
         type: "LOW_STOCK",

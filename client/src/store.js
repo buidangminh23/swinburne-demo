@@ -2,6 +2,7 @@ import { isProductionMode } from "./config";
 import {
   analyzeBorrowRequest,
   applyPartialReturnSnapshot,
+  availableUnitsForEquipment,
   buildEquipmentTimelines,
   buildSmartAlerts
 } from "./demoOperations";
@@ -15,13 +16,6 @@ const relativeDate = (days, hours) => {
   return d.toISOString();
 };
 
-const HOLD_STATUSES = ["RESERVED", "BORROWED"];
-
-function rangesOverlap(aStart, aEnd, bStart, bEnd) {
-  return new Date(aStart).getTime() < new Date(bEnd).getTime() &&
-    new Date(bStart).getTime() < new Date(aEnd).getTime();
-}
-
 function requestWindow(request) {
   return {
     start: request.startDate ?? request.createdAt,
@@ -33,7 +27,7 @@ function isImmediateStart(startDate) {
   if (!startDate) {
     return true;
   }
-  return new Date(startDate).getTime() <= Date.now() + 60 * 1000;
+  return new Date(startDate).getTime() <= Date.now();
 }
 
 const defaultUsers = [
@@ -321,11 +315,14 @@ const equipment = (() => {
 const borrowRequests = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-borrowRequests");
-    const validEquipmentIds = new Set(defaultEquipment.map((item) => item.id));
+    const validEquipmentIds = new Set(equipment.map((item) => item.id));
+    if (saved) {
+      return JSON.parse(saved).filter((request) => validEquipmentIds.has(request.equipmentId));
+    }
     const seeded = defaultBorrowRequests.filter((request) => validEquipmentIds.has(request.equipmentId));
-    return saved ? JSON.parse(saved) : (isProductionMode ? [] : seeded);
+    return isProductionMode ? [] : seeded;
   } catch {
-    const validEquipmentIds = new Set(defaultEquipment.map((item) => item.id));
+    const validEquipmentIds = new Set(equipment.map((item) => item.id));
     return isProductionMode ? [] : defaultBorrowRequests.filter((request) => validEquipmentIds.has(request.equipmentId));
   }
 })();
@@ -499,22 +496,16 @@ function computeDisplayStatus(item, availableNow) {
 }
 
 function demoAvailableUnits(equipmentId, window, excludeRequestId = null) {
-  const item = equipment.find((candidate) => candidate.id === equipmentId);
-  if (!item) {
-    return 0;
+  return availableUnitsForEquipment(equipment, borrowRequests, equipmentId, window, excludeRequestId);
+}
+
+function recomputeStoredStatus(item) {
+  if (!item || ["MAINTENANCE", "RETIRED"].includes(item.status)) {
+    return;
   }
-  if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
-    return 0;
-  }
-  const occupied = borrowRequests
-    .filter((request) =>
-      request.equipmentId === equipmentId &&
-      request.id !== excludeRequestId &&
-      HOLD_STATUSES.includes(request.status) &&
-      rangesOverlap(requestWindow(request).start, requestWindow(request).end, window.start, window.end)
-    )
-    .reduce((sum, request) => sum + (request.quantity ?? 1), 0);
-  return (item.totalQuantity ?? 1) - occupied;
+  const now = new Date().toISOString();
+  const free = demoAvailableUnits(item.id, { start: now, end: now });
+  item.status = free <= 0 ? "BORROWED" : "AVAILABLE";
 }
 
 class DemoRepository {
@@ -522,7 +513,7 @@ class DemoRepository {
     let candidate = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
     if (!candidate) {
       const newId = nextId(users);
-      let role = "ADMIN"; // Default to admin for convenience
+      let role = "STUDENT";
       const namePart = email.split("@")[0].toLowerCase();
       if (namePart.includes("student") || namePart.includes("std")) {
         role = "STUDENT";
@@ -706,7 +697,7 @@ class DemoRepository {
         item.status = "MAINTENANCE";
         item.conditionNotes = `Returned with issue: ${request.damageReport || request.conditionAfter || "Accessory or condition issue"}`;
       } else if (request.status === "RETURNED") {
-        item.status = "AVAILABLE";
+        recomputeStoredStatus(item);
         item.conditionNotes = request.conditionAfter || "Returned and confirmed OK";
       }
       item.updatedAt = new Date().toISOString();
@@ -861,9 +852,17 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
+    const wasHolding = ["RESERVED", "BORROWED"].includes(request.status);
     request.status = "CANCELLED";
     request.deniedById = userId;
     request.updatedAt = new Date().toISOString();
+    if (wasHolding) {
+      const item = equipment.find((candidate) => candidate.id === request.equipmentId);
+      if (item) {
+        recomputeStoredStatus(item);
+        item.updatedAt = new Date().toISOString();
+      }
+    }
     recordAudit({
       action: "REQUEST_DENIED",
       actorId: userId,

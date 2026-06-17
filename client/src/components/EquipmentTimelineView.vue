@@ -57,7 +57,7 @@ function formatDate(value) {
             <h3>{{ timeline.equipment.name }}</h3>
             <p>{{ timeline.equipment.category }} · {{ timeline.equipment.location }}</p>
           </div>
-          <span :class="'status-chip ' + timeline.equipment.displayStatus?.toLowerCase()">
+          <span :class="'status-chip ' + (timeline.equipment.displayStatus || timeline.equipment.status || '').toLowerCase()">
             {{ timeline.equipment.displayStatus || timeline.equipment.status }}
           </span>
         </header>
@@ -82,8 +82,8 @@ function formatDate(value) {
               <div class="event-details">
                 <span v-if="event.details?.purpose">Purpose: {{ event.details.purpose }}</span>
                 <span v-if="event.details?.classroom">Room: {{ event.details.classroom }}</span>
-                <span v-if="event.details?.quantity">Qty: {{ event.details.quantity }}</span>
-                <span v-if="event.details?.remainingQuantity">Remaining: {{ event.details.remainingQuantity }}</span>
+                <span v-if="event.details?.quantity != null">Qty: {{ event.details.quantity }}</span>
+                <span v-if="event.details?.remainingQuantity != null">Remaining: {{ event.details.remainingQuantity }}</span>
                 <span v-if="event.details?.conditionAfter">Condition: {{ event.details.conditionAfter }}</span>
                 <span v-if="event.details?.receipt?.id || event.details?.id">Receipt: {{ event.details.receipt?.id || event.details.id }}</span>
               </div>

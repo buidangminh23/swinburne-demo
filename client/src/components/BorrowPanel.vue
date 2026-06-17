@@ -87,6 +87,8 @@ const filteredReasonOptions = computed(() => {
 
 const search = ref("");
 const cart = reactive([]);
+const error = ref("");
+const submitting = ref(false);
 
 const preflightResults = computed(() => {
   return cart.map((item) => analyzeBorrowRequest({
@@ -128,21 +130,41 @@ function adjustQty(item, amount) {
 }
 
 function submit() {
+  if (submitting.value) return;
+  error.value = "";
+
   if (cart.length === 0) {
-    alert("Please add at least one item to borrow.");
+    error.value = "Please add at least one item to borrow.";
     return;
   }
   if (hasBlockingConflict.value) {
-    alert("Resolve schedule conflicts before submitting this borrow request.");
+    error.value = "Resolve schedule conflicts before submitting this borrow request.";
     return;
   }
 
-  // We emit the borrow event for each item in the cart
-  // The parent handles single or array requests. Let's map cart into request objects:
+  const dueDate = new Date(form.dueAt);
+  if (isNaN(dueDate.getTime())) {
+    error.value = "Please provide a valid return date.";
+    return;
+  }
+  if (dueDate.getTime() <= Date.now()) {
+    error.value = "Return date must be in the future.";
+    return;
+  }
+  if (form.startDate) {
+    const startDate = new Date(form.startDate);
+    if (!isNaN(startDate.getTime()) && dueDate.getTime() <= startDate.getTime()) {
+      error.value = "Return date must be after the start date.";
+      return;
+    }
+  }
+
+  submitting.value = true;
+
   const requests = cart.map(item => ({
     equipmentId: item.id,
     classroom: form.purpose === "CLASSROOM" ? form.classroom : null,
-    dueAt: new Date(form.dueAt).toISOString(),
+    dueAt: dueDate.toISOString(),
     handoverNotes: form.handoverNotes,
     purpose: form.purpose,
     program: form.program,
@@ -152,11 +174,10 @@ function submit() {
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null
   }));
 
-  // Emit either first request or all of them depending on parent capability
   emit("borrow", requests);
 
-  // Clear cart
   cart.length = 0;
+  submitting.value = false;
 }
 </script>
 
@@ -292,7 +313,7 @@ function submit() {
           </p>
           <label>
             Handover notes / Event Custody Notes
-            <textarea v-model="form.handoverNotes" rows="2" placeholder="Describe handover details..."></textarea>
+            <textarea v-model="form.handoverNotes" rows="2" maxlength="240" placeholder="Describe handover details..."></textarea>
           </label>
         </div>
       </div>
@@ -319,7 +340,9 @@ function submit() {
         </div>
       </div>
 
-      <button type="button" class="submit-wizard-btn" :disabled="cart.length === 0 || hasBlockingConflict" @click="submit">
+      <p v-if="error" class="error">{{ error }}</p>
+
+      <button type="button" class="submit-wizard-btn" :disabled="cart.length === 0 || hasBlockingConflict || submitting" @click="submit">
         {{ isStudent ? "Submit Request" : "Submit Borrow Request" }}
       </button>
     </div>
@@ -510,5 +533,15 @@ function submit() {
   border-radius: 4px;
   padding: 6px 8px;
   margin: 0 0 8px;
+}
+.error {
+  color: #b91c1c;
+  background: #fff1f2;
+  border: 1px solid #fec0cb;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 10px;
 }
 </style>

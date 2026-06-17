@@ -8,15 +8,22 @@ async function request(path, options = {}) {
   if (session?.token) {
     headers["Authorization"] = `Bearer ${session.token}`;
   }
-  const response = await fetch(`${API_BASE}${path}`, { headers, ...options });
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (response.status === 204) {
     return null;
   }
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(data?.message ?? "Request failed");
+    const error = new Error(data?.message ?? response.statusText ?? "Request failed");
+    error.status = response.status;
+    error.issues = data?.issues;
+    throw error;
   }
   return data;
+}
+
+function unsupported(feature) {
+  return () => Promise.reject(new Error(`${feature} is not available against the live API yet.`));
 }
 
 function toQuery(params = {}) {
@@ -89,7 +96,32 @@ export const apiHttp = {
   schedule(equipmentId) {
     return request(`/api/equipment/${equipmentId}/schedule`);
   },
-  notifications(limit = 20) {
-    return request(`/api/notifications?limit=${limit}`);
-  }
+  notifications(limit = 20, filters = {}) {
+    return request(`/api/notifications${toQuery({ limit, ...filters })}`);
+  },
+  markNotificationRead(id) {
+    return request(`/api/notifications/${id}/read`, { method: "PATCH" });
+  },
+  addEquipment(payload) {
+    return request("/api/equipment", { method: "POST", body: JSON.stringify(payload) });
+  },
+  editEquipment(id, payload) {
+    return request(`/api/equipment/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+  },
+  users() {
+    return request("/api/users");
+  },
+  updateUserRole(id, role) {
+    return request(`/api/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
+  },
+  borrowPreflight: unsupported("Borrow preflight"),
+  checkOut: unsupported("Check-out"),
+  runAutoReminders: unsupported("Automatic reminders"),
+  smartAlerts: unsupported("Smart alerts"),
+  equipmentTimelines: unsupported("Equipment timelines"),
+  auditLog: unsupported("Audit log"),
+  notificationPreferences: unsupported("Notification preferences"),
+  updateNotificationPreferences: unsupported("Notification preferences"),
+  reminderRules: unsupported("Reminder rules"),
+  updateReminderRules: unsupported("Reminder rules")
 };

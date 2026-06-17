@@ -21,13 +21,18 @@ function formatSimpleDate(dateStr) {
   return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+import { makeTranslator } from "../translate";
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
+
 const displayRole = computed(() => {
   const role = props.session.user.role;
   if (role === "LECTURER") return t("Lecturer");
   if (role === "STUDENT") return t("Student");
   if (role === "EVENT_STAFF") return t("Event Coordinator");
   if (role === "SUPPORT") return t("Support Desk");
-  return t("Admin");
+  if (role === "OPERATIONS") return t("Operations");
+  if (role === "ADMIN") return t("Admin");
+  return t("Member");
 });
 
 const avatarLetter = computed(() => {
@@ -66,9 +71,6 @@ const totalHistoryCount = computed(() => {
 const recentActivities = computed(() => {
   return myHistory.value.slice(0, 5);
 });
-
-import { makeTranslator } from "../translate";
-const t = (text) => makeTranslator(props.session?.user?.email)(text);
 </script>
 
 <template>

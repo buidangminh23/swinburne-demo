@@ -32,7 +32,7 @@ watch(
 watch(
   () => props.reminderRules,
   (value) => {
-    rulesDraft.value = value.map((rule) => ({ ...rule }));
+    rulesDraft.value = (value ?? []).map((rule) => ({ ...rule }));
   },
   { immediate: true }
 );

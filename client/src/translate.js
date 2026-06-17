@@ -43,7 +43,6 @@ const translations = {
   "Returned": "Đã trả",
   "Cancelled": "Đã hủy",
   "All Purposes": "Tất cả mục đích",
-  "Classroom": "Phòng học",
   "Lab": "Phòng Lab",
   "Research": "Nghiên cứu",
   "Event": "Sự kiện",
@@ -162,6 +161,7 @@ const translations = {
 
   // Notifications
   "Notifications": "Thông báo",
+  "No notifications yet.": "Chưa có thông báo nào.",
 
   // Chain of custody modal
   "Chain of custody — ": "Chuỗi bàn giao thiết bị — ",
@@ -204,9 +204,6 @@ const translations = {
   "Lab Session": "Buổi thực hành Lab",
   "Club Activity": "Hoạt động Câu lạc bộ",
   "Other": "Khác",
-  "Classroom Instruction": "Giảng dạy trên lớp",
-  "Research Work": "Nghiên cứu khoa học",
-  "Swinburne Event": "Sự kiện Swinburne",
   "Swinburne": "Swinburne",
   "Asia": "Asia",
   "FPT": "FPT",
@@ -227,22 +224,19 @@ const translations = {
 
   // Audit Log view
   "System Audit Log": "Nhật ký hoạt động hệ thống",
+  "System-wide: request, return, status, equipment, user, and notification changes.": "Toàn hệ thống: các thay đổi về yêu cầu, trả đồ, trạng thái, thiết bị, người dùng và thông báo.",
   "Toan he thong: request, return, status, equipment, user, and notification changes.": "Toàn hệ thống: các thay đổi về yêu cầu, trả đồ, trạng thái, thiết bị, người dùng và thông báo.",
   "Search audit log...": "Tìm kiếm nhật ký hoạt động...",
   "All actions": "Tất cả hoạt động",
   "Time": "Thời gian",
-  "Action": "Hoạt động",
   "Actor": "Người thực hiện",
   "Entity": "Đối tượng",
-  "Details": "Chi tiết",
   "No audit entries match the filters.": "Không có nhật ký hoạt động nào khớp với bộ lọc.",
 
   // Status panel
   "Keep inventory state accurate.": "Giữ cho trạng thái kho chính xác.",
-  "Equipment": "Thiết bị",
   "Select item": "Chọn thiết bị",
   "Available": "Khả dụng",
-  "Borrowed": "Đang mượn",
   "Maintenance": "Bảo trì",
   "Retired": "Đã thanh lý",
   "Update equipment status": "Cập nhật trạng thái thiết bị",

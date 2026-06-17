@@ -9,6 +9,8 @@ const props = defineProps({
 
 const emit = defineEmits(["update-user-role"]);
 
+const isAdmin = computed(() => props.currentUser?.role === "ADMIN");
+
 // ── Search & Filter ─────────────────────────────────────────────
 const search = ref("");
 const filterRole = ref("ALL");
@@ -180,7 +182,14 @@ const roleIcons = {
 </script>
 
 <template>
-  <div class="admin-users-wrap">
+  <div v-if="!isAdmin" class="admin-users-wrap">
+    <div class="not-authorized panel">
+      <ShieldAlert :size="28" />
+      <h2>Not authorized</h2>
+      <p>You need an Admin account to manage users.</p>
+    </div>
+  </div>
+  <div v-else class="admin-users-wrap">
     <!-- Header -->
     <div class="admin-page-header panel">
       <div class="admin-header-content">
@@ -232,7 +241,7 @@ const roleIcons = {
                     class="avatar-circle"
                     :style="{ backgroundColor: user.role === 'ADMIN' ? '#ef2335' : user.role === 'SUPPORT' ? '#3b82f6' : '#6b7280' }"
                   >
-                    {{ user.name.trim().split(/\s+/).at(-1).charAt(0).toUpperCase() }}
+                    {{ (user.name || '?').trim().split(/\s+/).at(-1)?.charAt(0)?.toUpperCase() || '?' }}
                   </div>
                   <div>
                     <span class="user-name">{{ user.name }}</span>
@@ -410,4 +419,8 @@ const roleIcons = {
 .btn-cancel:hover { background: #fecaca; transform: scale(1.08); }
 
 .empty-cell { text-align: center; padding: 40px; color: #9ca3af; font-style: italic; }
+
+.not-authorized { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 26px; text-align: center; color: #b91c1c; }
+.not-authorized h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.not-authorized p { margin: 0; font-size: 13px; color: #727285; }
 </style>

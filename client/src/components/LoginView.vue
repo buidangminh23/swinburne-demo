@@ -80,7 +80,7 @@ function handleGoogleClick() {
         callback: async (response) => {
           if (response.error) {
             busy.value = false;
-            loginError.value = "Google sign-in failed: " + response.error;
+            loginError.value = "Google sign-in could not be completed. Please try again.";
             step.value = "google";
             return;
           }
@@ -90,7 +90,7 @@ function handleGoogleClick() {
               accessToken: response.access_token
             });
           } catch (err) {
-            loginError.value = err.message;
+            loginError.value = "Sign-in failed. Please try again or contact support.";
             step.value = "google";
           } finally {
             busy.value = false;
@@ -135,7 +135,7 @@ async function submitCustomEmail() {
       email: customEmail.value
     });
   } catch (err) {
-    loginError.value = err.message || "Login failed.";
+    loginError.value = "Sign-in failed. Please check the email and try again.";
   } finally {
     busy.value = false;
   }

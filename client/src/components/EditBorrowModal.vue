@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch, computed } from "vue";
+import { reactive, ref, watch, computed } from "vue";
 import { Pencil } from "@lucide/vue";
 
 const reasonOptions = [
@@ -83,19 +83,50 @@ watch(() => form.purpose, (newVal) => {
 
 const filteredReasonOptions = computed(() => reasonOptions);
 
+const error = ref("");
+const submitting = ref(false);
+
 function submit() {
+  if (submitting.value) return;
+  error.value = "";
+
+  if (!form.dueAt) {
+    error.value = t("Please provide a return date.");
+    return;
+  }
+  const dueDate = new Date(form.dueAt);
+  if (isNaN(dueDate.getTime())) {
+    error.value = t("Please provide a valid return date.");
+    return;
+  }
+  if (dueDate.getTime() <= Date.now()) {
+    error.value = t("Return date must be in the future.");
+    return;
+  }
+  if (form.startDate) {
+    const startDate = new Date(form.startDate);
+    if (!isNaN(startDate.getTime()) && dueDate.getTime() <= startDate.getTime()) {
+      error.value = t("Return date must be after the start date.");
+      return;
+    }
+  }
+
+  submitting.value = true;
+
   const payload = {
     purpose: form.purpose,
     program: form.program || null,
     unitOrProject: form.purpose === "CLASSROOM" ? form.unitOrProject : null,
     classroom: form.classroom || null,
-    dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : undefined,
-    quantity: Number(form.quantity) || 1,
+    dueAt: dueDate.toISOString(),
+    quantity: Math.max(1, Math.floor(Number(form.quantity)) || 1),
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null,
     startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
     handoverNotes: form.handoverNotes || null
   };
   emit("save", { id: props.request.id, payload });
+
+  submitting.value = false;
 }
 </script>
 
@@ -160,15 +191,16 @@ function submit() {
         </label>
         <label>
           {{ t('Quantity') }}
-          <input v-model="form.quantity" type="number" min="1" />
+          <input v-model="form.quantity" type="number" min="1" step="1" />
         </label>
         <label>
           {{ t('Handover Notes') }}
-          <textarea v-model="form.handoverNotes" rows="2"></textarea>
+          <textarea v-model="form.handoverNotes" rows="2" maxlength="240"></textarea>
         </label>
+        <p v-if="error" class="error">{{ error }}</p>
         <div class="modal-actions">
           <button type="button" class="btn-cancel" @click="$emit('close')">{{ t('Cancel') }}</button>
-          <button type="submit" class="btn-confirm">{{ t('Save Changes') }}</button>
+          <button type="submit" class="btn-confirm" :disabled="submitting">{{ t('Save Changes') }}</button>
         </div>
       </form>
     </div>
@@ -275,5 +307,19 @@ function submit() {
 .btn-confirm {
   background: #5f63ff;
   color: #ffffff;
+}
+.btn-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.error {
+  color: #b91c1c;
+  background: #fff1f2;
+  border: 1px solid #fec0cb;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
 }
 </style>

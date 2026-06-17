@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch, onMounted, computed } from "vue";
+import { reactive, ref, watch, onMounted, computed } from "vue";
 import { Search, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight } from "@lucide/vue";
 import AuditLogView from "./AuditLogView.vue";
 
@@ -20,6 +20,8 @@ const props = defineProps({
 
 const emit = defineEmits(["fetch"]);
 
+const DERIVED_FILTERS = ["NEAR_DUE", "OVERDUE"];
+
 const filters = reactive({
   search: "",
   status: "",
@@ -30,20 +32,51 @@ const filters = reactive({
   limit: 10
 });
 
-watch(filters, () => {
-  emitFetch();
+const derivedFilter = ref("");
+const loading = ref(false);
+let fetchTimer = null;
+
+watch(derivedFilter, (value) => {
+  filters.status = DERIVED_FILTERS.includes(value) ? "" : value;
+});
+
+watch(() => filters.search, () => {
+  if (fetchTimer) {
+    clearTimeout(fetchTimer);
+  }
+  fetchTimer = setTimeout(() => {
+    emitFetch();
+  }, 300);
+});
+
+watch(
+  () => [filters.status, filters.purpose, filters.sortBy, filters.sortOrder, filters.page, filters.limit],
+  () => {
+    emitFetch();
+  }
+);
+
+watch(() => props.historyData, () => {
+  loading.value = false;
 }, { deep: true });
 
 watch(() => props.historyData.total, () => {
   const pageCount = Math.ceil(props.historyData.total / filters.limit) || 1;
-  if (filters.page > pageCount) {
-    filters.page = 1;
-  }
+  filters.page = Math.min(filters.page, pageCount);
 });
 
 function emitFetch() {
+  loading.value = true;
   emit("fetch", { ...filters });
 }
+
+const rows = computed(() => {
+  const list = props.historyData.data ?? [];
+  if (!DERIVED_FILTERS.includes(derivedFilter.value)) {
+    return list;
+  }
+  return list.filter((request) => getDisplayStatus(request) === derivedFilter.value);
+});
 
 function prevPage() {
   if (filters.page > 1) {
@@ -164,10 +197,10 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
         <div class="filter-group">
           <Filter :size="16" class="filter-icon" />
-          <select v-model="filters.status" class="filter-select">
+          <select v-model="derivedFilter" class="filter-select">
             <option value="">{{ t('All Statuses') }}</option>
             <option value="REQUESTED">{{ t('Requested') }}</option>
-            <option value="APPROVED">{{ t('Approved') }}</option>
+            <option value="RESERVED">{{ t('Reserved') }}</option>
             <option value="BORROWED">{{ t('Borrowed') }}</option>
             <option value="NEAR_DUE">{{ t('Near Due Date') }}</option>
             <option value="OVERDUE">{{ t('Overdue') }}</option>
@@ -189,7 +222,6 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
         <div class="filter-group">
           <select v-model="filters.sortBy" class="filter-select">
             <option value="createdAt">{{ t('Date Created') }}</option>
-            <option value="startDate">{{ t('Start Date') }}</option>
             <option value="dueAt">{{ t('Due Date') }}</option>
             <option value="returnedAt">{{ t('Returned Date') }}</option>
           </select>
@@ -225,7 +257,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(request, index) in historyData.data" :key="request.id">
+            <tr v-for="(request, index) in rows" :key="request.id">
               <td style="color: #727285; font-weight: 600;">
                 {{ (filters.page - 1) * filters.limit + index + 1 }}
               </td>
@@ -251,7 +283,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
                 <span :class="statusClass(getDisplayStatus(request))">{{ t(getDisplayStatus(request)).replace('_', ' ') }}</span>
               </td>
             </tr>
-            <tr v-if="historyData.data.length === 0">
+            <tr v-if="!loading && rows.length === 0">
               <td colspan="9" class="empty-row-text">{{ t('No borrow history records match filters.') }}</td>
             </tr>
           </tbody>
@@ -261,7 +293,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
       <!-- Pagination Footer -->
       <div class="pagination-footer">
         <div class="pagination-info">
-          {{ t('Showing ') }}{{ historyData.data.length }}{{ t(' of ') }}{{ historyData.total }}{{ t(' records') }}
+          {{ t('Showing ') }}{{ rows.length }}{{ t(' of ') }}{{ historyData.total }}{{ t(' records') }}
         </div>
         <div class="pagination-actions">
           <button

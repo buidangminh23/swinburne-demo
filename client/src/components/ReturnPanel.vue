@@ -20,6 +20,8 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 const emit = defineEmits(["return"]);
 
 const selectedRequestId = ref("");
+const error = ref("");
+const submitting = ref(false);
 
 const returnableRequests = computed(() =>
   props.requests.filter((request) => request.status === "BORROWED")
@@ -50,6 +52,7 @@ const selectedRemainingQuantity = computed(() => {
 
 // Watch selected request to update default returned quantity
 watch(selectedRequestId, (newVal) => {
+  error.value = "";
   const req = returnableRequests.value.find(r => r.id === Number(newVal));
   if (req) {
     form.returnedQuantity = selectedRemainingQuantity.value;
@@ -67,12 +70,28 @@ watch(selectedRequestId, (newVal) => {
 });
 
 function submit() {
+  if (submitting.value) return;
+  error.value = "";
+
   if (!selectedRequestId.value) return;
+
+  const remaining = selectedRemainingQuantity.value;
+  const returnedQuantity = Math.floor(Number(form.returnedQuantity));
+  if (isNaN(returnedQuantity) || returnedQuantity < 1) {
+    error.value = t("Quantity returned must be at least 1.");
+    return;
+  }
+  if (returnedQuantity > remaining) {
+    error.value = t("Quantity returned cannot exceed the remaining quantity.");
+    return;
+  }
+
+  submitting.value = true;
 
   emit("return", {
     id: Number(selectedRequestId.value),
     payload: {
-      returnedQuantity: Number(form.returnedQuantity),
+      returnedQuantity,
       isStatusOk: form.isStatusOk,
       damageReport: form.isStatusOk ? "" : form.damageReport,
       conditionBefore: form.conditionBefore,
@@ -84,8 +103,8 @@ function submit() {
     }
   });
 
-  // Reset selection
   selectedRequestId.value = "";
+  submitting.value = false;
 }
 </script>
 
@@ -191,7 +210,9 @@ function submit() {
           </label>
         </div>
 
-        <button type="submit" class="submit-return-btn">
+        <p v-if="error" class="error">{{ error }}</p>
+
+        <button type="submit" class="submit-return-btn" :disabled="submitting">
           {{ t('Confirm Return') }}
         </button>
       </form>
@@ -323,6 +344,20 @@ function submit() {
 }
 .submit-return-btn:hover {
   background: #0ca678;
+}
+.submit-return-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.error {
+  color: #b91c1c;
+  background: #fff1f2;
+  border: 1px solid #fec0cb;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
 }
 .empty-state {
   padding: 0 28px 24px;

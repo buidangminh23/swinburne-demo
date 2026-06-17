@@ -24,7 +24,7 @@ const state = reactive({
   equipmentTimelines: []
 });
 
-const isLoggedIn = computed(() => Boolean(session.value?.token));
+const isLoggedIn = computed(() => Boolean(session.value?.token && session.value?.user?.role));
 
 async function loadPortal() {
   state.loading = true;
@@ -32,11 +32,18 @@ async function loadPortal() {
   try {
     const user = session.value?.user;
     await api.runAutoReminders?.().catch(() => null);
-    const [summary, equipment, requests, sprints, notifications, smartAlerts, auditLog, notificationPreferences, reminderRules, equipmentTimelines] = await Promise.all([
-      api.summary(),
-      api.equipment(),
-      api.borrowRequests(),
-      api.sprints(),
+    const failed = [];
+    const core = await Promise.all([
+      api.summary().catch((error) => { failed.push(error); return null; }),
+      api.equipment().catch((error) => { failed.push(error); return []; }),
+      api.borrowRequests().catch((error) => { failed.push(error); return []; }),
+      api.sprints().catch((error) => { failed.push(error); return []; })
+    ]);
+    if (failed.length) {
+      throw new Error(failed[0]?.message || "Failed to load portal data.");
+    }
+    const [summary, equipment, requests, sprints] = core;
+    const [notifications, smartAlerts, auditLog, notificationPreferences, reminderRules, equipmentTimelines] = await Promise.all([
       api.notifications().catch(() => []),
       api.smartAlerts?.().catch(() => []),
       api.auditLog?.().catch(() => []),
@@ -87,9 +94,33 @@ async function login(payload) {
 }
 
 async function logout() {
-  await api.logout();
   session.value = null;
+  state.message = "";
+  state.error = "";
   localStorage.removeItem("portal-session");
+  const demoKeys = [
+    "swin-demo-users",
+    "swin-demo-equipment",
+    "swin-demo-borrowRequests",
+    "swin-demo-notifications",
+    "swin-demo-audit-log",
+    "swin-demo-notification-preferences",
+    "swin-demo-reminder-rules",
+    "swin-demo-seed-version"
+  ];
+  for (const key of demoKeys) {
+    localStorage.removeItem(key);
+  }
+  try {
+    await api.logout();
+  } catch {
+    session.value = null;
+  }
+}
+
+function clearBanners() {
+  state.message = "";
+  state.error = "";
 }
 
 async function borrowEquipment(payload) {
@@ -309,6 +340,7 @@ onMounted(() => {
     v-else
     :session="session"
     :state="state"
+    @navigate="clearBanners"
     @logout="logout"
     @borrow="borrowEquipment"
     @return="confirmReturn"

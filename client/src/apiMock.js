@@ -34,9 +34,11 @@ function persistNotifications() {
 
 function pushNotification({ to, type, subject, message, meta = {} }) {
   const recipients = (Array.isArray(to) ? to : [to]).filter(Boolean);
+  const recipientKey = JSON.stringify([...recipients].sort());
   const duplicate = notifications.some((notification) =>
     notification.type === type &&
     notification.subject === subject &&
+    JSON.stringify([...(notification.to ?? [])].sort()) === recipientKey &&
     JSON.stringify(notification.meta ?? {}) === JSON.stringify(meta)
   );
   if (duplicate) {
