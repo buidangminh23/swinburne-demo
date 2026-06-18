@@ -20,10 +20,10 @@ const showError = ref(false);
 const busy = ref(false);
 
 const locations = [
-  { value: "HN", label: "Hà Nội" },
-  { value: "HCM", label: "TP. Hồ Chí Minh" },
-  { value: "DN", label: "Đà Nẵng" },
-  { value: "CT", label: "Cần Thơ" }
+  { value: "HN", label: "Hanoi" },
+  { value: "HCM", label: "Ho Chi Minh City" },
+  { value: "DN", label: "Da Nang" },
+  { value: "CT", label: "Can Tho" }
 ];
 
 const demoAccounts = [
