@@ -3,13 +3,15 @@ import { reactive, ref, watch, computed } from "vue";
 import { Pencil } from "@lucide/vue";
 
 const classroomOptions = [
-  "HN-DT1-9.1",
-  "HN-DT1-9.2",
-  "HN-ATC-6.25",
-  "HN-ATC-6.28",
+  "HN-DT-9.1",
+  "HN-DT-9.2",
+  "HN-AT-6.25",
+  "HN-AT-6.28",
   "HN-BA-7.01",
   "HN-EN-4.02",
   "HN-EN-4.03",
+  "HCM-AB-2.1",
+  "HCM-CD-3.2",
   "HN-LIB-DESK",
   "HN-MED-DESK"
 ];

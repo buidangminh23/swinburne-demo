@@ -100,9 +100,9 @@ async function main() {
   });
 
   const unitSeeds = [
-    { code: "COS20031", name: "Technical Software Development", lecturerId: lecturer.id, dayOfWeek: 1, startHour: 9, endHour: 11, classroom: "HN-DT1-9.1" },
-    { code: "COS30008", name: "Data Structures and Patterns", lecturerId: lecturer.id, dayOfWeek: 3, startHour: 13, endHour: 15, classroom: "HN-DT1-9.2" },
-    { code: "COS20007", name: "Object Oriented Programming", lecturerId: secondLecturer.id, dayOfWeek: 2, startHour: 10, endHour: 12, classroom: "HN-ATC-6.25" }
+    { code: "COS20031", name: "Technical Software Development", lecturerId: lecturer.id, dayOfWeek: 1, startHour: 9, endHour: 11, classroom: "HN-DT-9.1" },
+    { code: "COS30008", name: "Data Structures and Patterns", lecturerId: lecturer.id, dayOfWeek: 3, startHour: 13, endHour: 15, classroom: "HN-DT-9.2" },
+    { code: "COS20007", name: "Object Oriented Programming", lecturerId: secondLecturer.id, dayOfWeek: 2, startHour: 10, endHour: 12, classroom: "HN-AT-6.25" }
   ];
 
   const unitsByCode = {};
@@ -173,10 +173,10 @@ async function main() {
   }
 
   const items = [
-    ["SW-EQ-1001", "Logitech Rally Camera Kit", "Video", "HN-ATC-6.25", "AVAILABLE", "Ready for classroom recording"],
+    ["SW-EQ-1001", "Logitech Rally Camera Kit", "Video", "HN-AT-6.25", "AVAILABLE", "Ready for classroom recording"],
     ["SW-EQ-1002", "Wireless Presentation Clicker", "Teaching", "Library Desk", "BORROWED", "Borrowed for tutorial room HN-EN-4.02"],
     ["SW-EQ-1003", "Portable Projector", "Display", "HN-BA-7.01", "MAINTENANCE", "Lamp replacement required"],
-    ["SW-EQ-1004", "HDMI Capture Adapter", "Video", "HN-ATC-6.28", "AVAILABLE", "Checked by support staff"],
+    ["SW-EQ-1004", "HDMI Capture Adapter", "Video", "HN-AT-6.28", "AVAILABLE", "Checked by support staff"],
     ["SW-EQ-1005", "Lapel Microphone Set", "Audio", "Media Counter", "AVAILABLE", "Batteries replaced"]
   ];
 
@@ -216,7 +216,7 @@ async function main() {
       data: {
         equipmentId: adapter.id,
         lecturerId: student.id,
-        classroom: "HN-ATC-6.25",
+        classroom: "HN-AT-6.25",
         dueAt: new Date("2026-05-26T10:30:00.000Z"),
         returnedAt: new Date("2026-05-26T10:05:00.000Z"),
         status: "RETURNED",

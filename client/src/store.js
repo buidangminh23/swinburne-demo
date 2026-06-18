@@ -66,7 +66,7 @@ const defaultEquipment = [
     assetCode: "Logitech-LRC-001",
     name: "Logitech Rally Camera Kit",
     category: "Video",
-    location: "HN-ATC-6.25",
+    location: "HN-AT-6.25",
     status: "AVAILABLE",
     conditionNotes: "Ready for classroom recording",
     accessories: ["HDMI cable", "USB-C cable", "Remote", "Tripod mount"],
@@ -79,7 +79,7 @@ const defaultEquipment = [
     category: "Teaching",
     location: "HN-LIB-DESK",
     status: "BORROWED",
-    conditionNotes: "Borrowed for tutorial room HN-ATC-6.25",
+    conditionNotes: "Borrowed for tutorial room HN-AT-6.25",
     accessories: ["USB receiver", "AAA batteries", "Carry pouch"],
     updatedAt: new Date("2026-05-27T09:10:00.000Z").toISOString()
   },
@@ -99,7 +99,7 @@ const defaultEquipment = [
     assetCode: "Elgato-HCA-004",
     name: "HDMI Capture Adapter",
     category: "Video",
-    location: "HN-ATC-6.28",
+    location: "HN-AT-6.28",
     status: "AVAILABLE",
     conditionNotes: "Checked by support staff",
     accessories: ["HDMI cable", "USB cable"],
@@ -128,7 +128,7 @@ const defaultBorrowRequests = [
     id: 1,
     equipmentId: 1,
     lecturerId: 1,
-    classroom: "HN-ATC-6.25",
+    classroom: "HN-AT-6.25",
     startDate: relativeDate(0, 14),
     dueAt: relativeDate(0, 16),
     returnedAt: null,
@@ -164,7 +164,7 @@ const defaultBorrowRequests = [
     id: 5,
     equipmentId: 4,
     lecturerId: 4,
-    classroom: "HN-ATC-6.25",
+    classroom: "HN-AT-6.25",
     startDate: relativeDate(-4, 10),
     dueAt: relativeDate(-4, 12),
     returnedAt: relativeDate(-4, 12),
@@ -219,7 +219,7 @@ const defaultBorrowRequests = [
     id: 15,
     equipmentId: 1,
     lecturerId: 1,
-    classroom: "HN-ATC-6.25",
+    classroom: "HN-AT-6.25",
     startDate: relativeDate(1, 9),
     dueAt: relativeDate(1, 11),
     returnedAt: null,
@@ -273,9 +273,9 @@ const defaultSemesters = [
 ];
 
 const defaultUnits = [
-  { id: 1, code: "COS20031", name: "Technical Software Development", semesterId: 1, lecturerId: 1, dayOfWeek: 1, startHour: 9, endHour: 11, classroom: "HN-DT1-9.1" },
-  { id: 2, code: "COS30008", name: "Data Structures and Patterns", semesterId: 1, lecturerId: 1, dayOfWeek: 3, startHour: 13, endHour: 15, classroom: "HN-DT1-9.2" },
-  { id: 3, code: "COS20007", name: "Object Oriented Programming", semesterId: 1, lecturerId: 10, dayOfWeek: 2, startHour: 10, endHour: 12, classroom: "HN-ATC-6.25" }
+  { id: 1, code: "COS20031", name: "Technical Software Development", semesterId: 1, lecturerId: 1, dayOfWeek: 1, startHour: 9, endHour: 11, classroom: "HN-DT-9.1" },
+  { id: 2, code: "COS30008", name: "Data Structures and Patterns", semesterId: 1, lecturerId: 1, dayOfWeek: 3, startHour: 13, endHour: 15, classroom: "HN-DT-9.2" },
+  { id: 3, code: "COS20007", name: "Object Oriented Programming", semesterId: 1, lecturerId: 10, dayOfWeek: 2, startHour: 10, endHour: 12, classroom: "HN-AT-6.25" }
 ];
 
 const defaultEnrollments = [
@@ -295,7 +295,7 @@ const defaultSchedules = [
   { id: 3, ownerType: "PROJECT", ownerId: 1, startDate: "2026-03-09", endDate: "2026-06-12" }
 ];
 
-const SEED_VERSION = "2026-06-20-units-no-vovinam-v6";
+const SEED_VERSION = "2026-06-20-units-no-vovinam-v7";
 const AUDIT_KEY = "swin-demo-audit-log";
 const PREF_KEY = "swin-demo-notification-preferences";
 const REMINDER_KEY = "swin-demo-reminder-rules";
