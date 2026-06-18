@@ -1,12 +1,23 @@
 import { PrismaClient } from "@prisma/client";
 
+// Deterministically generate a student ID from an email address.
+// Format: SWH + 5-digit number (e.g. SWH02468)
+function generateStudentId(email) {
+  const prefix = email.split("@")[0].toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < prefix.length; i++) {
+    hash = (hash * 31 + prefix.charCodeAt(i)) & 0xfffff;
+  }
+  return "SWH" + String(hash % 100000).padStart(5, "0");
+}
+
 const users = [
-  { id: 1, name: "Minh Bùi Đăng", email: "buidangminh23@fpt.edu.vn", role: "LECTURER" },
-  { id: 2, name: "minh anh", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT" },
-  { id: 3, name: "Đinh Dũng", email: "dindungwork@fpt.edu.vn", role: "ADMIN" },
-  { id: 4, name: "Đăng Minh Bùi", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT" },
-  { id: 5, name: "hihi", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF" },
-  { id: 6, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS" }
+  { id: 1, name: "Minh Bùi Đăng", email: "buidangminh23@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminh23@fpt.edu.vn") },
+  { id: 2, name: "minh anh", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT", studentId: generateStudentId("taolaminhanh1@fpt.edu.vn") },
+  { id: 3, name: "Đinh Dũng", email: "dindungwork@fpt.edu.vn", role: "ADMIN", studentId: generateStudentId("dindungwork@fpt.edu.vn") },
+  { id: 4, name: "Đăng Minh Bùi", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("buidangminh.lh@fpt.edu.vn") },
+  { id: 5, name: "hihi", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", studentId: generateStudentId("hiheho911@fpt.edu.vn") },
+  { id: 6, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS", studentId: generateStudentId("operations@fpt.edu.vn") }
 ];
 
 const equipment = [
@@ -315,11 +326,17 @@ function closeInMemoryTransferredBorrow(request, recipient, at) {
 
 class DemoRepository {
   async login(email) {
-    const user = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
+    let user = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
     if (!user) {
-      const error = new Error("Invalid login");
-      error.status = 401;
-      throw error;
+      // Auto-register new Google account as STUDENT with a generated student ID
+      user = {
+        id: nextId(users),
+        name: email.split("@")[0],
+        email: email.toLowerCase(),
+        role: "STUDENT",
+        studentId: generateStudentId(email)
+      };
+      users.push(user);
     }
     return { user, token: `token-${user.id}` };
   }

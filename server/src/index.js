@@ -251,7 +251,7 @@ app.post(
     const result = await repository.login(payload.email);
 
     const token = jwt.sign(
-      { id: result.user.id, email: result.user.email, role: result.user.role },
+      { id: result.user.id, email: result.user.email, role: result.user.role, studentId: result.user.studentId },
       jwtSecret,
       { expiresIn: "7d" }
     );
@@ -278,7 +278,7 @@ app.post(
     
     // Sign secure JWT token
     const token = jwt.sign(
-      { id: result.user.id, email: result.user.email, role: result.user.role },
+      { id: result.user.id, email: result.user.email, role: result.user.role, studentId: result.user.studentId },
       jwtSecret,
       { expiresIn: "7d" }
     );

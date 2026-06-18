@@ -17,6 +17,7 @@ const translations = {
   "Requester": "Người yêu cầu",
   "Equipment": "Thiết bị",
   "University / Purpose": "Trường / Mục đích",
+  "Student ID": "Mã sinh viên",
   "Classroom": "Phòng học",
   "Actions": "Thao tác",
   "Approve": "Duyệt",
