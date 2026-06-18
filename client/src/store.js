@@ -37,7 +37,6 @@ const defaultUsers = [
   { id: 4, name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", lecturerId: 1, groupName: "Student Cohort", className: "SE Class" },
   { id: 5, name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", groupName: "Event Team", className: "Campus Events" },
   { id: 7, name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT", groupName: "IT Support", className: "Front Desk" },
-  { id: 8, name: "VOVINAM TEACHER", email: "vovinamteacher@fpt.edu.vn", role: "LECTURER", groupName: "Physical Education", className: "Vovinam" },
   { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER", groupName: "Teaching Team", className: "Demo Class" },
   { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER", groupName: "Media Team", className: "Content Lab" },
   { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS", groupName: "Operations", className: "Asset Control" },
@@ -253,7 +252,7 @@ const defaultBorrowRequests = [
   }
 ];
 
-const SEED_VERSION = "2026-06-19-no-vovinam";
+const SEED_VERSION = "2026-06-20-delete-vovinam";
 const AUDIT_KEY = "swin-demo-audit-log";
 const PREF_KEY = "swin-demo-notification-preferences";
 const REMINDER_KEY = "swin-demo-reminder-rules";
