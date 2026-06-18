@@ -382,7 +382,6 @@ watchEffect(() => {
                 <table class="widget-table">
                   <thead>
                     <tr>
-                      <th>{{ t('Student ID') }}</th>
                       <th>{{ t('Requester') }}</th>
                       <th>{{ t('Equipment') }}</th>
                       <th>{{ t('Classroom') }}</th>
@@ -394,8 +393,10 @@ watchEffect(() => {
                   </thead>
                   <tbody>
                     <tr v-for="req in pendingRequests" :key="req.id">
-                      <td><code class="student-id-code">{{ req.lecturer?.studentId || '-' }}</code></td>
-                      <td>{{ req.lecturer?.name }}</td>
+                      <td>
+                        <strong class="requester-name" style="display: block; font-weight: 600;">{{ req.lecturer?.name }}</strong>
+                        <code class="student-id-code" style="font-size: 11px; margin-top: 2px; display: inline-block;">{{ req.lecturer?.studentId || '-' }}</code>
+                      </td>
                       <td>{{ req.equipment?.name }}</td>
                       <td>{{ req.classroom || "-" }}</td>
                       <td>
@@ -416,7 +417,7 @@ watchEffect(() => {
                       </td>
                     </tr>
                     <tr v-if="pendingRequests.length === 0">
-                      <td colspan="8" class="empty-widget-text">{{ t('No pending approval requests.') }}</td>
+                      <td colspan="7" class="empty-widget-text">{{ t('No pending approval requests.') }}</td>
                     </tr>
                   </tbody>
                 </table>
