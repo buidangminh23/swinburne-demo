@@ -20,11 +20,10 @@ const showError = ref(false);
 const busy = ref(false);
 
 const locations = [
-  { value: "HN", label: "Swinburne Hanoi" },
-  { value: "HO", label: "Swinburne HO" },
-  { value: "HCM", label: "Swinburne HCM" },
-  { value: "DN", label: "Swinburne Da Nang" },
-  { value: "CT", label: "Swinburne CT" }
+  { value: "HN", label: "Hà Nội" },
+  { value: "HCM", label: "TP. Hồ Chí Minh" },
+  { value: "DN", label: "Đà Nẵng" },
+  { value: "CT", label: "Cần Thơ" }
 ];
 
 const demoAccounts = [
