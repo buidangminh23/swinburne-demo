@@ -216,7 +216,7 @@ function getInitial(name) {
 
         <!-- Right column -->
         <div class="google-right-col">
-          <div v-if="!showCustomInput" class="accounts-list">
+          <div class="accounts-list">
             <button
               v-for="acc in accounts"
               :key="acc.email"
@@ -236,32 +236,6 @@ function getInitial(name) {
                 <span class="account-email">{{ acc.email }}</span>
               </div>
             </button>
-
-            <!-- Use another account -->
-            <button type="button" class="account-row another-account-row" :disabled="busy" @click="showCustomInput = true">
-              <div class="avatar-circle another">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </div>
-              <div class="account-details">
-                <span class="account-name">Use another account</span>
-              </div>
-            </button>
-          </div>
-
-          <div v-else class="custom-email-input-wrap">
-            <form class="custom-email-form" @submit.prevent="submitCustomEmail">
-              <label class="custom-email-label">
-                Email address
-                <input v-model="customEmail" type="email" placeholder="username@fpt.edu.vn" required class="custom-email-input" :disabled="busy" />
-              </label>
-              <div class="custom-email-actions">
-                <button type="button" class="custom-email-back-btn" @click="showCustomInput = false" :disabled="busy">Back</button>
-                <button type="submit" class="custom-email-submit-btn" :disabled="busy">Sign In</button>
-              </div>
-            </form>
           </div>
 
           <p v-if="loginError" class="google-error-msg">{{ loginError }}</p>
