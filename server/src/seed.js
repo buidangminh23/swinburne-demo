@@ -6,9 +6,9 @@ const prisma = new PrismaClient();
 async function main() {
   const lecturer = await prisma.user.upsert({
     where: { email: "buidangminh23@fpt.edu.vn" },
-    update: { name: "Minh Bùi Đăng", role: "LECTURER" },
+    update: { name: "Minh Bui Dang", role: "LECTURER" },
     create: {
-      name: "Minh Bùi Đăng",
+      name: "Minh Bui Dang",
       email: "buidangminh23@fpt.edu.vn",
       role: "LECTURER"
     }
@@ -16,9 +16,9 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "taolaminhanh1@fpt.edu.vn" },
-    update: { name: "Nguyễn Minh Anh", role: "SUPPORT" },
+    update: { name: "Nguyen Minh Anh", role: "SUPPORT" },
     create: {
-      name: "Nguyễn Minh Anh",
+      name: "Nguyen Minh Anh",
       email: "taolaminhanh1@fpt.edu.vn",
       role: "SUPPORT"
     }
@@ -26,9 +26,9 @@ async function main() {
 
   const student = await prisma.user.upsert({
     where: { email: "buidangminh.lh@fpt.edu.vn" },
-    update: { name: "Đăng Minh Bùi", role: "STUDENT" },
+    update: { name: "Dang Minh Bui", role: "STUDENT" },
     create: {
-      name: "Đăng Minh Bùi",
+      name: "Dang Minh Bui",
       email: "buidangminh.lh@fpt.edu.vn",
       role: "STUDENT"
     }
@@ -36,9 +36,9 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "hiheho911@fpt.edu.vn" },
-    update: { name: "Nguyễn Hoàng Hiệp", role: "EVENT_STAFF" },
+    update: { name: "Nguyen Hoang Hiep", role: "EVENT_STAFF" },
     create: {
-      name: "Nguyễn Hoàng Hiệp",
+      name: "Nguyen Hoang Hiep",
       email: "hiheho911@fpt.edu.vn",
       role: "EVENT_STAFF"
     }
@@ -46,9 +46,9 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "dindungwork@fpt.edu.vn" },
-    update: { name: "Đinh Dũng", role: "ADMIN" },
+    update: { name: "Dinh Dung", role: "ADMIN" },
     create: {
-      name: "Đinh Dũng",
+      name: "Dinh Dung",
       email: "dindungwork@fpt.edu.vn",
       role: "ADMIN"
     }
@@ -56,9 +56,9 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "operations@fpt.edu.vn" },
-    update: { name: "Ban Vận Hành", role: "OPERATIONS" },
+    update: { name: "Operations", role: "OPERATIONS" },
     create: {
-      name: "Ban Vận Hành",
+      name: "Operations",
       email: "operations@fpt.edu.vn",
       role: "OPERATIONS"
     }
@@ -66,9 +66,9 @@ async function main() {
 
   const secondLecturer = await prisma.user.upsert({
     where: { email: "lecturer2@fpt.edu.vn" },
-    update: { name: "Lê Hoàng Nam", role: "LECTURER" },
+    update: { name: "Le Hoang Nam", role: "LECTURER" },
     create: {
-      name: "Lê Hoàng Nam",
+      name: "Le Hoang Nam",
       email: "lecturer2@fpt.edu.vn",
       role: "LECTURER"
     }
@@ -76,9 +76,9 @@ async function main() {
 
   const secondStudent = await prisma.user.upsert({
     where: { email: "student2@fpt.edu.vn" },
-    update: { name: "Nguyễn Tuấn Anh", role: "STUDENT" },
+    update: { name: "Nguyen Tuan Anh", role: "STUDENT" },
     create: {
-      name: "Nguyễn Tuấn Anh",
+      name: "Nguyen Tuan Anh",
       email: "student2@fpt.edu.vn",
       role: "STUDENT"
     }

@@ -266,11 +266,11 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
       <table class="requests-table">
         <thead>
           <tr>
-            <th>{{ t('Priority & Status') }}</th>
             <th>{{ t('Requester') }}</th>
             <th>{{ t('Equipment') }}</th>
-            <th>{{ t('Purpose & Details') }}</th>
-            <th>{{ t('Classroom/Location') }}</th>
+            <th>{{ t('Classroom') }}</th>
+            <th>{{ t('Unit / Purpose') }}</th>
+            <th>{{ t('Quantity') }}</th>
             <th>{{ t('Due Date') }}</th>
             <th>{{ t('Actions') }}</th>
           </tr>
@@ -285,22 +285,10 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
               'row-neardue': isNearDue(req)
             }"
           >
-            <!-- Status Badge -->
-            <td class="status-cell">
-              <div class="status-indicator-wrap">
-                <span :class="'status-chip ' + getDisplayStatus(req).toLowerCase().replace('_', '-')">
-                  {{ t(getDisplayStatus(req)).replace('_', ' ') }}
-                </span>
-              </div>
-            </td>
-
             <!-- Requester -->
             <td>
-              <div class="user-cell">
-                <strong class="user-name">{{ req.lecturer?.name }}</strong>
-                <span class="user-role-sub">{{ t(req.lecturer?.role) }}</span>
-                <span class="user-email-sub">{{ req.lecturer?.email }}</span>
-              </div>
+              <strong class="user-name" style="display: block; font-weight: 600;">{{ req.lecturer?.name }}</strong>
+              <code class="student-id-code" style="font-size: 11px; margin-top: 2px; display: inline-block;">{{ req.lecturer?.studentId || '-' }}</code>
             </td>
 
             <!-- Equipment -->
@@ -311,116 +299,115 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
                   class="asset-code timeline-trigger"
                   @click="showTimeline(req.equipmentId || req.equipment?.id)"
                   :title="t('View equipment history timeline')"
+                  style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;"
                 >
                   <Clock :size="10" />
                   {{ req.equipment?.assetCode }}
                 </span>
-                <span class="qty-sub">{{ t('Quantity: ') }}{{ req.quantity }}</span>
               </div>
             </td>
 
-            <!-- Purpose & Details -->
+            <!-- Classroom -->
+            <td>{{ req.classroom || "-" }}</td>
+
+            <!-- Unit / Purpose -->
             <td>
-              <div class="details-cell">
-                <span class="purpose-tag" :class="purposeClass(req)">{{ t(purposeText(req)) }}</span>
-                <span v-if="req.program" class="program-sub">{{ req.program }}</span>
-                <span v-if="req.unitOrProject" class="unit-sub">{{ t('Unit: ') }}{{ req.unitOrProject }}</span>
-              </div>
+              <span class="program-span" style="display: block; font-size: 12px; color: #4e5b66;">{{ req.program || "-" }}</span>
+              <span class="purpose-span" :class="purposeClass(req)" style="display: inline-block; margin-top: 2px;">{{ t(purposeText(req)) }}</span>
             </td>
 
-            <!-- Classroom/Location -->
-            <td>
-              <div class="location-cell">
-                <strong>{{ req.classroom || "-" }}</strong>
-                <span class="location-sub">{{ req.equipment?.location }}</span>
-              </div>
-            </td>
+            <!-- Quantity -->
+            <td>{{ req.quantity || 1 }}</td>
 
             <!-- Due Date -->
             <td>
               <div class="due-cell" :class="{ 'overdue-text': isOverdue(req), 'warning-text': isNearDue(req) }">
-                <span v-if="req.startDate" style="color: #727285; font-size: 11px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</span>
+                <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                 <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
-                <span v-if="req.returnedAt" class="returned-sub">{{ t('Returned: ') }}{{ formatDate(req.returnedAt) }}</span>
+                <span v-if="req.returnedAt" class="returned-sub" style="display: block; font-size: 10px; color: #10b981; margin-top: 2px;">
+                  {{ t('Returned: ') }}{{ formatDate(req.returnedAt) }}
+                </span>
               </div>
             </td>
 
             <!-- Actions Column -->
             <td class="action-cell">
-              <div class="actions-wrapper">
-                 <!-- Approval Actions (Support/Admin/Lecturers) -->
-                <template v-if="req.status === 'REQUESTED' && canActOn(req)">
+              <div class="actions-wrapper" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
+                <!-- Status Badge -->
+                <div class="status-indicator-wrap" style="margin-bottom: 2px;">
+                  <span :class="'status-chip ' + getDisplayStatus(req).toLowerCase().replace('_', '-')">
+                    {{ t(getDisplayStatus(req)).replace('_', ' ') }}
+                  </span>
+                </div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                  <!-- Approval Actions (Support/Admin/Lecturers) -->
+                  <template v-if="req.status === 'REQUESTED' && canActOn(req)">
+                    <button
+                      class="action-btn approve"
+                      @click="emit('approve', req.id)"
+                      :title="t('Approve')"
+                    >
+                      {{ t('Approve') }}
+                    </button>
+                    <button
+                      class="action-btn deny"
+                      @click="emit('deny', req.id)"
+                      :title="t('Deny')"
+                    >
+                      {{ t('Deny') }}
+                    </button>
+                  </template>
+
+                  <!-- General actions -->
                   <button
+                    v-if="canFullyEdit(req)"
+                    class="action-btn edit"
+                    @click="emit('edit', req)"
+                    :title="t('Edit')"
+                  >
+                    <Pencil :size="12" /> {{ t('Edit') }}
+                  </button>
+
+                  <!-- Check out a reserved booking -->
+                  <button
+                    v-if="req.status === 'RESERVED' && !isStudent"
                     class="action-btn approve"
-                    @click="emit('approve', req.id)"
-                    :title="t('Approve')"
+                    @click="emit('check-out', req.id)"
+                    :title="t('Check out reserved equipment')"
                   >
-                    {{ t('Approve') }}
+                    {{ t('Check Out') }}
                   </button>
+
+                  <!-- Extend action -->
                   <button
-                    class="action-btn deny"
-                    @click="emit('deny', req.id)"
-                    :title="t('Deny')"
+                    v-if="canExtend(req)"
+                    class="action-btn extend"
+                    @click="emit('extend', { id: req.id, payload: {} })"
+                    :title="t('Extend borrowing by 7 days')"
                   >
-                    {{ t('Deny') }}
+                    {{ t('Extend 7d') }}
                   </button>
-                </template>
-                <span
-                  v-else-if="!canActOn(req)"
-                  :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')"
-                >
-                  {{ t(approvalStatusText(req)) }}
-                </span>
 
-                <!-- General actions -->
-                <button
-                  v-if="canFullyEdit(req)"
-                  class="action-btn edit"
-                  @click="emit('edit', req)"
-                  :title="t('Edit')"
-                >
-                  <Pencil :size="12" /> {{ t('Edit') }}
-                </button>
+                  <!-- Custody action for EVENT purposes -->
+                  <button
+                    v-if="req.purpose === 'EVENT'"
+                    class="action-btn custody"
+                    @click="emit('custody', req)"
+                    :title="t('View or update chain of custody')"
+                  >
+                    <ScrollText :size="12" /> {{ t('Custody') }}
+                  </button>
 
-                <!-- Check out a reserved booking -->
-                <button
-                  v-if="req.status === 'RESERVED' && !isStudent"
-                  class="action-btn approve"
-                  @click="emit('check-out', req.id)"
-                  :title="t('Check out reserved equipment')"
-                >
-                  {{ t('Check Out') }}
-                </button>
-
-                <!-- Extend action -->
-                <button
-                  v-if="canExtend(req)"
-                  class="action-btn extend"
-                  @click="emit('extend', { id: req.id, payload: {} })"
-                  :title="t('Extend borrowing by 7 days')"
-                >
-                  {{ t('Extend 7d') }}
-                </button>
-
-                <!-- Custody action for EVENT purposes -->
-                <button
-                  v-if="req.purpose === 'EVENT'"
-                  class="action-btn custody"
-                  @click="emit('custody', req)"
-                  :title="t('View or update chain of custody')"
-                >
-                  <ScrollText :size="12" /> {{ t('Custody') }}
-                </button>
-
-                <!-- Reminder email action (Staff only, for overdue or near due) -->
-                <button
-                  v-if="req.status === 'BORROWED' && canActOn(req) && (isOverdue(req) || isNearDue(req))"
-                  class="action-btn remind"
-                  @click="emit('remind', req.id)"
-                  :title="t('Send email reminder to borrower')"
-                >
-                  <Mail :size="12" /> {{ t('Remind') }}
-                </button>
+                  <!-- Reminder email action (Staff only, for overdue or near due) -->
+                  <button
+                    v-if="req.status === 'BORROWED' && canActOn(req) && (isOverdue(req) || isNearDue(req))"
+                    class="action-btn remind"
+                    @click="emit('remind', req.id)"
+                    :title="t('Send email reminder to borrower')"
+                  >
+                    <Mail :size="12" /> {{ t('Remind') }}
+                  </button>
+                </div>
               </div>
             </td>
           </tr>

@@ -29,12 +29,12 @@ function attachStudentIdToRequest(request) {
 }
 
 const users = [
-  { id: 1, name: "Minh Bùi Đăng", email: "buidangminh23@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminh23@fpt.edu.vn") },
-  { id: 2, name: "Nguyễn Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT", studentId: generateStudentId("taolaminhanh1@fpt.edu.vn") },
-  { id: 3, name: "Đinh Dũng", email: "dindungwork@fpt.edu.vn", role: "ADMIN", studentId: generateStudentId("dindungwork@fpt.edu.vn") },
-  { id: 4, name: "Đăng Minh Bùi", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("buidangminh.lh@fpt.edu.vn") },
-  { id: 5, name: "Nguyễn Hoàng Hiệp", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", studentId: generateStudentId("hiheho911@fpt.edu.vn") },
-  { id: 6, name: "Ban Vận Hành", email: "operations@fpt.edu.vn", role: "OPERATIONS", studentId: generateStudentId("operations@fpt.edu.vn") }
+  { id: 1, name: "Minh Bui Dang", email: "buidangminh23@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminh23@fpt.edu.vn") },
+  { id: 2, name: "Nguyen Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT", studentId: generateStudentId("taolaminhanh1@fpt.edu.vn") },
+  { id: 3, name: "Dinh Dung", email: "dindungwork@fpt.edu.vn", role: "ADMIN", studentId: generateStudentId("dindungwork@fpt.edu.vn") },
+  { id: 4, name: "Dang Minh Bui", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("buidangminh.lh@fpt.edu.vn") },
+  { id: 5, name: "Nguyen Hoang Hiep", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", studentId: generateStudentId("hiheho911@fpt.edu.vn") },
+  { id: 6, name: "Operations", email: "operations@fpt.edu.vn", role: "OPERATIONS", studentId: generateStudentId("operations@fpt.edu.vn") }
 ];
 
 const equipment = [
