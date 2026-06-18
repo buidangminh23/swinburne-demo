@@ -288,7 +288,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
             <!-- Requester -->
             <td>
               <strong class="user-name" style="display: block; font-weight: 600;">{{ req.lecturer?.name }}</strong>
-              <code class="student-id-code" style="font-size: 11px; margin-top: 2px; display: inline-block;">{{ req.lecturer?.studentId || '-' }}</code>
+              <code class="student-id-code" style="font-size: 13px; text-transform: uppercase; margin-top: 2px; display: inline-block;">{{ (req.lecturer?.studentId || '-').toUpperCase() }}</code>
             </td>
 
             <!-- Equipment -->

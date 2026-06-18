@@ -43,7 +43,7 @@ const equipment = [
     assetCode: "SW-EQ-1001",
     name: "Logitech Rally Camera Kit",
     category: "Video",
-    location: "ATC 625",
+    location: "HN-ATC-6.25",
     status: "AVAILABLE",
     conditionNotes: "Ready for classroom recording",
     updatedAt: new Date("2026-05-27T08:30:00.000Z").toISOString()
@@ -55,7 +55,7 @@ const equipment = [
     category: "Teaching",
     location: "Library Desk",
     status: "BORROWED",
-    conditionNotes: "Borrowed for tutorial room EN402",
+    conditionNotes: "Borrowed for tutorial room HN-EN-4.02",
     updatedAt: new Date("2026-05-27T09:10:00.000Z").toISOString()
   },
   {
@@ -63,7 +63,7 @@ const equipment = [
     assetCode: "SW-EQ-1003",
     name: "Portable Projector",
     category: "Display",
-    location: "Room BA701",
+    location: "HN-BA-7.01",
     status: "MAINTENANCE",
     conditionNotes: "Lamp replacement required",
     updatedAt: new Date("2026-05-26T17:15:00.000Z").toISOString()
@@ -73,7 +73,7 @@ const equipment = [
     assetCode: "SW-EQ-1004",
     name: "HDMI Capture Adapter",
     category: "Video",
-    location: "ATC 628",
+    location: "HN-ATC-6.28",
     status: "AVAILABLE",
     conditionNotes: "Checked by support staff",
     updatedAt: new Date("2026-05-27T07:45:00.000Z").toISOString()
@@ -95,7 +95,7 @@ const borrowRequests = [
     id: 1,
     equipmentId: 2,
     lecturerId: 1,
-    classroom: "EN402",
+    classroom: "HN-EN-4.02",
     dueAt: new Date("2026-05-29T10:30:00.000Z").toISOString(),
     returnedAt: null,
     status: "BORROWED",
@@ -111,7 +111,7 @@ const borrowRequests = [
     id: 2,
     equipmentId: 4,
     lecturerId: 4,
-    classroom: "ATC 625",
+    classroom: "HN-ATC-6.25",
     dueAt: new Date("2026-05-26T10:30:00.000Z").toISOString(),
     returnedAt: new Date("2026-05-26T10:05:00.000Z").toISOString(),
     status: "RETURNED",
@@ -129,7 +129,7 @@ const borrowRequests = [
     id: 3,
     equipmentId: 5,
     lecturerId: 4,
-    classroom: "EN402",
+    classroom: "HN-EN-4.02",
     dueAt: new Date("2026-05-29T12:00:00.000Z").toISOString(),
     returnedAt: null,
     status: "BORROWED",

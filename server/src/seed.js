@@ -173,10 +173,10 @@ async function main() {
   }
 
   const items = [
-    ["SW-EQ-1001", "Logitech Rally Camera Kit", "Video", "ATC 625", "AVAILABLE", "Ready for classroom recording"],
-    ["SW-EQ-1002", "Wireless Presentation Clicker", "Teaching", "Library Desk", "BORROWED", "Borrowed for tutorial room EN402"],
-    ["SW-EQ-1003", "Portable Projector", "Display", "Room BA701", "MAINTENANCE", "Lamp replacement required"],
-    ["SW-EQ-1004", "HDMI Capture Adapter", "Video", "ATC 628", "AVAILABLE", "Checked by support staff"],
+    ["SW-EQ-1001", "Logitech Rally Camera Kit", "Video", "HN-ATC-6.25", "AVAILABLE", "Ready for classroom recording"],
+    ["SW-EQ-1002", "Wireless Presentation Clicker", "Teaching", "Library Desk", "BORROWED", "Borrowed for tutorial room HN-EN-4.02"],
+    ["SW-EQ-1003", "Portable Projector", "Display", "HN-BA-7.01", "MAINTENANCE", "Lamp replacement required"],
+    ["SW-EQ-1004", "HDMI Capture Adapter", "Video", "HN-ATC-6.28", "AVAILABLE", "Checked by support staff"],
     ["SW-EQ-1005", "Lapel Microphone Set", "Audio", "Media Counter", "AVAILABLE", "Batteries replaced"]
   ];
 
@@ -198,7 +198,7 @@ async function main() {
       data: {
         equipmentId: clicker.id,
         lecturerId: lecturer.id,
-        classroom: "EN402",
+        classroom: "HN-EN-4.02",
         dueAt: new Date("2026-05-29T10:30:00.000Z"),
         status: "BORROWED",
         handoverNotes: "Collected by lecturer for morning tutorial"
@@ -216,7 +216,7 @@ async function main() {
       data: {
         equipmentId: adapter.id,
         lecturerId: student.id,
-        classroom: "ATC 625",
+        classroom: "HN-ATC-6.25",
         dueAt: new Date("2026-05-26T10:30:00.000Z"),
         returnedAt: new Date("2026-05-26T10:05:00.000Z"),
         status: "RETURNED",

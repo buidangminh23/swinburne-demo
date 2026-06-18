@@ -395,7 +395,7 @@ watchEffect(() => {
                     <tr v-for="req in pendingRequests" :key="req.id">
                       <td>
                         <strong class="requester-name" style="display: block; font-weight: 600;">{{ req.lecturer?.name }}</strong>
-                        <code class="student-id-code" style="font-size: 11px; margin-top: 2px; display: inline-block;">{{ req.lecturer?.studentId || '-' }}</code>
+                        <code class="student-id-code" style="font-size: 13px; text-transform: uppercase; margin-top: 2px; display: inline-block;">{{ (req.lecturer?.studentId || '-').toUpperCase() }}</code>
                       </td>
                       <td>{{ req.equipment?.name }}</td>
                       <td>{{ req.classroom || "-" }}</td>
