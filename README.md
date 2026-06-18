@@ -1,92 +1,61 @@
 # Swinburne Equipment Portal
 
-Web portal for managing classroom equipment borrowing and returns — Sprint 1 demo.
+Web portal for borrowing, returning, and scheduling classroom and lab equipment.
+Frontend-only production build.
 
 ## Tech Stack
 
-- **Frontend: Vue.js** (Vue 3 + Vite) — single-page app, runs in the browser
-- **Backend: Node.js** — not included in this build; production is frontend-only, with data in the browser's `localStorage`
-- Build tool: Node.js (Vite/npm) — build/dev time only
-- Deploy: Vercel (static SPA)
-
-## How It Works
-
-This is a client-only SPA. All data (users, equipment, borrow requests) lives in
-`client/src/store.js` and is persisted to the browser's `localStorage`
-(keys `swin-demo-users`, `swin-demo-equipment`, `swin-demo-borrowRequests`).
-
-There is no server and no real authentication — it is a demo. `client/src/api.js`
-delegates every call to the in-browser store, so the UI behaves as if it were
-talking to a backend.
-
-The store seeds default data on first load. Bumping `SEED_VERSION` in
-`client/src/store.js` clears stale `localStorage` on the next visit, so the demo
-always starts from the latest seed (and the relative seed dates stay fresh).
-
-Basic flow:
-
-1. Open the app, pick a demo account in the Google-style chooser.
-2. The dashboard loads summary, equipment, active requests, sprint plan and history.
-3. Borrow / approve / deny / check out / return / extend / update status — all handled
-   in-browser, then the dashboard reloads from the store.
+- **Frontend:** Vue 3 + Vite single-page app (runs in the browser).
+- **Data:** in-browser `localStorage` store (no backend in this build).
+- **Deploy:** Vercel (static SPA).
 
 ## Run
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://127.0.0.1:5173
+npm run build      # output: client/dist
 ```
 
-- Dev server: `http://127.0.0.1:5173`
-- Production build: `npm run build` (output: `client/dist`)
-- Preview the build: `npm run preview`
+## Environment
 
-## Demo Login
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `VITE_APP_MODE` | `production` | `production` = catalog only, typed `@fpt.edu.vn` login. `demo` = full seed data + click-to-login chooser. |
+| `VITE_GOOGLE_CLIENT_ID` | — | Enables real Google sign-in (optional). |
 
-Click an account in the Google-style chooser — there is no password form. Only
-`@fpt.edu.vn` accounts can sign in.
+## Login
+
+Sign in with an `@fpt.edu.vn` account. Production uses typed-email login; the
+demo build shows a click-to-login chooser (no password).
 
 | Email | Role |
 |-------|------|
 | `buidangminh23@fpt.edu.vn` | LECTURER |
 | `taolaminhanh1@fpt.edu.vn` | SUPPORT |
+| `dindungwork@fpt.edu.vn` | ADMIN |
 | `buidangminh.lh@fpt.edu.vn` | STUDENT |
 | `hiheho911@fpt.edu.vn` | EVENT_STAFF |
-| `dindungwork@fpt.edu.vn` | ADMIN |
+| `operations@fpt.edu.vn` | OPERATIONS |
 
-## Features by Role
+## Roles & Permissions
 
-### Shared
-- Login/logout, Swinburne-style dashboard, topbar notifications, profile dropdown, sidebar navigation.
-- Sprint roadmap (4 sprints).
+| Role | Capabilities |
+|------|--------------|
+| **Student** | Submit borrow requests (need approval). Full edit before approval, extend-only after. View own history. |
+| **Lecturer** | Borrow instantly. Approve / deny / check-out / return. Edit requests for students in units they teach. |
+| **Support / Operations** | Borrow instantly. Manage approvals, returns, and equipment status. |
+| **Event Staff** | Borrow instantly **for events only**. May take over an item a lecturer is currently borrowing (auto-returns the lecturer's loan). |
+| **Admin** | All of the above, plus equipment inventory and user-role management. |
 
-### Lecturer / Support / Admin
-- View all requests and pending approvals.
-- Approve, deny, check out, extend and edit borrow requests.
-- Confirm returns with condition checklist (sets Maintenance on damage).
-- Update equipment status: Available, Borrowed, Maintenance, Retired.
-- Admin also manages equipment inventory and user roles.
+## Key Behaviors
 
-### Student
-- Borrow equipment and view personal Borrow History.
-
-## Sprint Plan
-
-- Sprint 1: Classroom use, login/logout, view equipment, borrow, confirm returns, update status.
-- Sprint 2: Student requests, support handover, borrowing extensions, notifications.
-- Sprint 3: Inventory CRUD, user management, reporting, audit trail.
-- Sprint 4: Admin governance, role permissions, analytics, production hardening.
-
-## Quick Test
-
-```bash
-npm run build
-```
-
-Manual smoke test (`npm run dev`):
-
-1. Log in as `buidangminh23@fpt.edu.vn` (LECTURER).
-2. Borrow an available item; approve a pending request.
-3. Confirm return of a borrowed item; update an item to Maintenance.
-4. Log in as `buidangminh.lh@fpt.edu.vn` (STUDENT) and check the Borrow History.
-5. Log in as `dindungwork@fpt.edu.vn` (ADMIN) to check equipment and user management.
+- **Approval:** student requests start as `REQUESTED` (pending); staff and
+  lecturers borrow as `BORROWED` immediately.
+- **Unit-based borrowing:** each borrow is tied to a Unit or Research Project;
+  classroom borrows auto-fill the schedule and room.
+- **Rejected** requests stay listed with a red chip (they are not deleted).
+- **Availability** is computed per time window (5 units per item); statuses:
+  Available / Borrowed / Maintenance / Retired.
+- **Demo data:** bumping `SEED_VERSION` in `client/src/store.js` resets
+  `localStorage` on the next load.
