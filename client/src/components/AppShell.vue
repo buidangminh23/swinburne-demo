@@ -385,8 +385,10 @@ watchEffect(() => {
                       <th>{{ t('Student ID') }}</th>
                       <th>{{ t('Requester') }}</th>
                       <th>{{ t('Equipment') }}</th>
-                      <th>{{ t('Unit / Purpose') }}</th>
                       <th>{{ t('Classroom') }}</th>
+                      <th>{{ t('Unit / Purpose') }}</th>
+                      <th>{{ t('Quantity') }}</th>
+                      <th>{{ t('Due Date') }}</th>
                       <th>{{ t('Actions') }}</th>
                     </tr>
                   </thead>
@@ -395,11 +397,16 @@ watchEffect(() => {
                       <td><code class="student-id-code">{{ req.lecturer?.studentId || '-' }}</code></td>
                       <td>{{ req.lecturer?.name }}</td>
                       <td>{{ req.equipment?.name }}</td>
+                      <td>{{ req.classroom || "-" }}</td>
                       <td>
                         <span class="program-span">{{ req.program || "-" }}</span>
                         <span class="purpose-span">{{ t(req.purpose) }}</span>
                       </td>
-                      <td>{{ req.classroom || "-" }}</td>
+                      <td>{{ req.quantity || 1 }}</td>
+                      <td>
+                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
+                        <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
+                      </td>
                       <td class="action-cell">
                         <template v-if="canApproveRequest(req)">
                           <button class="widget-btn approve-btn" @click="$emit('approve', req.id)">{{ t('Approve') }}</button>
@@ -409,7 +416,7 @@ watchEffect(() => {
                       </td>
                     </tr>
                     <tr v-if="pendingRequests.length === 0">
-                      <td colspan="6" class="empty-widget-text">{{ t('No pending approval requests.') }}</td>
+                      <td colspan="8" class="empty-widget-text">{{ t('No pending approval requests.') }}</td>
                     </tr>
                   </tbody>
                 </table>

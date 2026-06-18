@@ -11,13 +11,30 @@ function generateStudentId(email) {
   return "SWH" + String(hash % 100000).padStart(5, "0");
 }
 
+function attachStudentIdToUser(user) {
+  if (!user) return user;
+  return {
+    ...user,
+    studentId: generateStudentId(user.email)
+  };
+}
+
+function attachStudentIdToRequest(request) {
+  if (!request) return request;
+  const copy = { ...request };
+  if (copy.lecturer) {
+    copy.lecturer = attachStudentIdToUser(copy.lecturer);
+  }
+  return copy;
+}
+
 const users = [
   { id: 1, name: "Minh Bùi Đăng", email: "buidangminh23@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminh23@fpt.edu.vn") },
-  { id: 2, name: "minh anh", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT", studentId: generateStudentId("taolaminhanh1@fpt.edu.vn") },
+  { id: 2, name: "Nguyễn Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT", studentId: generateStudentId("taolaminhanh1@fpt.edu.vn") },
   { id: 3, name: "Đinh Dũng", email: "dindungwork@fpt.edu.vn", role: "ADMIN", studentId: generateStudentId("dindungwork@fpt.edu.vn") },
   { id: 4, name: "Đăng Minh Bùi", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("buidangminh.lh@fpt.edu.vn") },
-  { id: 5, name: "hihi", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", studentId: generateStudentId("hiheho911@fpt.edu.vn") },
-  { id: 6, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS", studentId: generateStudentId("operations@fpt.edu.vn") }
+  { id: 5, name: "Nguyễn Hoàng Hiệp", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", studentId: generateStudentId("hiheho911@fpt.edu.vn") },
+  { id: 6, name: "Ban Vận Hành", email: "operations@fpt.edu.vn", role: "OPERATIONS", studentId: generateStudentId("operations@fpt.edu.vn") }
 ];
 
 const equipment = [
@@ -854,7 +871,7 @@ class PrismaRepository {
       error.status = 401;
       throw error;
     }
-    return { user, token: `token-${user.id}` };
+    return { user: attachStudentIdToUser(user), token: `token-${user.id}` };
   }
 
   async listEquipment() {
@@ -872,29 +889,31 @@ class PrismaRepository {
       const { requests, ...rest } = item;
       return {
         ...rest,
-        latestRequest
+        latestRequest: attachStudentIdToRequest(latestRequest)
       };
     });
   }
 
   async listActiveRequests() {
-    return this.prisma.borrowRequest.findMany({
+    const requests = await this.prisma.borrowRequest.findMany({
       where: { status: { notIn: ["RETURNED", "CANCELLED"] } },
       include: { equipment: true, lecturer: true },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }]
     });
+    return requests.map(attachStudentIdToRequest);
   }
 
   async listBorrowHistory(userId) {
-    return this.prisma.borrowRequest.findMany({
+    const requests = await this.prisma.borrowRequest.findMany({
       where: { lecturerId: userId },
       include: { equipment: true, lecturer: true },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }]
     });
+    return requests.map(attachStudentIdToRequest);
   }
 
   async borrowEquipment(input) {
-    return this.prisma.$transaction(async (tx) => {
+    const request = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id: input.lecturerId } });
       const isStudent = user?.role === "STUDENT";
 
@@ -1021,10 +1040,11 @@ class PrismaRepository {
         include: { equipment: true, lecturer: true }
       });
     });
+    return attachStudentIdToRequest(request);
   }
 
   async confirmReturn(id, input = {}) {
-    return this.prisma.$transaction(async (tx) => {
+    const request = await this.prisma.$transaction(async (tx) => {
       const request = await tx.borrowRequest.findUnique({ where: { id }, include: { equipment: true } });
       if (!request) {
         const error = new Error("Borrow request not found");
@@ -1076,6 +1096,7 @@ class PrismaRepository {
         include: { equipment: true, lecturer: true }
       });
     });
+    return attachStudentIdToRequest(request);
   }
 
   async updateEquipmentStatus(id, input) {
@@ -1089,7 +1110,7 @@ class PrismaRepository {
   }
 
   async approveRequest(id, userId) {
-    return this.prisma.$transaction(async (tx) => {
+    const request = await this.prisma.$transaction(async (tx) => {
       const request = await tx.borrowRequest.findUnique({ where: { id } });
       if (!request) {
         const error = new Error("Request not found");
@@ -1122,10 +1143,11 @@ class PrismaRepository {
         include: { equipment: true, lecturer: true }
       });
     });
+    return attachStudentIdToRequest(request);
   }
 
   async denyRequest(id, userId) {
-    return this.prisma.$transaction(async (tx) => {
+    const request = await this.prisma.$transaction(async (tx) => {
       const request = await tx.borrowRequest.findUnique({ where: { id } });
       if (!request) {
         const error = new Error("Request not found");
@@ -1155,11 +1177,12 @@ class PrismaRepository {
         include: { equipment: true, lecturer: true }
       });
     });
+    return attachStudentIdToRequest(request);
   }
 
   async extendRequest(id, input = {}) {
     const newDueInput = toValidDate(input.dueAt);
-    return this.prisma.$transaction(async (tx) => {
+    const request = await this.prisma.$transaction(async (tx) => {
       const request = await tx.borrowRequest.findUnique({ where: { id } });
       if (!request) {
         const error = new Error("Request not found");
@@ -1181,6 +1204,7 @@ class PrismaRepository {
         include: { equipment: true, lecturer: true }
       });
     });
+    return attachStudentIdToRequest(request);
   }
 
   async listAllHistory(query = {}) {
@@ -1220,7 +1244,7 @@ class PrismaRepository {
     ]);
 
     return {
-      data,
+      data: data.map(attachStudentIdToRequest),
       total,
       page,
       limit
@@ -1267,11 +1291,12 @@ class PrismaRepository {
       error.status = 400;
       throw error;
     }
-    return this.prisma.borrowRequest.update({
+    const updated = await this.prisma.borrowRequest.update({
       where: { id },
       data,
       include: { equipment: true, lecturer: true }
     });
+    return attachStudentIdToRequest(updated);
   }
 
   async addCustody(id, entry = {}) {
@@ -1288,11 +1313,12 @@ class PrismaRepository {
       actor: entry.actor ?? "Unknown",
       notes: entry.notes ?? ""
     });
-    return this.prisma.borrowRequest.update({
+    const updated = await this.prisma.borrowRequest.update({
       where: { id },
       data: { custodyLog: JSON.stringify(log) },
       include: { equipment: true, lecturer: true }
     });
+    return attachStudentIdToRequest(updated);
   }
 
   async getEquipmentSchedule(equipmentId) {
@@ -1371,14 +1397,16 @@ class PrismaRepository {
   }
 
   async getUser(id) {
-    return this.prisma.user.findUnique({ where: { id } });
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    return attachStudentIdToUser(user);
   }
 
   async getRequest(id) {
-    return this.prisma.borrowRequest.findUnique({
+    const request = await this.prisma.borrowRequest.findUnique({
       where: { id },
       include: { equipment: true, lecturer: true }
     });
+    return attachStudentIdToRequest(request);
   }
 
   async createEquipment(input) {
@@ -1405,11 +1433,13 @@ class PrismaRepository {
   }
 
   async listAllUsers() {
-    return this.prisma.user.findMany({ orderBy: { id: "asc" } });
+    const users = await this.prisma.user.findMany({ orderBy: { id: "asc" } });
+    return users.map(attachStudentIdToUser);
   }
 
   async updateUserRole(id, role) {
-    return this.prisma.user.update({ where: { id }, data: { role } });
+    const user = await this.prisma.user.update({ where: { id }, data: { role } });
+    return attachStudentIdToUser(user);
   }
 
   async summary() {

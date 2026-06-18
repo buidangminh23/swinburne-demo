@@ -27,15 +27,15 @@ const locations = [
 ];
 
 const demoAccounts = [
-  { name: "LECTURER", email: "buidangminh23@fpt.edu.vn", isDemo: true, color: "#4e5b66" },
-  { name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", isDemo: true, photo: avatarDangMinh },
-  { name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", isDemo: true, color: "#3f51b5" },
-  { name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", isDemo: true, color: "#d84315" },
+  { name: "Minh Bùi Đăng", email: "buidangminh23@fpt.edu.vn", isDemo: true, color: "#4e5b66" },
+  { name: "Đăng Minh Bùi", email: "buidangminh.lh@fpt.edu.vn", isDemo: true, photo: avatarDangMinh },
+  { name: "Nguyễn Hoàng Hiệp", email: "hiheho911@fpt.edu.vn", isDemo: true, color: "#3f51b5" },
+  { name: "Nguyễn Minh Anh", email: "taolaminhanh1@fpt.edu.vn", isDemo: true, color: "#d84315" },
   { name: "Test Account", email: "cacc80077@fpt.edu.vn", isDemo: false, color: "#00796b" },
   { name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", isDemo: false, color: "#c62828" },
-  { name: "ADMIN", email: "dindungwork@fpt.edu.vn", isDemo: true, photo: avatarDinhDung },
-  { name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", isDemo: true, color: "#4338ca" },
-  { name: "STUDENT 2", email: "student2@fpt.edu.vn", isDemo: true, color: "#0891b2" }
+  { name: "Đinh Dũng", email: "dindungwork@fpt.edu.vn", isDemo: true, photo: avatarDinhDung },
+  { name: "Nguyễn Thành Linh", email: "linhnt89_fe@fpt.edu.vn", isDemo: true, color: "#4338ca" },
+  { name: "Nguyễn Tuấn Anh", email: "student2@fpt.edu.vn", isDemo: true, color: "#0891b2" }
 ];
 
 const accounts = isProductionMode ? [] : demoAccounts;

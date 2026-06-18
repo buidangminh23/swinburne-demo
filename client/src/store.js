@@ -38,17 +38,26 @@ function withDefaultItemQuantity(item) {
   };
 }
 
+function generateStudentId(email) {
+  const prefix = email.split("@")[0].toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < prefix.length; i++) {
+    hash = (hash * 31 + prefix.charCodeAt(i)) & 0xfffff;
+  }
+  return "SWH" + String(hash % 100000).padStart(5, "0");
+}
+
 const defaultUsers = [
-  { id: 1, name: "LECTURER", email: "buidangminh23@fpt.edu.vn", role: "LECTURER", groupName: "Teaching Team", className: "COS20031" },
-  { id: 2, name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT", groupName: "IT Support", className: "Support Desk" },
-  { id: 3, name: "ADMIN", email: "dindungwork@fpt.edu.vn", role: "ADMIN", groupName: "Admin", className: "Operations" },
-  { id: 4, name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", lecturerId: 1, groupName: "Student Cohort", className: "SE Class" },
-  { id: 5, name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", groupName: "Event Team", className: "Campus Events" },
-  { id: 7, name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT", groupName: "IT Support", className: "Front Desk" },
-  { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER", groupName: "Teaching Team", className: "Demo Class" },
-  { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER", groupName: "Media Team", className: "Content Lab" },
-  { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS", groupName: "Operations", className: "Asset Control" },
-  { id: 12, name: "STUDENT 2", email: "student2@fpt.edu.vn", role: "STUDENT", lecturerId: 1, groupName: "Student Cohort", className: "SE Class" }
+  { id: 1, name: "Minh Bùi Đăng", email: "buidangminh23@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminh23@fpt.edu.vn"), groupName: "Teaching Team", className: "COS20031" },
+  { id: 2, name: "Nguyễn Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT", studentId: generateStudentId("taolaminhanh1@fpt.edu.vn"), groupName: "IT Support", className: "Support Desk" },
+  { id: 3, name: "Đinh Dũng", email: "dindungwork@fpt.edu.vn", role: "ADMIN", studentId: generateStudentId("dindungwork@fpt.edu.vn"), groupName: "Admin", className: "Operations" },
+  { id: 4, name: "Đăng Minh Bùi", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("buidangminh.lh@fpt.edu.vn"), lecturerId: 1, groupName: "Student Cohort", className: "SE Class" },
+  { id: 5, name: "Nguyễn Hoàng Hiệp", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", studentId: generateStudentId("hiheho911@fpt.edu.vn"), groupName: "Event Team", className: "Campus Events" },
+  { id: 7, name: "Nguyễn Thành Linh", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT", studentId: generateStudentId("linhnt89_fe@fpt.edu.vn"), groupName: "IT Support", className: "Front Desk" },
+  { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("cacc80077@fpt.edu.vn"), groupName: "Teaching Team", className: "Demo Class" },
+  { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminhcontentcreator@fpt.edu.vn"), groupName: "Media Team", className: "Content Lab" },
+  { id: 11, name: "Ban Vận Hành", email: "operations@fpt.edu.vn", role: "OPERATIONS", studentId: generateStudentId("operations@fpt.edu.vn"), groupName: "Operations", className: "Asset Control" },
+  { id: 12, name: "Nguyễn Tuấn Anh", email: "student2@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("student2@fpt.edu.vn"), lecturerId: 1, groupName: "Student Cohort", className: "SE Class" }
 ];
 
 const defaultEquipment = [
@@ -286,7 +295,7 @@ const defaultSchedules = [
   { id: 3, ownerType: "PROJECT", ownerId: 1, startDate: "2026-03-09", endDate: "2026-06-12" }
 ];
 
-const SEED_VERSION = "2026-06-20-units-no-vovinam";
+const SEED_VERSION = "2026-06-20-units-no-vovinam-v4";
 const AUDIT_KEY = "swin-demo-audit-log";
 const PREF_KEY = "swin-demo-notification-preferences";
 const REMINDER_KEY = "swin-demo-reminder-rules";
@@ -618,6 +627,7 @@ class DemoRepository {
         name: namePart.toUpperCase(),
         email: email.toLowerCase(),
         role: role,
+        studentId: generateStudentId(email),
         groupName: role === "STUDENT" ? "Student Cohort" : "Demo Users",
         className: role === "STUDENT" ? "Unassigned Class" : "Staff"
       };
