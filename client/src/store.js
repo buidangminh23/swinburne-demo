@@ -1151,11 +1151,7 @@ class DemoRepository {
       const isOwner = actor.id === request.lecturerId;
       if (!canManage) {
         if (isOwner) {
-          if (owner?.role === "STUDENT" && request.status !== "REQUESTED") {
-            const error = new Error("After approval you can only extend the due date.");
-            error.status = 409;
-            throw error;
-          }
+          // Allowed to edit
         } else if (actor.role === "LECTURER") {
           if (!lecturerTeachesStudent(actor.id, request.lecturerId)) {
             const error = new Error("You can only edit requests for students you teach.");
@@ -1177,7 +1173,7 @@ class DemoRepository {
       error.status = 400;
       throw error;
     }
-    if (owner?.role === "STUDENT" && request.status !== "REQUESTED") {
+    if (owner?.role === "STUDENT" && request.status !== "REQUESTED" && input.isExtendMode) {
       if (data.dueAt) {
         const origStart = request.startDate ?? request.createdAt;
         const origDay = new Date(origStart).toDateString();
