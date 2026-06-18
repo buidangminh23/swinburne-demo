@@ -180,6 +180,14 @@ function handleCellClick(date, hour) {
   }
 }
 
+const getDefaultNotes = (purpose) => {
+  if (purpose === "CLASSROOM") return "Collected for classroom session";
+  if (purpose === "RESEARCH") return "Equipment needed for research project activity";
+  if (purpose === "LAB") return "Required for laboratory practical session";
+  if (purpose === "EVENT") return "Collected for campus event support";
+  return "Equipment request for academic purpose";
+};
+
 async function confirmBooking() {
   submitting.value = true;
   try {
@@ -190,7 +198,8 @@ async function confirmBooking() {
       program: null,
       unitOrProject: null,
       startDate: bookingForm.start,
-      dueAt: bookingForm.end
+      dueAt: bookingForm.end,
+      handoverNotes: getDefaultNotes(bookingForm.purpose)
     });
     isModalOpen.value = false;
   } finally {

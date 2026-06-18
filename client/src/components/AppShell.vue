@@ -400,8 +400,9 @@ watchEffect(() => {
                       <td>{{ req.equipment?.name }}</td>
                       <td>{{ req.classroom || "-" }}</td>
                       <td>
-                        <span class="program-span">{{ req.program || "-" }}</span>
-                        <span class="purpose-span">{{ t(req.purpose) }}</span>
+                        <span class="program-span" style="display: block; font-size: 12px; color: #4e5b66;">{{ req.program || "-" }}</span>
+                        <span class="purpose-span" style="display: inline-block; margin-top: 2px;">{{ t(req.purpose) }}</span>
+                        <span v-if="req.handoverNotes" class="handover-notes-inline" style="color: #6b7280; font-size: 11px; margin-left: 4px; font-weight: normal; display: inline-block; vertical-align: middle;">({{ req.handoverNotes }})</span>
                       </td>
                       <td>{{ req.quantity || 1 }}</td>
                       <td>

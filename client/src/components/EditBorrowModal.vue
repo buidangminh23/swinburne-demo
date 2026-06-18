@@ -66,6 +66,14 @@ function toLocalInput(iso) {
 
 const dueAtInput = ref(null);
 
+const getDefaultNotes = (purpose) => {
+  if (purpose === "CLASSROOM") return "Collected for classroom session";
+  if (purpose === "RESEARCH") return "Equipment needed for research project activity";
+  if (purpose === "LAB") return "Required for laboratory practical session";
+  if (purpose === "EVENT") return "Collected for campus event support";
+  return "Equipment request for academic purpose";
+};
+
 watch(
   () => props.request,
   (request) => {
@@ -78,7 +86,7 @@ watch(
     form.startDate = toLocalInput(request.startDate);
     form.recurrence = request.recurrence ?? "NONE";
     form.quantity = request.quantity ?? 1;
-    form.handoverNotes = request.handoverNotes ?? "";
+    form.handoverNotes = request.handoverNotes || getDefaultNotes(request.purpose ?? "CLASSROOM");
     if (props.isExtendMode) {
       setTimeout(() => {
         dueAtInput.value?.focus();
@@ -88,6 +96,15 @@ watch(
   },
   { immediate: true }
 );
+
+watch(() => form.purpose, (newVal, oldVal) => {
+  if (oldVal !== undefined) {
+    const oldDefault = getDefaultNotes(oldVal);
+    if (!form.handoverNotes || !form.handoverNotes.trim() || form.handoverNotes === oldDefault) {
+      form.handoverNotes = getDefaultNotes(newVal);
+    }
+  }
+});
 
 const error = ref("");
 const submitting = ref(false);
@@ -123,6 +140,10 @@ function submit() {
       error.value = t("Return date must be after the start date.");
       return;
     }
+  }
+
+  if (!form.handoverNotes || !form.handoverNotes.trim()) {
+    form.handoverNotes = getDefaultNotes(form.purpose);
   }
 
   submitting.value = true;
@@ -194,8 +215,8 @@ function submit() {
           <input v-model="form.quantity" type="number" min="1" step="1" :disabled="props.isExtendMode" />
         </label>
         <label>
-          {{ t('Handover Notes') }}
-          <textarea v-model="form.handoverNotes" rows="2" maxlength="240" :disabled="props.isExtendMode"></textarea>
+          {{ t('Handover Notes') }} ({{ t('Required') }})
+          <textarea v-model="form.handoverNotes" rows="2" maxlength="240" :disabled="props.isExtendMode" placeholder="Describe handover details (required)..."></textarea>
         </label>
         <p v-if="error" class="error">{{ error }}</p>
         <div class="modal-actions">

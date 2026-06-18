@@ -109,7 +109,19 @@ function applyProject(projectId) {
   form.dueAt = toLocalInput(end);
 }
 
-watch(() => form.purpose, (newVal) => {
+const getDefaultNotes = (purpose) => {
+  if (purpose === "CLASSROOM") return "Collected for classroom session";
+  if (purpose === "RESEARCH") return "Equipment needed for research project activity";
+  if (purpose === "LAB") return "Required for laboratory practical session";
+  if (purpose === "EVENT") return "Collected for campus event support";
+  return "Equipment request for academic purpose";
+};
+
+watch(() => form.purpose, (newVal, oldVal) => {
+  const oldDefault = oldVal ? getDefaultNotes(oldVal) : "";
+  if (!form.handoverNotes || !form.handoverNotes.trim() || form.handoverNotes === oldDefault) {
+    form.handoverNotes = getDefaultNotes(newVal);
+  }
   form.unitId = null;
   form.researchProjectId = null;
   if (newVal === "CLASSROOM") {
@@ -228,6 +240,10 @@ function submit() {
       error.value = "Return date must be after the start date.";
       return;
     }
+  }
+
+  if (!form.handoverNotes || !form.handoverNotes.trim()) {
+    form.handoverNotes = getDefaultNotes(form.purpose);
   }
 
   submitting.value = true;
@@ -378,8 +394,8 @@ function submit() {
             Event borrowing starts a chain-of-custody log. Record the initial custodian below.
           </p>
           <label>
-            Handover notes / Event Custody Notes
-            <textarea v-model="form.handoverNotes" rows="2" maxlength="240" placeholder="Describe handover details..."></textarea>
+            Handover notes / Event Custody Notes (Required)
+            <textarea v-model="form.handoverNotes" rows="2" maxlength="240" placeholder="Describe handover details (required)..."></textarea>
           </label>
         </div>
       </div>

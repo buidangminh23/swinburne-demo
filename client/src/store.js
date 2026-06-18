@@ -603,6 +603,14 @@ function closeTransferredBorrow(request, recipient, actorName, at) {
   request.custodyLog = JSON.stringify(custody);
 }
 
+function getDefaultNotes(purpose) {
+  if (purpose === "CLASSROOM") return "Collected for classroom session";
+  if (purpose === "RESEARCH") return "Equipment needed for research project activity";
+  if (purpose === "LAB") return "Required for laboratory practical session";
+  if (purpose === "EVENT") return "Collected for campus event support";
+  return "Equipment request for academic purpose";
+}
+
 class DemoRepository {
   async login(email) {
     let candidate = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
@@ -749,7 +757,7 @@ class DemoRepository {
       dueAt: end,
       returnedAt: null,
       status,
-      handoverNotes: input.handoverNotes ?? "",
+      handoverNotes: (input.handoverNotes && input.handoverNotes.trim()) ? input.handoverNotes : getDefaultNotes(purpose),
       createdAt: now,
       updatedAt: now,
       purpose,
@@ -1155,6 +1163,10 @@ class DemoRepository {
           throw error;
         }
       }
+    }
+    if (data.handoverNotes !== undefined && (!data.handoverNotes || !data.handoverNotes.trim())) {
+      const nextPurpose = data.purpose ?? request.purpose;
+      data.handoverNotes = getDefaultNotes(nextPurpose);
     }
     Object.assign(request, data);
     request.updatedAt = new Date().toISOString();

@@ -11,6 +11,14 @@ function generateStudentId(email) {
   return "SWH" + String(hash % 100000).padStart(5, "0");
 }
 
+function getDefaultNotes(purpose) {
+  if (purpose === "CLASSROOM") return "Collected for classroom session";
+  if (purpose === "RESEARCH") return "Equipment needed for research project activity";
+  if (purpose === "LAB") return "Required for laboratory practical session";
+  if (purpose === "EVENT") return "Collected for campus event support";
+  return "Equipment request for academic purpose";
+}
+
 function attachStudentIdToUser(user) {
   if (!user) return user;
   return {
@@ -446,7 +454,7 @@ class DemoRepository {
       dueAt: dueAt.toISOString(),
       returnedAt: null,
       status,
-      handoverNotes: input.handoverNotes ?? "",
+      handoverNotes: (input.handoverNotes && input.handoverNotes.trim()) ? input.handoverNotes : getDefaultNotes(purpose),
       createdAt: now,
       updatedAt: now,
       purpose,
@@ -699,6 +707,10 @@ class DemoRepository {
       const error = new Error("Event staff can only borrow equipment for event support");
       error.status = 400;
       throw error;
+    }
+    if (data.handoverNotes !== undefined && (!data.handoverNotes || !data.handoverNotes.trim())) {
+      const nextPurpose = data.purpose ?? request.purpose;
+      data.handoverNotes = getDefaultNotes(nextPurpose);
     }
     Object.assign(request, data);
     request.updatedAt = new Date().toISOString();
@@ -1026,7 +1038,7 @@ class PrismaRepository {
           classroom: input.classroom ?? null,
           dueAt,
           status,
-          handoverNotes: input.handoverNotes ?? "",
+          handoverNotes: (input.handoverNotes && input.handoverNotes.trim()) ? input.handoverNotes : getDefaultNotes(purpose),
           purpose,
           program: input.program ?? null,
           unitOrProject: input.unitOrProject ?? null,
@@ -1290,6 +1302,10 @@ class PrismaRepository {
       const error = new Error("Event staff can only borrow equipment for event support");
       error.status = 400;
       throw error;
+    }
+    if (data.handoverNotes !== undefined && (!data.handoverNotes || !data.handoverNotes.trim())) {
+      const nextPurpose = data.purpose ?? request.purpose;
+      data.handoverNotes = getDefaultNotes(nextPurpose);
     }
     const updated = await this.prisma.borrowRequest.update({
       where: { id },

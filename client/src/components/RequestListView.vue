@@ -314,6 +314,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
             <td>
               <span class="program-span" style="display: block; font-size: 12px; color: #4e5b66;">{{ req.program || "-" }}</span>
               <span class="purpose-span" :class="purposeClass(req)" style="display: inline-block; margin-top: 2px;">{{ t(purposeText(req)) }}</span>
+              <span v-if="req.handoverNotes" class="handover-notes-inline" style="color: #6b7280; font-size: 11px; margin-left: 4px; font-weight: normal; display: inline-block; vertical-align: middle;">({{ req.handoverNotes }})</span>
             </td>
 
             <!-- Quantity -->
