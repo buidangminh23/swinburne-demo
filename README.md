@@ -3,6 +3,11 @@
 Web portal for borrowing, returning, and scheduling classroom and lab equipment.
 Frontend-only production build.
 
+## Live
+
+- **Demo:** https://swinburne-demo.vercel.app
+- **Production:** https://swinburne-equipment-portal.vercel.app
+
 ## Tech Stack
 
 - **Frontend:** Vue 3 + Vite single-page app (runs in the browser).
