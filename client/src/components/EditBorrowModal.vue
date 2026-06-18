@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, watch } from "vue";
+import { reactive, ref, watch, computed } from "vue";
 import { Pencil } from "@lucide/vue";
 
 const classroomOptions = [
@@ -36,6 +36,8 @@ const props = defineProps({
     default: false
   }
 });
+
+const showEventOption = computed(() => props.session?.user?.role === "EVENT_STAFF" || props.request?.purpose === "EVENT");
 
 const emit = defineEmits(["save", "close"]);
 
@@ -156,7 +158,7 @@ function submit() {
           <select v-model="form.purpose" :disabled="props.isExtendMode">
             <option v-if="props.session?.user?.role !== 'EVENT_STAFF'" value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
             <option v-if="props.session?.user?.role !== 'EVENT_STAFF'" value="RESEARCH">{{ t('Research Work') }}</option>
-            <option value="EVENT">{{ t('Swinburne Event') }}</option>
+            <option v-if="showEventOption" value="EVENT">{{ t('Swinburne Event') }}</option>
           </select>
         </label>
 
