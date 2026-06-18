@@ -100,7 +100,7 @@ const isSupport = computed(() => currentRole.value === "SUPPORT");
 const isLecturer = computed(() => currentRole.value === "LECTURER");
 const isEventStaff = computed(() => currentRole.value === "EVENT_STAFF");
 const isOperations = computed(() => currentRole.value === "OPERATIONS");
-const canApprove = computed(() => ["LECTURER", "EVENT_STAFF", "SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value));
+const canApprove = computed(() => ["LECTURER", "SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value));
 const canManageEquipment = computed(() => ["SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value));
 const canConfirmReturn = computed(() => canManageEquipment.value);
 const displayEmail = computed(() => props.session?.user?.email || "");
@@ -154,8 +154,67 @@ const nearDueRequests = computed(() => {
 });
 
 const myActiveRequests = computed(() => {
-  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED"].includes(r.status) && r.lecturerId === props.session.user.id);
+  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
 });
+
+const pendingTabRequests = computed(() => {
+  if (canApprove.value) {
+    return props.state.requests;
+  }
+  return props.state.requests.filter(r => r.lecturerId === props.session.user.id);
+});
+
+const isApprovalRequester = computed(() => ["STUDENT", "EVENT_STAFF"].includes(currentRole.value));
+
+const myApprovalStatusRequests = computed(() => {
+  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "RETURNED", "CANCELLED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
+});
+
+function canApproveRequest(req) {
+  if (currentRole.value === "LECTURER") {
+    return req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
+  }
+  return ["SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value);
+}
+
+const MANAGE_ROLES = ["SUPPORT", "OPERATIONS", "ADMIN"];
+
+function isOwner(req) {
+  return props.session.user.id === req.lecturerId;
+}
+
+function canManageRequest() {
+  return MANAGE_ROLES.includes(currentRole.value);
+}
+
+function lecturerTeachesOwner(req) {
+  return currentRole.value === "LECTURER" && req.lecturer?.lecturerId === props.session.user.id;
+}
+
+function canFullyEdit(req) {
+  if (canManageRequest()) return true;
+  if (lecturerTeachesOwner(req)) return true;
+  if (isOwner(req) && req.status === "REQUESTED") return true;
+  return false;
+}
+
+function canExtend(req) {
+  if (!["RESERVED", "BORROWED"].includes(req.status)) return false;
+  return isOwner(req) || canManageRequest() || lecturerTeachesOwner(req);
+}
+
+function approvalStatusText(req) {
+  if (req.status === "REQUESTED") return "Pending Approval";
+  if (["RESERVED", "BORROWED"].includes(req.status)) return "Accepted";
+  if (req.status === "RETURNED") return "Success";
+  if (req.status === "CANCELLED") return "Denied";
+  if (req.status === "REJECTED") return "Rejected";
+  return req.status;
+}
+
+function requesterDisplayStatus(req) {
+  return ["STUDENT", "EVENT_STAFF"].includes(currentRole.value) ? approvalStatusText(req) : getDisplayStatus(req);
+}
 
 function formatDate(dateStr) {
   if (!dateStr) return "-";
@@ -185,7 +244,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 const activeTabDisplay = computed(() => {
   if (activeTab.value === 'dashboard') return t('Dashboard');
   if (activeTab.value === 'equipment') return t('All Requests');
-  if (activeTab.value === 'pending-approvals') return t('Pending Approvals');
+  if (activeTab.value === 'pending-approvals') return canApprove.value ? t('Pending Approvals') : t('Pending Approval Status');
   if (activeTab.value === 'borrow') return t('Borrow Equipment');
   if (activeTab.value === 'history') return t('History Log');
   if (activeTab.value === 'schedules') return t('Schedules');
@@ -206,7 +265,7 @@ const canAccessTab = computed(() => ({
   profile: true,
   borrow: !isAdmin.value && !isSupport.value && !isOperations.value,
   equipment: canApprove.value,
-  "pending-approvals": canApprove.value,
+  "pending-approvals": true,
   status: canApprove.value,
   returns: canConfirmReturn.value,
   "admin-equipment": canManageEquipment.value,
@@ -235,7 +294,7 @@ watchEffect(() => {
         <a v-if="isAdmin" :class="{ active: activeTab === 'admin-users' }" href="#" @click.prevent="goToTab('admin-users')"><UserRound :size="18" /> {{ t('User Management') }}</a>
 
         <a v-if="canApprove" :class="{ active: activeTab === 'equipment' }" href="#" @click.prevent="goToTab('equipment')"><Boxes :size="18" /> {{ t('All Requests') }}</a>
-        <a v-if="canApprove" :class="{ active: activeTab === 'pending-approvals' }" href="#" @click.prevent="goToTab('pending-approvals')"><ShieldCheck :size="18" /> {{ t('Pending Approvals') }}</a>
+        <a :class="{ active: activeTab === 'pending-approvals' }" href="#" @click.prevent="goToTab('pending-approvals')"><ShieldCheck :size="18" /> {{ canApprove ? t('Pending Approvals') : t('Pending Approval Status') }}</a>
         <a v-if="!isAdmin && !isSupport && !isOperations" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="goToTab('borrow')"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="goToTab('history')"><History :size="18" /> {{ t('History Log') }}</a>
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="goToTab('schedules')"><CalendarDays :size="18" /> {{ t('Schedules') }}</a>
@@ -303,7 +362,7 @@ watchEffect(() => {
         <template v-if="activeTab === 'dashboard'">
           <div class="dashboard-widgets-grid">
             <!-- 1. PENDING APPROVALS (Lecturer/Support/Admin only) -->
-            <div v-if="!isStudent" class="dashboard-widget panel">
+            <div v-if="canApprove" class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2>{{ t('Pending Approval Requests') }} ({{ pendingRequests.length }})</h2>
               </div>
@@ -313,7 +372,7 @@ watchEffect(() => {
                     <tr>
                       <th>{{ t('Requester') }}</th>
                       <th>{{ t('Equipment') }}</th>
-                      <th>{{ t('University / Purpose') }}</th>
+                      <th>{{ t('Unit / Purpose') }}</th>
                       <th>{{ t('Classroom') }}</th>
                       <th>{{ t('Actions') }}</th>
                     </tr>
@@ -328,8 +387,11 @@ watchEffect(() => {
                       </td>
                       <td>{{ req.classroom || "-" }}</td>
                       <td class="action-cell">
-                        <button class="widget-btn approve-btn" @click="$emit('approve', req.id)">{{ t('Approve') }}</button>
-                        <button class="widget-btn deny-btn" @click="confirmDeny(req.id)">{{ t('Deny') }}</button>
+                        <template v-if="canApproveRequest(req)">
+                          <button class="widget-btn approve-btn" @click="$emit('approve', req.id)">{{ t('Approve') }}</button>
+                          <button class="widget-btn deny-btn" @click="confirmDeny(req.id)">{{ t('Deny') }}</button>
+                        </template>
+                        <span v-else :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')">{{ t(approvalStatusText(req)) }}</span>
                       </td>
                     </tr>
                     <tr v-if="pendingRequests.length === 0">
@@ -405,7 +467,40 @@ watchEffect(() => {
               </div>
             </div>
 
-            <!-- 4. MY REQUESTS & BORROWS -->
+            <!-- 4. PENDING APPROVAL STATUS -->
+            <div v-if="isApprovalRequester" class="dashboard-widget panel">
+              <div class="panel-heading compact border-bottom-0">
+                <h2>{{ t('Pending Approval Status') }} ({{ myApprovalStatusRequests.length }})</h2>
+              </div>
+              <div class="widget-table-wrap">
+                <table class="widget-table">
+                  <thead>
+                    <tr>
+                      <th>{{ t('Equipment') }}</th>
+                      <th>{{ t('Purpose') }}</th>
+                      <th>{{ t('Status') }}</th>
+                      <th>{{ t('Due Date') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="req in myApprovalStatusRequests" :key="'approval-status-' + req.id">
+                      <td>{{ req.equipment?.name }}</td>
+                      <td><span class="purpose-span">{{ t(req.purpose) }}</span></td>
+                      <td><span :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')">{{ t(approvalStatusText(req)) }}</span></td>
+                      <td>
+                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
+                        <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
+                      </td>
+                    </tr>
+                    <tr v-if="myApprovalStatusRequests.length === 0">
+                      <td colspan="4" class="empty-widget-text">{{ t('No approval status requests yet.') }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 5. MY REQUESTS & BORROWS -->
             <div class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2>{{ t('My Requests & Borrows') }} ({{ myActiveRequests.length }})</h2>
@@ -425,16 +520,16 @@ watchEffect(() => {
                     <tr v-for="req in myActiveRequests" :key="req.id">
                       <td>{{ req.equipment?.name }}</td>
                       <td><span class="purpose-span">{{ t(req.purpose) }}</span></td>
-                      <td><span :class="'status-chip ' + getDisplayStatus(req).toLowerCase().replace('_', '-')">{{ t(getDisplayStatus(req)).replace('_', ' ') }}</span></td>
+                      <td><span :class="'status-chip ' + requesterDisplayStatus(req).toLowerCase().replace('_', '-').replace(' ', '-')">{{ t(requesterDisplayStatus(req)).replace('_', ' ') }}</span></td>
                       <td>
                         <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td class="action-cell">
-                        <button class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> {{ t('Edit') }}</button>
+                        <button v-if="canFullyEdit(req)" class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> {{ t('Edit') }}</button>
                         <button v-if="req.status === 'BORROWED' && canConfirmReturn" class="widget-btn return-btn" @click="goToTab('returns')">{{ t('Return') }}</button>
                         <button v-if="req.status === 'RESERVED' && !isStudent" class="widget-btn approve-btn" @click="$emit('check-out', req.id)">{{ t('Check Out') }}</button>
-                        <button v-if="req.status === 'BORROWED'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
+                        <button v-if="canExtend(req)" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
                         <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> {{ t('Custody') }}</button>
                       </td>
                     </tr>
@@ -445,6 +540,21 @@ watchEffect(() => {
                 </table>
               </div>
             </div>
+          </div>
+          <div v-if="canApprove" style="margin-top: 30px;">
+            <RequestListView
+              key="dashboard-all-requests"
+              :requests="state.requests"
+              :session="session"
+              :timelines="state.equipmentTimelines"
+              @approve="$emit('approve', $event)"
+              @deny="confirmDeny"
+              @extend="$emit('extend', $event)"
+              @edit="editingRequest = $event"
+              @custody="openCustody"
+              @remind="$emit('remind', $event)"
+              @check-out="$emit('check-out', $event)"
+            />
           </div>
         </template>
 
@@ -464,13 +574,13 @@ watchEffect(() => {
           />
         </template>
 
-        <template v-else-if="activeTab === 'pending-approvals' && canApprove">
+        <template v-else-if="activeTab === 'pending-approvals'">
           <RequestListView
             key="pending"
-            :requests="state.requests"
+            :requests="pendingTabRequests"
             :session="session"
             :timelines="state.equipmentTimelines"
-            initialStatus="REQUESTED"
+            :initialStatus="canApprove ? 'REQUESTED' : 'ALL'"
             @approve="$emit('approve', $event)"
             @deny="confirmDeny"
             @extend="$emit('extend', $event)"
@@ -482,7 +592,7 @@ watchEffect(() => {
         </template>
 
         <template v-else-if="activeTab === 'borrow' && !isAdmin && !isSupport && !isOperations">
-          <BorrowPanel :equipment="state.equipment" :requests="state.requests" :is-student="isStudent" :user-role="session.user.role" :session="session" @borrow="$emit('borrow', $event)" />
+          <BorrowPanel :equipment="state.equipment" :requests="state.requests" :is-student="isStudent" :user-role="session.user.role" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" @borrow="$emit('borrow', $event)" />
         </template>
 
         <template v-else-if="activeTab === 'returns' && canConfirmReturn">
@@ -543,7 +653,7 @@ watchEffect(() => {
       </section>
     </main>
 
-    <EditBorrowModal :request="editingRequest" :session="session" @save="submitEdit" @close="editingRequest = null" />
+    <EditBorrowModal :request="editingRequest" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" @save="submitEdit" @close="editingRequest = null" />
 
     <div v-if="custodyTarget" class="modal-overlay" @click.self="custodyTarget = null">
       <div class="modal-card">

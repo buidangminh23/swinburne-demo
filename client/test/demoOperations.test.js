@@ -15,7 +15,7 @@ const equipment = [
     name: "Logitech Rally Camera Kit",
     category: "Video",
     status: "AVAILABLE",
-    totalQuantity: 1,
+    totalQuantity: 5,
     accessories: ["HDMI cable", "Remote"]
   },
   {
@@ -24,7 +24,7 @@ const equipment = [
     name: "Portable Lecture Camera",
     category: "Video",
     status: "AVAILABLE",
-    totalQuantity: 1,
+    totalQuantity: 5,
     accessories: ["USB-C cable"]
   }
 ];
@@ -60,7 +60,7 @@ test("analyzeBorrowRequest blocks overlapping conflicts, warns on duplicates, an
         status: "BORROWED",
         startDate: "2026-06-14T01:00:00.000Z",
         dueAt: "2026-06-14T03:00:00.000Z",
-        quantity: 1
+        quantity: 5
       }
     ],
     payload: {

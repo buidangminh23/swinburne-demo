@@ -1,25 +1,17 @@
 <script setup>
-import { reactive, ref, watch, computed } from "vue";
+import { reactive, ref, watch } from "vue";
 import { Pencil } from "@lucide/vue";
 
-const reasonOptions = [
-  "Teaching",
-  "Student Presentation",
-  "Exam/Quiz",
-  "Seminar/Workshop",
-  "Lab Session",
-  "Club Activity",
-  "Other"
-];
-
 const classroomOptions = [
-  "ATC 625",
-  "ATC 628",
-  "BA 701",
-  "LIB DESK",
-  "MED DESK",
-  "EN402",
-  "EN403"
+  "HN-DT1-9.1",
+  "HN-DT1-9.2",
+  "HN-ATC-6.25",
+  "HN-ATC-6.28",
+  "HN-BA-7.01",
+  "HN-EN-4.02",
+  "HN-EN-4.03",
+  "HN-LIB-DESK",
+  "HN-MED-DESK"
 ];
 
 const props = defineProps({
@@ -30,6 +22,14 @@ const props = defineProps({
   session: {
     type: Object,
     required: true
+  },
+  units: {
+    type: Array,
+    default: () => []
+  },
+  projects: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -64,8 +64,8 @@ watch(
     if (!request) return;
     form.purpose = request.purpose ?? "CLASSROOM";
     form.program = request.program ?? "";
-    form.unitOrProject = request.unitOrProject || "Teaching";
-    form.classroom = request.classroom ?? "ATC 625";
+    form.unitOrProject = request.unitOrProject ?? "";
+    form.classroom = request.classroom ?? classroomOptions[0];
     form.dueAt = toLocalInput(request.dueAt);
     form.startDate = toLocalInput(request.startDate);
     form.recurrence = request.recurrence ?? "NONE";
@@ -74,14 +74,6 @@ watch(
   },
   { immediate: true }
 );
-
-watch(() => form.purpose, (newVal) => {
-  if (newVal === "CLASSROOM") {
-    form.unitOrProject = "Teaching";
-  }
-});
-
-const filteredReasonOptions = computed(() => reasonOptions);
 
 const error = ref("");
 const submitting = ref(false);
@@ -116,8 +108,8 @@ function submit() {
   const payload = {
     purpose: form.purpose,
     program: form.program || null,
-    unitOrProject: form.purpose === "CLASSROOM" ? form.unitOrProject : null,
-    classroom: form.classroom || null,
+    unitOrProject: form.unitOrProject || null,
+    classroom: form.purpose === "CLASSROOM" ? form.classroom || null : null,
     dueAt: dueDate.toISOString(),
     quantity: Math.max(1, Math.floor(Number(form.quantity)) || 1),
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null,
@@ -142,17 +134,8 @@ function submit() {
           {{ t('Purpose') }}
           <select v-model="form.purpose">
             <option value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
-            <option value="LAB">{{ t('Lab Session') }}</option>
             <option value="RESEARCH">{{ t('Research Work') }}</option>
             <option value="EVENT">{{ t('Swinburne Event') }}</option>
-          </select>
-        </label>
-        <label>
-          {{ t('University:') }}
-          <select v-model="form.program">
-            <option value="Swinburne">{{ t('Swinburne') }}</option>
-            <option value="Asia">{{ t('Asia') }}</option>
-            <option value="FPT">{{ t('FPT') }}</option>
           </select>
         </label>
 
@@ -163,12 +146,6 @@ function submit() {
           </select>
         </label>
 
-        <label v-if="form.purpose === 'CLASSROOM'">
-          {{ t('Reason of Use:') }}
-          <select v-model="form.unitOrProject">
-            <option v-for="r in filteredReasonOptions" :key="r" :value="r">{{ t(r) }}</option>
-          </select>
-        </label>
         <div class="form-row">
           <label>
             {{ t('From') }}

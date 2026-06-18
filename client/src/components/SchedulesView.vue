@@ -3,24 +3,16 @@ import { ref, reactive, computed, watch, onMounted } from "vue";
 import { Calendar, Clock, ChevronLeft, ChevronRight } from "@lucide/vue";
 import { api } from "../api";
 
-const reasonOptions = [
-  "Teaching",
-  "Student Presentation",
-  "Exam/Quiz",
-  "Seminar/Workshop",
-  "Lab Session",
-  "Club Activity",
-  "Other"
-];
-
 const classroomOptions = [
-  "ATC 625",
-  "ATC 628",
-  "BA 701",
-  "LIB DESK",
-  "MED DESK",
-  "EN402",
-  "EN403"
+  "HN-DT1-9.1",
+  "HN-DT1-9.2",
+  "HN-ATC-6.25",
+  "HN-ATC-6.28",
+  "HN-BA-7.01",
+  "HN-EN-4.02",
+  "HN-EN-4.03",
+  "HN-LIB-DESK",
+  "HN-MED-DESK"
 ];
 
 const props = defineProps({
@@ -38,6 +30,7 @@ const emit = defineEmits(["borrow"]);
 
 import { makeTranslator } from "../translate";
 const t = (text) => makeTranslator(props.session?.user?.email)(text);
+const showEventOption = computed(() => props.session?.user?.role === "EVENT_STAFF");
 
 const selectedEquipmentId = ref(props.equipment[0]?.id ?? null);
 const selectedItem = computed(() => props.equipment.find((item) => item.id === selectedEquipmentId.value) ?? null);
@@ -163,10 +156,10 @@ function cellStatus(dayDate, hour) {
 const isModalOpen = ref(false);
 const submitting = ref(false);
 const bookingForm = reactive({
-  classroom: "ATC 625",
+  classroom: "HN-DT1-9.1",
   purpose: "CLASSROOM",
-  program: "Swinburne",
-  unitOrProject: "Teaching",
+  program: null,
+  unitOrProject: null,
   start: null,
   end: null,
   label: ""
@@ -187,14 +180,6 @@ function handleCellClick(date, hour) {
   }
 }
 
-watch(() => bookingForm.purpose, (newVal) => {
-  if (newVal === "CLASSROOM") {
-    bookingForm.unitOrProject = "Teaching";
-  }
-});
-
-const filteredBookingReasonOptions = computed(() => reasonOptions);
-
 async function confirmBooking() {
   submitting.value = true;
   try {
@@ -202,8 +187,8 @@ async function confirmBooking() {
       equipmentId: selectedEquipmentId.value,
       classroom: bookingForm.classroom,
       purpose: bookingForm.purpose,
-      program: bookingForm.program,
-      unitOrProject: bookingForm.purpose === "CLASSROOM" ? bookingForm.unitOrProject : null,
+      program: null,
+      unitOrProject: null,
       startDate: bookingForm.start,
       dueAt: bookingForm.end
     });
@@ -386,24 +371,9 @@ function formatDateTime(dateStr) {
           <label>
             {{ t('Purpose') }}:
             <select v-model="bookingForm.purpose">
-              <option value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
-              <option value="LAB">{{ t('Lab Session') }}</option>
-              <option value="RESEARCH">{{ t('Research Work') }}</option>
-              <option value="EVENT">{{ t('Swinburne Event') }}</option>
-            </select>
-          </label>
-          <label v-if="bookingForm.purpose === 'CLASSROOM'">
-            {{ t('Reason of Use:') }}
-            <select v-model="bookingForm.unitOrProject">
-              <option v-for="r in filteredBookingReasonOptions" :key="r" :value="r">{{ t(r) }}</option>
-            </select>
-          </label>
-          <label>
-            {{ t('University:') }}
-            <select v-model="bookingForm.program">
-              <option value="Swinburne">{{ t('Swinburne') }}</option>
-              <option value="Asia">{{ t('Asia') }}</option>
-              <option value="FPT">{{ t('FPT') }}</option>
+              <option value="CLASSROOM">{{ t('Classroom Use') }}</option>
+              <option value="RESEARCH">{{ t('Research / Project') }}</option>
+              <option v-if="showEventOption" value="EVENT">{{ t('Event Support') }}</option>
             </select>
           </label>
 

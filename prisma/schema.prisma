@@ -32,18 +32,103 @@ enum EquipmentStatus {
 
 enum BorrowStatus {
   REQUESTED
+  RESERVED
   BORROWED
   RETURNED
   CANCELLED
+  REJECTED
+}
+
+enum ScheduleOwnerType {
+  CLASS
+  EVENT
+  PROJECT
 }
 
 model User {
-  id        Int             @id @default(autoincrement())
+  id              Int              @id @default(autoincrement())
+  name            String
+  email           String           @unique
+  role            UserRole
+  createdAt       DateTime         @default(now())
+  requests        BorrowRequest[]
+  taughtUnits     Unit[]           @relation("UnitLecturer")
+  enrollments     Enrollment[]
+  ledProjects     ResearchProject[] @relation("ProjectLecturer")
+  projectMembers  ProjectMember[]
+}
+
+model Semester {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
   name      String
-  email     String          @unique
-  role      UserRole
-  createdAt DateTime        @default(now())
-  requests  BorrowRequest[]
+  startDate DateTime
+  endDate   DateTime
+  units     Unit[]
+}
+
+model Unit {
+  id         Int             @id @default(autoincrement())
+  code       String          @unique
+  name       String
+  semesterId Int
+  lecturerId Int
+  dayOfWeek  Int
+  startHour  Int
+  endHour    Int
+  classroom  String
+  semester   Semester        @relation(fields: [semesterId], references: [id])
+  lecturer   User            @relation("UnitLecturer", fields: [lecturerId], references: [id])
+  enrollments Enrollment[]
+  requests   BorrowRequest[]
+
+  @@index([lecturerId])
+  @@index([semesterId])
+}
+
+model Enrollment {
+  id        Int  @id @default(autoincrement())
+  studentId Int
+  unitId    Int
+  student   User @relation(fields: [studentId], references: [id])
+  unit      Unit @relation(fields: [unitId], references: [id])
+
+  @@unique([studentId, unitId])
+  @@index([unitId])
+}
+
+model ResearchProject {
+  id         Int             @id @default(autoincrement())
+  name       String
+  lecturerId Int
+  startDate  DateTime
+  endDate    DateTime
+  lecturer   User            @relation("ProjectLecturer", fields: [lecturerId], references: [id])
+  members    ProjectMember[]
+  requests   BorrowRequest[]
+
+  @@index([lecturerId])
+}
+
+model ProjectMember {
+  id        Int             @id @default(autoincrement())
+  projectId Int
+  studentId Int
+  project   ResearchProject @relation(fields: [projectId], references: [id])
+  student   User            @relation(fields: [studentId], references: [id])
+
+  @@unique([projectId, studentId])
+  @@index([studentId])
+}
+
+model Schedule {
+  id        Int               @id @default(autoincrement())
+  ownerType ScheduleOwnerType
+  ownerId   Int
+  startDate DateTime
+  endDate   DateTime
+
+  @@index([ownerType, ownerId])
 }
 
 model Equipment {
@@ -81,11 +166,17 @@ model BorrowRequest {
   approvedById     Int?
   deniedById       Int?
   custodyLog       String?
-  equipment        Equipment     @relation(fields: [equipmentId], references: [id])
-  lecturer         User          @relation(fields: [lecturerId], references: [id])
+  unitId           Int?
+  researchProjectId Int?
+  equipment        Equipment        @relation(fields: [equipmentId], references: [id])
+  lecturer         User             @relation(fields: [lecturerId], references: [id])
+  unit             Unit?            @relation(fields: [unitId], references: [id])
+  researchProject  ResearchProject? @relation(fields: [researchProjectId], references: [id])
 
   @@index([status])
   @@index([lecturerId])
   @@index([equipmentId, status])
   @@index([createdAt])
+  @@index([unitId])
+  @@index([researchProjectId])
 }

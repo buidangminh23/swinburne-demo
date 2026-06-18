@@ -115,6 +115,46 @@ const borrowRequests = [
   }
 ];
 
+const semesters = [
+  { id: 1, code: "2026-S1", name: "Semester 1 2026", startDate: "2026-03-02", endDate: "2026-06-19" }
+];
+
+const units = [
+  { id: 1, code: "COS20031", name: "Technical Software Development", semesterId: 1, lecturerId: 1, dayOfWeek: 1, startHour: 9, endHour: 11, classroom: "HN-DT1-9.1" },
+  { id: 2, code: "COS30008", name: "Data Structures and Patterns", semesterId: 1, lecturerId: 1, dayOfWeek: 3, startHour: 13, endHour: 15, classroom: "HN-DT1-9.2" },
+  { id: 3, code: "COS20007", name: "Object Oriented Programming", semesterId: 1, lecturerId: 10, dayOfWeek: 2, startHour: 10, endHour: 12, classroom: "HN-ATC-6.25" }
+];
+
+const enrollments = [
+  { studentId: 12, unitId: 1 },
+  { studentId: 12, unitId: 3 }
+];
+
+const researchProjects = [
+  { id: 1, name: "Data Science Capstone", lecturerId: 1, startDate: "2026-03-09", endDate: "2026-06-12", memberIds: [12] },
+  { id: 2, name: "Computer Vision Lab", lecturerId: 10, startDate: "2026-03-09", endDate: "2026-06-12", memberIds: [12] }
+];
+
+const schedules = [
+  { id: 1, ownerType: "CLASS", ownerId: 1, startDate: "2026-03-02", endDate: "2026-06-19" },
+  { id: 2, ownerType: "PROJECT", ownerId: 1, startDate: "2026-03-09", endDate: "2026-06-12" }
+];
+
+function unitIdsForStudent(studentId) {
+  return enrollments
+    .filter((enrollment) => enrollment.studentId === studentId)
+    .map((enrollment) => enrollment.unitId);
+}
+
+function inMemoryLecturerTeachesStudent(lecturerId, studentId) {
+  const taughtUnitIds = units
+    .filter((unit) => unit.lecturerId === lecturerId)
+    .map((unit) => unit.id);
+  return enrollments.some(
+    (enrollment) => enrollment.studentId === studentId && taughtUnitIds.includes(enrollment.unitId)
+  );
+}
+
 const sprintPlan = [
   {
     id: 1,
@@ -183,7 +223,9 @@ const EDITABLE_FIELDS = [
   "unitOrProject",
   "quantity",
   "startDate",
-  "recurrence"
+  "recurrence",
+  "unitId",
+  "researchProjectId"
 ];
 const DATE_FIELDS = ["dueAt", "startDate"];
 
@@ -243,6 +285,34 @@ function clampReturnedQuantity(input, quantity) {
   return value;
 }
 
+function findInMemoryLecturerBorrowForTransfer(equipmentId, requesterId, quantity = 1) {
+  return borrowRequests.find((request) => {
+    if (request.equipmentId !== equipmentId || request.status !== "BORROWED" || request.lecturerId === requesterId) {
+      return false;
+    }
+    const holder = users.find((candidate) => candidate.id === request.lecturerId);
+    const remaining = request.remainingQuantity ?? request.quantity ?? 1;
+    return holder?.role === "LECTURER" && remaining >= quantity;
+  }) ?? null;
+}
+
+function closeInMemoryTransferredBorrow(request, recipient, at) {
+  request.status = "RETURNED";
+  request.returnedAt = at;
+  request.returnedQuantity = request.quantity ?? 1;
+  request.isStatusOk = true;
+  request.damageReport = "";
+  request.updatedAt = at;
+  const custody = parseCustody(request.custodyLog);
+  custody.push({
+    at,
+    action: "TRANSFERRED",
+    actor: recipient?.email ?? recipient?.name ?? "Staff",
+    notes: `Transferred directly to ${recipient?.name ?? recipient?.email ?? "new borrower"}`
+  });
+  request.custodyLog = JSON.stringify(custody);
+}
+
 class DemoRepository {
   async login(email) {
     const user = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
@@ -297,7 +367,12 @@ class DemoRepository {
     const user = users.find((candidate) => candidate.id === input.lecturerId);
     const isStudent = user?.role === "STUDENT";
 
-    if (item.status !== "AVAILABLE" && !isStudent) {
+    const quantity = input.quantity ?? 1;
+    const transferSource = !isStudent && item.status === "BORROWED"
+      ? findInMemoryLecturerBorrowForTransfer(item.id, input.lecturerId, quantity)
+      : null;
+
+    if (item.status !== "AVAILABLE" && !transferSource && !isStudent) {
       const error = new Error("Equipment is not available");
       error.status = 409;
       throw error;
@@ -338,15 +413,23 @@ class DemoRepository {
       purpose,
       program: input.program ?? null,
       unitOrProject: input.unitOrProject ?? null,
-      quantity: input.quantity ?? 1,
+      quantity,
       startDate: startDate ? startDate.toISOString() : null,
       recurrence: input.recurrence ?? null,
+      unitId: input.unitId ?? null,
+      researchProjectId: input.researchProjectId ?? null,
       custodyLog: JSON.stringify(custody)
     };
 
+    if (transferSource) {
+      closeInMemoryTransferredBorrow(transferSource, user, now);
+    }
+
     if (!isStudent) {
       item.status = "BORROWED";
-      item.conditionNotes = `Borrowed for ${input.classroom || purpose}`;
+      item.conditionNotes = transferSource
+        ? `Transferred from ${users.find((candidate) => candidate.id === transferSource.lecturerId)?.name ?? "lecturer"} to ${user?.name ?? "staff"}`
+        : `Borrowed for ${input.classroom || purpose}`;
       item.updatedAt = now;
     }
     borrowRequests.push(request);
@@ -456,7 +539,7 @@ class DemoRepository {
       throw error;
     }
     const wasHoldingEquipment = request.status === "BORROWED";
-    request.status = "CANCELLED";
+    request.status = "REJECTED";
     request.deniedById = userId;
     request.updatedAt = new Date().toISOString();
     if (wasHoldingEquipment) {
@@ -537,7 +620,7 @@ class DemoRepository {
     };
   }
 
-  async editRequest(id, input = {}) {
+  async editRequest(id, input = {}, actor = null) {
     const request = borrowRequests.find((candidate) => candidate.id === id);
     if (!request) {
       const error = new Error("Request not found");
@@ -546,6 +629,13 @@ class DemoRepository {
     }
     if (!["REQUESTED", "BORROWED"].includes(request.status)) {
       const error = new Error("Only pending or active borrowings can be edited");
+      error.status = 409;
+      throw error;
+    }
+    const owner = users.find((candidate) => candidate.id === request.lecturerId);
+    const ownerIsStudent = owner?.role === "STUDENT";
+    if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED") {
+      const error = new Error("After approval you can only extend the due date.");
       error.status = 409;
       throw error;
     }
@@ -596,6 +686,37 @@ class DemoRepository {
 
   async listStaff() {
     return users.filter((user) => user.role !== "STUDENT");
+  }
+
+  async listUnitsForUser(user) {
+    if (!user) {
+      return [];
+    }
+    if (user.role === "STUDENT") {
+      const enrolledUnitIds = unitIdsForStudent(user.id);
+      return units.filter((unit) => enrolledUnitIds.includes(unit.id));
+    }
+    if (user.role === "LECTURER") {
+      return units.filter((unit) => unit.lecturerId === user.id);
+    }
+    return [...units];
+  }
+
+  async listProjectsForUser(user) {
+    if (!user) {
+      return [];
+    }
+    if (user.role === "STUDENT") {
+      return researchProjects.filter((project) => project.memberIds.includes(user.id));
+    }
+    if (user.role === "LECTURER") {
+      return researchProjects.filter((project) => project.lecturerId === user.id);
+    }
+    return [...researchProjects];
+  }
+
+  async lecturerTeachesStudent(lecturerId, studentId) {
+    return inMemoryLecturerTeachesStudent(lecturerId, studentId);
   }
 
   async getUser(id) {
@@ -747,7 +868,22 @@ class PrismaRepository {
         throw error;
       }
 
-      if (item.status !== "AVAILABLE" && !isStudent) {
+      const quantity = input.quantity ?? 1;
+      const transferSource = !isStudent && item.status === "BORROWED"
+        ? await tx.borrowRequest.findFirst({
+            where: {
+              equipmentId: input.equipmentId,
+              status: "BORROWED",
+              lecturerId: { not: input.lecturerId },
+              lecturer: { is: { role: "LECTURER" } },
+              quantity: { gte: quantity }
+            },
+            include: { lecturer: true },
+            orderBy: { createdAt: "asc" }
+          })
+        : null;
+
+      if (item.status !== "AVAILABLE" && !transferSource && !isStudent) {
         const error = new Error("Equipment is not available");
         error.status = 409;
         throw error;
@@ -763,7 +899,7 @@ class PrismaRepository {
       }
       const startDate = toValidDate(input.startDate);
 
-      if (!isStudent) {
+      if (!isStudent && !transferSource) {
         const flipped = await tx.equipment.updateMany({
           where: { id: input.equipmentId, status: "AVAILABLE" },
           data: {
@@ -776,6 +912,34 @@ class PrismaRepository {
           error.status = 409;
           throw error;
         }
+      }
+
+      if (transferSource) {
+        const custody = parseCustody(transferSource.custodyLog);
+        custody.push({
+          at: new Date().toISOString(),
+          action: "TRANSFERRED",
+          actor: user?.email ?? user?.name ?? "Staff",
+          notes: `Transferred directly to ${user?.name ?? user?.email ?? "new borrower"}`
+        });
+        await tx.borrowRequest.update({
+          where: { id: transferSource.id },
+          data: {
+            status: "RETURNED",
+            returnedAt: new Date(),
+            returnedQuantity: transferSource.quantity ?? 1,
+            isStatusOk: true,
+            damageReport: "",
+            custodyLog: JSON.stringify(custody)
+          }
+        });
+        await tx.equipment.update({
+          where: { id: input.equipmentId },
+          data: {
+            status: "BORROWED",
+            conditionNotes: `Transferred from ${transferSource.lecturer?.name ?? "lecturer"} to ${user?.name ?? "staff"}`
+          }
+        });
       }
 
       const custody = [];
@@ -799,9 +963,11 @@ class PrismaRepository {
           purpose,
           program: input.program ?? null,
           unitOrProject: input.unitOrProject ?? null,
-          quantity: input.quantity ?? 1,
+          quantity,
           startDate,
           recurrence: input.recurrence ?? null,
+          unitId: input.unitId ?? null,
+          researchProjectId: input.researchProjectId ?? null,
           custodyLog: JSON.stringify(custody)
         },
         include: { equipment: true, lecturer: true }
@@ -935,7 +1101,7 @@ class PrismaRepository {
       return tx.borrowRequest.update({
         where: { id },
         data: {
-          status: "CANCELLED",
+          status: "REJECTED",
           deniedById: userId
         },
         include: { equipment: true, lecturer: true }
@@ -1013,8 +1179,8 @@ class PrismaRepository {
     };
   }
 
-  async editRequest(id, input = {}) {
-    const request = await this.prisma.borrowRequest.findUnique({ where: { id } });
+  async editRequest(id, input = {}, actor = null) {
+    const request = await this.prisma.borrowRequest.findUnique({ where: { id }, include: { lecturer: true } });
     if (!request) {
       const error = new Error("Request not found");
       error.status = 404;
@@ -1022,6 +1188,12 @@ class PrismaRepository {
     }
     if (!["REQUESTED", "BORROWED"].includes(request.status)) {
       const error = new Error("Only pending or active borrowings can be edited");
+      error.status = 409;
+      throw error;
+    }
+    const ownerIsStudent = request.lecturer?.role === "STUDENT";
+    if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED") {
+      const error = new Error("After approval you can only extend the due date.");
       error.status = 409;
       throw error;
     }
@@ -1078,6 +1250,55 @@ class PrismaRepository {
 
   async listStaff() {
     return this.prisma.user.findMany({ where: { role: { not: "STUDENT" } } });
+  }
+
+  async listUnitsForUser(user) {
+    if (!user) {
+      return [];
+    }
+    if (user.role === "STUDENT") {
+      return this.prisma.unit.findMany({
+        where: { enrollments: { some: { studentId: user.id } } },
+        orderBy: { code: "asc" }
+      });
+    }
+    if (user.role === "LECTURER") {
+      return this.prisma.unit.findMany({ where: { lecturerId: user.id }, orderBy: { code: "asc" } });
+    }
+    return this.prisma.unit.findMany({ orderBy: { code: "asc" } });
+  }
+
+  async listProjectsForUser(user) {
+    if (!user) {
+      return [];
+    }
+    let projects;
+    if (user.role === "STUDENT") {
+      projects = await this.prisma.researchProject.findMany({
+        where: { members: { some: { studentId: user.id } } },
+        include: { members: true },
+        orderBy: { id: "asc" }
+      });
+    } else if (user.role === "LECTURER") {
+      projects = await this.prisma.researchProject.findMany({
+        where: { lecturerId: user.id },
+        include: { members: true },
+        orderBy: { id: "asc" }
+      });
+    } else {
+      projects = await this.prisma.researchProject.findMany({
+        include: { members: true },
+        orderBy: { id: "asc" }
+      });
+    }
+    return projects.map(({ members, ...rest }) => ({ ...rest, memberIds: members.map((member) => member.studentId) }));
+  }
+
+  async lecturerTeachesStudent(lecturerId, studentId) {
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { studentId, unit: { is: { lecturerId } } }
+    });
+    return Boolean(enrollment);
   }
 
   async getUser(id) {

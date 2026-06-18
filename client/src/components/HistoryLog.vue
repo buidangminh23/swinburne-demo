@@ -213,8 +213,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
           <select v-model="filters.purpose" class="filter-select">
             <option value="">{{ t('All Purposes') }}</option>
             <option value="CLASSROOM">{{ t('Classroom') }}</option>
-            <option value="LAB">{{ t('Lab') }}</option>
-            <option value="RESEARCH">{{ t('Research') }}</option>
+            <option value="RESEARCH">{{ t('Research / Project') }}</option>
             <option value="EVENT">{{ t('Event') }}</option>
           </select>
         </div>
@@ -249,7 +248,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
               <th>{{ t('User') }}</th>
               <th>{{ t('Equipment') }}</th>
               <th>{{ t('Purpose') }}</th>
-              <th>{{ t('Classroom / University') }}</th>
+              <th>{{ t('Classroom / Unit') }}</th>
               <th>{{ t('Borrowed At') }}</th>
               <th>{{ t('Due At') }}</th>
               <th>{{ t('Returned At') }}</th>

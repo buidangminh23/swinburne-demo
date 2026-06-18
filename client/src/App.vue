@@ -21,7 +21,9 @@ const state = reactive({
   auditLog: [],
   notificationPreferences: null,
   reminderRules: [],
-  equipmentTimelines: []
+  equipmentTimelines: [],
+  myUnits: [],
+  myProjects: []
 });
 
 const isLoggedIn = computed(() => Boolean(session.value?.token && session.value?.user?.role));
@@ -43,13 +45,15 @@ async function loadPortal() {
       throw new Error(failed[0]?.message || "Failed to load portal data.");
     }
     const [summary, equipment, requests, sprints] = core;
-    const [notifications, smartAlerts, auditLog, notificationPreferences, reminderRules, equipmentTimelines] = await Promise.all([
+    const [notifications, smartAlerts, auditLog, notificationPreferences, reminderRules, equipmentTimelines, myUnits, myProjects] = await Promise.all([
       api.notifications().catch(() => []),
       api.smartAlerts?.().catch(() => []),
       api.auditLog?.().catch(() => []),
       api.notificationPreferences?.().catch(() => null),
       api.reminderRules?.().catch(() => []),
-      api.equipmentTimelines?.().catch(() => [])
+      api.equipmentTimelines?.().catch(() => []),
+      api.units?.().catch(() => []),
+      api.researchProjects?.().catch(() => [])
     ]);
     state.summary = summary;
     state.equipment = equipment;
@@ -61,6 +65,8 @@ async function loadPortal() {
     state.notificationPreferences = notificationPreferences;
     state.reminderRules = reminderRules;
     state.equipmentTimelines = equipmentTimelines;
+    state.myUnits = myUnits;
+    state.myProjects = myProjects;
 
     if (user?.role === "ADMIN") {
       state.users = await api.users().catch(() => []);

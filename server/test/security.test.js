@@ -183,6 +183,57 @@ test("rbac: a lecturer cannot create equipment", async () => {
   assert.equal(res.status, 403);
 });
 
+test("transfer: staff can borrow equipment currently borrowed by a lecturer and receive immediate approval", async () => {
+  const supportToken = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const lecturerToken = await tokenFor("buidangminh23@fpt.edu.vn");
+
+  const createRes = await authFetch(supportToken, "/api/equipment", {
+    method: "POST",
+    body: JSON.stringify({
+      assetCode: `SW-EQ-XFER-${Date.now()}`,
+      name: "Transfer Test Kit",
+      category: "Teaching",
+      location: "ATC 610"
+    })
+  });
+  assert.equal(createRes.status, 201);
+  const item = await createRes.json();
+
+  const lecturerBorrowRes = await authFetch(lecturerToken, "/api/borrow-requests", {
+    method: "POST",
+    body: JSON.stringify({
+      equipmentId: item.id,
+      classroom: "ATC 610",
+      dueAt: "2026-12-30T10:00:00.000Z",
+      purpose: "CLASSROOM"
+    })
+  });
+  assert.equal(lecturerBorrowRes.status, 201);
+  const lecturerBorrow = await lecturerBorrowRes.json();
+  assert.equal(lecturerBorrow.status, "BORROWED");
+  assert.equal(lecturerBorrow.lecturerId, 1);
+
+  const staffBorrowRes = await authFetch(supportToken, "/api/borrow-requests", {
+    method: "POST",
+    body: JSON.stringify({
+      equipmentId: item.id,
+      classroom: "ATC 611",
+      dueAt: "2026-12-30T12:00:00.000Z",
+      purpose: "CLASSROOM"
+    })
+  });
+  assert.equal(staffBorrowRes.status, 201);
+  const staffBorrow = await staffBorrowRes.json();
+  assert.equal(staffBorrow.status, "BORROWED");
+  assert.equal(staffBorrow.lecturerId, 2);
+
+  const activeRes = await authFetch(supportToken, "/api/borrow-requests");
+  assert.equal(activeRes.status, 200);
+  const active = await activeRes.json();
+  const transferRows = active.filter((request) => request.equipmentId === item.id);
+  assert.deepEqual(transferRows.map((request) => request.id), [staffBorrow.id]);
+});
+
 test("rbac: only an admin can list users", async () => {
   const adminToken = await tokenFor("dindungwork@fpt.edu.vn");
   const adminRes = await authFetch(adminToken, "/api/users");

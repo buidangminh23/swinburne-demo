@@ -655,6 +655,12 @@ tbody tr:hover {
   color: #9e9e9e;
 }
 
+.status-chip.denied,
+.status-chip.rejected {
+  background: #ffe7ec;
+  color: #d9182f;
+}
+
 .status-chip.maintenance {
   background: #ffe7ec;
   color: #d9182f;

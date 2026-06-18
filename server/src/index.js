@@ -62,7 +62,9 @@ const borrowSchema = z.object({
   unitOrProject: z.string().max(100).optional().nullable(),
   quantity: z.number().int().positive().optional(),
   startDate: z.string().datetime().optional().nullable(),
-  recurrence: z.string().max(50).optional().nullable()
+  recurrence: z.string().max(50).optional().nullable(),
+  unitId: z.number().int().positive().optional().nullable(),
+  researchProjectId: z.number().int().positive().optional().nullable()
 });
 
 const editSchema = z.object({
@@ -74,7 +76,9 @@ const editSchema = z.object({
   unitOrProject: z.string().max(100).optional().nullable(),
   quantity: z.number().int().positive().optional(),
   startDate: z.string().datetime().optional().nullable(),
-  recurrence: z.string().max(50).optional().nullable()
+  recurrence: z.string().max(50).optional().nullable(),
+  unitId: z.number().int().positive().optional().nullable(),
+  researchProjectId: z.number().int().positive().optional().nullable()
 });
 
 const custodySchema = z.object({
@@ -122,7 +126,7 @@ const extendSchema = z.object({
 
 const historyQuerySchema = z.object({
   userId: z.coerce.number().int().positive().optional(),
-  status: z.enum(["REQUESTED", "BORROWED", "RETURNED", "CANCELLED"]).optional(),
+  status: z.enum(["REQUESTED", "RESERVED", "BORROWED", "RETURNED", "CANCELLED", "REJECTED"]).optional(),
   purpose: z.enum(["CLASSROOM", "LAB", "RESEARCH", "EVENT"]).optional(),
   search: z.string().max(120).optional(),
   sortBy: z.enum(["createdAt", "dueAt", "returnedAt", "updatedAt", "startDate"]).optional(),
@@ -376,6 +380,14 @@ app.get("/api/equipment/:id/schedule", route(async (req, res) => {
   res.json(await repository.getEquipmentSchedule(parseId(req.params.id)));
 }));
 
+app.get("/api/units", route(async (req, res) => {
+  res.json(await repository.listUnitsForUser(req.user));
+}));
+
+app.get("/api/research-projects", route(async (req, res) => {
+  res.json(await repository.listProjectsForUser(req.user));
+}));
+
 app.get("/api/borrow-requests", route(async (req, res) => {
   res.json(await repository.listActiveRequests());
 }));
@@ -447,9 +459,19 @@ app.post("/api/borrow-requests", route(async (req, res) => {
   }
 }));
 
-app.patch("/api/borrow-requests/:id", loadOwnRequest, route(async (req, res) => {
+app.patch("/api/borrow-requests/:id", loadRequest, route(async (req, res) => {
+  const request = req.borrowRequest;
+  const isOwner = request.lecturerId === req.user.id;
+  const canManage = can(req.user.role, "MANAGE_REQUEST");
+  let allowed = isOwner || canManage;
+  if (!allowed && req.user.role === "LECTURER") {
+    allowed = await repository.lecturerTeachesStudent(req.user.id, request.lecturerId);
+  }
+  if (!allowed) {
+    return res.status(403).json({ message: "Bạn chỉ có thể thao tác trên yêu cầu của chính mình." });
+  }
   const payload = editSchema.parse(req.body);
-  res.json(await repository.editRequest(parseId(req.params.id), payload));
+  res.json(await repository.editRequest(parseId(req.params.id), payload, { id: req.user.id, role: req.user.role }));
 }));
 
 app.post("/api/borrow-requests/:id/approve", requireCapability("APPROVE_REQUEST"), loadRequest, route(async (req, res) => {

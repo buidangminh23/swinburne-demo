@@ -101,11 +101,14 @@ export const apiMock = {
     for (const item of list) {
       const created = await store.borrowEquipment({ ...item, lecturerId: user?.id });
       results.push(created);
+      const isRequest = created.status === "REQUESTED";
       pushNotification({
         to: await staffEmails(),
-        type: "BORROW_REQUEST",
-        subject: `New borrow request • ${itemName(created)}`,
-        message: `${created.lecturer?.name ?? "A user"} requested ${itemName(created)} for ${created.purpose}.`
+        type: isRequest ? "BORROW_REQUEST" : "EQUIPMENT_BORROWED",
+        subject: `${isRequest ? "New borrow request" : "Equipment borrowed"} • ${itemName(created)}`,
+        message: isRequest
+          ? `${created.lecturer?.name ?? "A user"} requested ${itemName(created)} for ${created.purpose}.`
+          : `${created.lecturer?.name ?? "A user"} borrowed ${itemName(created)} for ${created.purpose}.`
       });
     }
     return Array.isArray(payload) ? results : results[0];
@@ -268,6 +271,12 @@ export const apiMock = {
   },
   users() {
     return store.listAllUsers();
+  },
+  units() {
+    return store.listUnitsForUser(currentUser());
+  },
+  researchProjects() {
+    return store.listProjectsForUser(currentUser());
   },
   updateUserRole(id, role, lecturerId = null, profile = {}) {
     const user = currentUser();

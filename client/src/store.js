@@ -1,13 +1,14 @@
-import { isProductionMode } from "./config";
+import { isProductionMode } from "./config.js";
 import {
   analyzeBorrowRequest,
   applyPartialReturnSnapshot,
   availableUnitsForEquipment,
   buildEquipmentTimelines,
   buildSmartAlerts
-} from "./demoOperations";
+} from "./demoOperations.js";
 
 const DAY = 24 * 60 * 60 * 1000;
+const DEFAULT_ITEM_QUANTITY = 5;
 const fromNow = (ms) => new Date(Date.now() + ms).toISOString();
 const relativeDate = (days, hours) => {
   const d = new Date();
@@ -28,6 +29,13 @@ function isImmediateStart(startDate) {
     return true;
   }
   return new Date(startDate).getTime() <= Date.now();
+}
+
+function withDefaultItemQuantity(item) {
+  return {
+    ...item,
+    totalQuantity: DEFAULT_ITEM_QUANTITY
+  };
 }
 
 const defaultUsers = [
@@ -101,9 +109,8 @@ const defaultEquipment = [
   }
 ];
 
-const STOCK_OVERRIDES = {};
 defaultEquipment.forEach((item) => {
-  item.totalQuantity = STOCK_OVERRIDES[item.id] ?? 1;
+  item.totalQuantity = DEFAULT_ITEM_QUANTITY;
 });
 
 const defaultBorrowRequests = [
@@ -252,7 +259,34 @@ const defaultBorrowRequests = [
   }
 ];
 
-const SEED_VERSION = "2026-06-20-delete-vovinam";
+const defaultSemesters = [
+  { id: 1, code: "2026-S1", name: "Semester 1 2026", startDate: "2026-03-02", endDate: "2026-06-19" }
+];
+
+const defaultUnits = [
+  { id: 1, code: "COS20031", name: "Technical Software Development", semesterId: 1, lecturerId: 1, dayOfWeek: 1, startHour: 9, endHour: 11, classroom: "HN-DT1-9.1" },
+  { id: 2, code: "COS30008", name: "Data Structures and Patterns", semesterId: 1, lecturerId: 1, dayOfWeek: 3, startHour: 13, endHour: 15, classroom: "HN-DT1-9.2" },
+  { id: 3, code: "COS20007", name: "Object Oriented Programming", semesterId: 1, lecturerId: 10, dayOfWeek: 2, startHour: 10, endHour: 12, classroom: "HN-ATC-6.25" }
+];
+
+const defaultEnrollments = [
+  { studentId: 4, unitId: 1 },
+  { studentId: 4, unitId: 2 },
+  { studentId: 12, unitId: 1 }
+];
+
+const defaultResearchProjects = [
+  { id: 1, name: "Data Science Capstone", lecturerId: 1, startDate: "2026-03-09", endDate: "2026-06-12", memberIds: [4, 12] },
+  { id: 2, name: "Computer Vision Lab", lecturerId: 10, startDate: "2026-03-09", endDate: "2026-06-12", memberIds: [12] }
+];
+
+const defaultSchedules = [
+  { id: 1, ownerType: "CLASS", ownerId: 1, startDate: "2026-03-02", endDate: "2026-06-19" },
+  { id: 2, ownerType: "CLASS", ownerId: 2, startDate: "2026-03-04", endDate: "2026-06-19" },
+  { id: 3, ownerType: "PROJECT", ownerId: 1, startDate: "2026-03-09", endDate: "2026-06-12" }
+];
+
+const SEED_VERSION = "2026-06-20-units-no-vovinam";
 const AUDIT_KEY = "swin-demo-audit-log";
 const PREF_KEY = "swin-demo-notification-preferences";
 const REMINDER_KEY = "swin-demo-reminder-rules";
@@ -305,9 +339,9 @@ const users = (() => {
 const equipment = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-equipment");
-    return saved ? JSON.parse(saved) : defaultEquipment;
+    return (saved ? JSON.parse(saved) : defaultEquipment).map(withDefaultItemQuantity);
   } catch {
-    return defaultEquipment;
+    return defaultEquipment.map(withDefaultItemQuantity);
   }
 })();
 
@@ -352,6 +386,12 @@ const reminderRules = (() => {
     return defaultReminderRules;
   }
 })();
+
+const semesters = defaultSemesters.map((semester) => ({ ...semester }));
+const units = defaultUnits.map((unit) => ({ ...unit }));
+const enrollments = defaultEnrollments.map((enrollment) => ({ ...enrollment }));
+const researchProjects = defaultResearchProjects.map((project) => ({ ...project, memberIds: [...project.memberIds] }));
+const schedules = defaultSchedules.map((schedule) => ({ ...schedule }));
 
 function persistState() {
   try {
@@ -407,7 +447,7 @@ function attachEquipment(request) {
   return { ...request, equipment: item, lecturer };
 }
 
-const APPROVER_ROLES = ["ADMIN", "SUPPORT", "OPERATIONS", "EVENT_STAFF"];
+const APPROVER_ROLES = ["ADMIN", "SUPPORT", "OPERATIONS"];
 
 function canApproveRequest(actorId, request) {
   const actor = users.find((candidate) => candidate.id === actorId);
@@ -423,6 +463,24 @@ function canApproveRequest(actorId, request) {
 
 function nextId(rows) {
   return rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
+}
+
+function unitIdsForStudent(studentId) {
+  return enrollments.filter((enrollment) => enrollment.studentId === studentId).map((enrollment) => enrollment.unitId);
+}
+
+function unitsForStudent(studentId) {
+  const ids = new Set(unitIdsForStudent(studentId));
+  return units.filter((unit) => ids.has(unit.id));
+}
+
+function projectsForStudent(studentId) {
+  return researchProjects.filter((project) => project.memberIds.includes(studentId));
+}
+
+function teachesStudent(lecturerId, studentId) {
+  const taughtUnitIds = new Set(units.filter((unit) => unit.lecturerId === lecturerId).map((unit) => unit.id));
+  return enrollments.some((enrollment) => enrollment.studentId === studentId && taughtUnitIds.has(enrollment.unitId));
 }
 
 function recordAudit({ action, actorId = null, actorName = "", entityType, entityId, details = {} }) {
@@ -507,6 +565,35 @@ function recomputeStoredStatus(item) {
   item.status = free <= 0 ? "BORROWED" : "AVAILABLE";
 }
 
+function findLecturerBorrowForTransfer(equipmentId, requesterId, quantity = 1) {
+  return borrowRequests.find((request) => {
+    if (request.equipmentId !== equipmentId || request.status !== "BORROWED" || request.lecturerId === requesterId) {
+      return false;
+    }
+    const holder = users.find((candidate) => candidate.id === request.lecturerId);
+    const remaining = request.remainingQuantity ?? request.quantity ?? 1;
+    return holder?.role === "LECTURER" && remaining >= quantity;
+  }) ?? null;
+}
+
+function closeTransferredBorrow(request, recipient, actorName, at) {
+  request.status = "RETURNED";
+  request.returnedAt = at;
+  request.returnedQuantity = request.quantity ?? 1;
+  request.remainingQuantity = 0;
+  request.isStatusOk = true;
+  request.damageReport = "";
+  request.updatedAt = at;
+  const custody = parseCustody(request.custodyLog);
+  custody.push({
+    at,
+    action: "TRANSFERRED",
+    actor: actorName,
+    notes: `Transferred directly to ${recipient?.name ?? recipient?.email ?? "new borrower"}`
+  });
+  request.custodyLog = JSON.stringify(custody);
+}
+
 class DemoRepository {
   async login(email) {
     let candidate = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
@@ -554,7 +641,7 @@ class DemoRepository {
       return {
         ...item,
         accessories: item.accessories ?? [],
-        totalQuantity: item.totalQuantity ?? 1,
+        totalQuantity: DEFAULT_ITEM_QUANTITY,
         availableNow: Math.max(0, availableNow),
         displayStatus: computeDisplayStatus(item, availableNow),
         latestRequest: itemRequests[0] || null
@@ -608,26 +695,35 @@ class DemoRepository {
       error.status = 400;
       throw error;
     }
+    const user = users.find((candidate) => candidate.id === input.lecturerId);
+    const isStudent = user?.role === "STUDENT";
+    const transferSource = !isStudent && item.status === "BORROWED"
+      ? findLecturerBorrowForTransfer(item.id, input.lecturerId, quantity)
+      : null;
     const available = demoAvailableUnits(item.id, { start, end });
-    if (quantity > available) {
-      const error = new Error(`Only ${Math.max(0, available)} of ${item.totalQuantity ?? 1} unit(s) are free for that time window`);
+    if (quantity > available && !transferSource) {
+      const error = new Error(`Only ${Math.max(0, available)} of ${DEFAULT_ITEM_QUANTITY} unit(s) are free for that time window`);
       error.status = 409;
       throw error;
     }
     const preflight = await this.analyzeBorrow(input, input.lecturerId);
 
-    const user = users.find((candidate) => candidate.id === input.lecturerId);
-    const status = "REQUESTED";
+    const status = isStudent ? "REQUESTED" : "BORROWED";
     const purpose = input.purpose ?? "CLASSROOM";
+    const now = new Date().toISOString();
 
     const custody = [];
     if (purpose === "EVENT") {
       custody.push({
-        at: new Date().toISOString(),
-        action: "REQUESTED",
+        at: now,
+        action: isStudent ? "REQUESTED" : "CHECKED_OUT",
         actor: user?.name ?? `User ${input.lecturerId}`,
         notes: input.handoverNotes ?? ""
       });
+    }
+
+    if (transferSource) {
+      closeTransferredBorrow(transferSource, user, user?.email ?? "Staff", now);
     }
 
     const request = {
@@ -639,8 +735,8 @@ class DemoRepository {
       returnedAt: null,
       status,
       handoverNotes: input.handoverNotes ?? "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       purpose,
       program: input.program ?? null,
       unitOrProject: input.unitOrProject ?? null,
@@ -660,9 +756,18 @@ class DemoRepository {
         quantity,
         startDate: start,
         dueAt: end,
-        duplicates: preflight.duplicates.length
+        duplicates: preflight.duplicates.length,
+        transferredFromRequestId: transferSource?.id ?? null
       }
     });
+    if (!isStudent) {
+      const transferHolder = transferSource ? users.find((candidate) => candidate.id === transferSource.lecturerId) : null;
+      item.conditionNotes = transferSource
+        ? `Transferred from ${transferHolder?.name ?? "lecturer"} to ${user?.name ?? "staff"}`
+        : `Borrowed for ${input.classroom || purpose}`;
+      item.updatedAt = now;
+      recomputeStoredStatus(item);
+    }
     persistState();
     return attachEquipment(request);
   }
@@ -799,7 +904,7 @@ class DemoRepository {
       throw error;
     }
     if (!canApproveRequest(userId, request)) {
-      const error = new Error("Lecturers can only approve borrow requests submitted by students.");
+      const error = new Error("You do not have permission to approve this request.");
       error.status = 403;
       throw error;
     }
@@ -842,7 +947,7 @@ class DemoRepository {
       throw error;
     }
     if (!canApproveRequest(userId, request)) {
-      const error = new Error("Lecturers can only deny borrow requests submitted by students.");
+      const error = new Error("You do not have permission to deny this request.");
       error.status = 403;
       throw error;
     }
@@ -852,7 +957,7 @@ class DemoRepository {
       throw error;
     }
     const wasHolding = ["RESERVED", "BORROWED"].includes(request.status);
-    request.status = "CANCELLED";
+    request.status = "REJECTED";
     request.deniedById = userId;
     request.updatedAt = new Date().toISOString();
     if (wasHolding) {
@@ -998,6 +1103,23 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
+    const actor = input.actorId != null ? users.find((candidate) => candidate.id === input.actorId) : null;
+    const owner = users.find((candidate) => candidate.id === request.lecturerId);
+    const isOwner = actor != null && actor.id === request.lecturerId;
+    const canManage = actor != null && APPROVER_ROLES.includes(actor.role);
+    if (isOwner && owner?.role === "STUDENT" && request.status !== "REQUESTED") {
+      const error = new Error("After approval you can only extend the due date.");
+      error.status = 409;
+      throw error;
+    }
+    if (actor != null && !isOwner && !canManage) {
+      const teaches = actor.role === "LECTURER" && teachesStudent(actor.id, request.lecturerId);
+      if (!teaches) {
+        const error = new Error("You do not have permission to edit this request.");
+        error.status = 403;
+        throw error;
+      }
+    }
     const data = buildEditData(input, { toDate: (value) => new Date(value).toISOString() });
     Object.assign(request, data);
     request.updatedAt = new Date().toISOString();
@@ -1068,6 +1190,38 @@ class DemoRepository {
     return users.find((user) => user.id === id) ?? null;
   }
 
+  async listUnitsForUser(user) {
+    if (!user) {
+      return [];
+    }
+    if (user.role === "STUDENT") {
+      return unitsForStudent(user.id).map((unit) => ({ ...unit }));
+    }
+    if (user.role === "LECTURER") {
+      return units.filter((unit) => unit.lecturerId === user.id).map((unit) => ({ ...unit }));
+    }
+    return units.map((unit) => ({ ...unit }));
+  }
+
+  async listProjectsForUser(user) {
+    if (!user) {
+      return [];
+    }
+    if (user.role === "STUDENT") {
+      return projectsForStudent(user.id).map((project) => ({ ...project, memberIds: [...project.memberIds] }));
+    }
+    if (user.role === "LECTURER") {
+      return researchProjects
+        .filter((project) => project.lecturerId === user.id)
+        .map((project) => ({ ...project, memberIds: [...project.memberIds] }));
+    }
+    return researchProjects.map((project) => ({ ...project, memberIds: [...project.memberIds] }));
+  }
+
+  lecturerTeachesStudent(lecturerId, studentId) {
+    return teachesStudent(lecturerId, studentId);
+  }
+
   async getRequest(id) {
     const request = borrowRequests.find((candidate) => candidate.id === id);
     return request ? attachEquipment(request) : null;
@@ -1081,7 +1235,7 @@ class DemoRepository {
     let totalUnits = 0;
     let availableUnits = 0;
     for (const item of equipment) {
-      totalUnits += item.totalQuantity ?? 1;
+      totalUnits += DEFAULT_ITEM_QUANTITY;
       if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
         maintenance += 1;
         continue;
@@ -1236,7 +1390,7 @@ class DemoRepository {
       status: input.status ?? "AVAILABLE",
       conditionNotes: input.conditionNotes ?? "",
       accessories: input.accessories ?? [],
-      totalQuantity: input.totalQuantity ?? 1,
+      totalQuantity: DEFAULT_ITEM_QUANTITY,
       updatedAt: new Date().toISOString()
     };
     equipment.push(item);
@@ -1263,7 +1417,7 @@ class DemoRepository {
     item.status = input.status ?? item.status;
     item.conditionNotes = input.conditionNotes !== undefined ? input.conditionNotes : item.conditionNotes;
     item.accessories = input.accessories ?? item.accessories ?? [];
-    item.totalQuantity = input.totalQuantity ?? item.totalQuantity;
+    item.totalQuantity = DEFAULT_ITEM_QUANTITY;
     item.updatedAt = new Date().toISOString();
     recordAudit({
       action: "EQUIPMENT_UPDATED",

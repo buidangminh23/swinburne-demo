@@ -111,6 +111,12 @@ export const apiHttp = {
   users() {
     return request("/api/users");
   },
+  units() {
+    return request("/api/units");
+  },
+  researchProjects() {
+    return request("/api/research-projects");
+  },
   updateUserRole(id, role) {
     return request(`/api/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
   },

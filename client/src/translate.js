@@ -295,53 +295,11 @@ const translations = {
   "Pending Requests": "Yêu cầu đang chờ",
   "Current Borrowing": "Đang mượn",
   "Updating...": "Đang cập nhật...",
-  "Coming Soon": "Sắp ra mắt"
+  "Coming Soon": "Sắp ra mắt",
+  "Accepted": "Chấp nhận",
+  "Success": "Thành công"
 };
 
-export function makeTranslator(email) {
-  const isVovinam = String(email || "").toLowerCase() === "vovinamteacher@fpt.edu.vn";
-  
-  // Build case-insensitive translation map
-  const lowerTranslations = {};
-  for (const [key, val] of Object.entries(translations)) {
-    lowerTranslations[key.toLowerCase()] = val;
-  }
-
-  const translateFn = (text) => {
-    if (!isVovinam) return text;
-    if (typeof text !== "string") return text;
-    const clean = text.trim();
-    if (translations[clean]) return translations[clean];
-    
-    const lowerClean = clean.toLowerCase();
-    if (lowerTranslations[lowerClean]) return lowerTranslations[lowerClean];
-
-    // Dynamic pattern matching for alerts
-    if (clean.endsWith(" is overdue.")) {
-      const item = clean.slice(0, -12);
-      return `${translateFn(item)} đã quá hạn trả.`;
-    }
-    if (clean.endsWith(" is due within 24 hours.")) {
-      const item = clean.slice(0, -24);
-      return `${translateFn(item)} cần trả trong vòng 24 giờ.`;
-    }
-    if (clean.endsWith(" needs staff attention.")) {
-      const item = clean.slice(0, -23);
-      return `${translateFn(item)} cần sự kiểm tra của nhân viên.`;
-    }
-    if (clean.endsWith(" has no free units right now.")) {
-      const item = clean.slice(0, -29);
-      return `${translateFn(item)} hiện tại đã hết thiết bị trống.`;
-    }
-    if (clean.includes(" still has ") && clean.endsWith(" unit(s) pending return.")) {
-      const parts = clean.split(" still has ");
-      const item = parts[0];
-      const qty = parts[1].replace(" unit(s) pending return.", "");
-      return `${translateFn(item)} vẫn còn ${qty} thiết bị chưa trả.`;
-    }
-
-    return text;
-  };
-
-  return translateFn;
+export function makeTranslator() {
+  return (text) => text;
 }

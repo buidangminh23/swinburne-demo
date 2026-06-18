@@ -64,6 +64,114 @@ async function main() {
     }
   });
 
+  const secondLecturer = await prisma.user.upsert({
+    where: { email: "lecturer2@fpt.edu.vn" },
+    update: {},
+    create: {
+      name: "Lecturer Two",
+      email: "lecturer2@fpt.edu.vn",
+      role: "LECTURER"
+    }
+  });
+
+  const secondStudent = await prisma.user.upsert({
+    where: { email: "student2@fpt.edu.vn" },
+    update: {},
+    create: {
+      name: "Student Two",
+      email: "student2@fpt.edu.vn",
+      role: "STUDENT"
+    }
+  });
+
+  const semester = await prisma.semester.upsert({
+    where: { code: "2026-S1" },
+    update: {
+      name: "Semester 1 2026",
+      startDate: new Date("2026-03-02"),
+      endDate: new Date("2026-06-19")
+    },
+    create: {
+      code: "2026-S1",
+      name: "Semester 1 2026",
+      startDate: new Date("2026-03-02"),
+      endDate: new Date("2026-06-19")
+    }
+  });
+
+  const unitSeeds = [
+    { code: "COS20031", name: "Technical Software Development", lecturerId: lecturer.id, dayOfWeek: 1, startHour: 9, endHour: 11, classroom: "HN-DT1-9.1" },
+    { code: "COS30008", name: "Data Structures and Patterns", lecturerId: lecturer.id, dayOfWeek: 3, startHour: 13, endHour: 15, classroom: "HN-DT1-9.2" },
+    { code: "COS20007", name: "Object Oriented Programming", lecturerId: secondLecturer.id, dayOfWeek: 2, startHour: 10, endHour: 12, classroom: "HN-ATC-6.25" }
+  ];
+
+  const unitsByCode = {};
+  for (const unitSeed of unitSeeds) {
+    const unit = await prisma.unit.upsert({
+      where: { code: unitSeed.code },
+      update: {
+        name: unitSeed.name,
+        semesterId: semester.id,
+        lecturerId: unitSeed.lecturerId,
+        dayOfWeek: unitSeed.dayOfWeek,
+        startHour: unitSeed.startHour,
+        endHour: unitSeed.endHour,
+        classroom: unitSeed.classroom
+      },
+      create: {
+        code: unitSeed.code,
+        name: unitSeed.name,
+        semesterId: semester.id,
+        lecturerId: unitSeed.lecturerId,
+        dayOfWeek: unitSeed.dayOfWeek,
+        startHour: unitSeed.startHour,
+        endHour: unitSeed.endHour,
+        classroom: unitSeed.classroom
+      }
+    });
+    unitsByCode[unitSeed.code] = unit;
+  }
+
+  const enrollmentSeeds = [
+    { studentId: student.id, unitId: unitsByCode.COS20031.id },
+    { studentId: student.id, unitId: unitsByCode.COS30008.id },
+    { studentId: secondStudent.id, unitId: unitsByCode.COS20031.id }
+  ];
+
+  for (const enrollmentSeed of enrollmentSeeds) {
+    await prisma.enrollment.upsert({
+      where: { studentId_unitId: { studentId: enrollmentSeed.studentId, unitId: enrollmentSeed.unitId } },
+      update: {},
+      create: enrollmentSeed
+    });
+  }
+
+  const projectSeeds = [
+    { name: "Data Science Capstone", lecturerId: lecturer.id, startDate: new Date("2026-03-09"), endDate: new Date("2026-06-12"), memberIds: [student.id, secondStudent.id] },
+    { name: "Computer Vision Lab", lecturerId: secondLecturer.id, startDate: new Date("2026-03-09"), endDate: new Date("2026-06-12"), memberIds: [secondStudent.id] }
+  ];
+
+  for (const projectSeed of projectSeeds) {
+    let project = await prisma.researchProject.findFirst({ where: { name: projectSeed.name } });
+    if (!project) {
+      project = await prisma.researchProject.create({
+        data: {
+          name: projectSeed.name,
+          lecturerId: projectSeed.lecturerId,
+          startDate: projectSeed.startDate,
+          endDate: projectSeed.endDate
+        }
+      });
+    }
+    for (const memberId of projectSeed.memberIds) {
+      await prisma.projectMember.upsert({
+        where: { projectId_studentId: { projectId: project.id, studentId: memberId } },
+        update: {},
+        create: { projectId: project.id, studentId: memberId }
+      });
+    }
+  }
+
   const items = [
     ["SW-EQ-1001", "Logitech Rally Camera Kit", "Video", "ATC 625", "AVAILABLE", "Ready for classroom recording"],
     ["SW-EQ-1002", "Wireless Presentation Clicker", "Teaching", "Library Desk", "BORROWED", "Borrowed for tutorial room EN402"],

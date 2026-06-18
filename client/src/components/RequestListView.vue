@@ -57,12 +57,21 @@ const searchText = ref("");
 const statusFilter = ref(props.initialStatus || "ALL");
 const purposeFilter = ref("ALL");
 
-const APPROVER_ROLES = ["LECTURER", "EVENT_STAFF", "SUPPORT", "OPERATIONS", "ADMIN"];
+const APPROVER_ROLES = ["LECTURER", "SUPPORT", "OPERATIONS", "ADMIN"];
 
 const isStudent = computed(() => props.session.user.role === "STUDENT");
 
 function canActOn() {
   return APPROVER_ROLES.includes(props.session.user.role);
+}
+
+function approvalStatusText(req) {
+  if (req.status === "REQUESTED") return "Pending Approval";
+  if (["RESERVED", "BORROWED"].includes(req.status)) return "Accepted";
+  if (req.status === "RETURNED") return "Success";
+  if (req.status === "CANCELLED") return "Denied";
+  if (req.status === "REJECTED") return "Rejected";
+  return req.status;
 }
 
 function getPriorityScore(req) {
@@ -71,14 +80,51 @@ function getPriorityScore(req) {
   if (req.status === "RESERVED") return 4;
   if (req.status === "BORROWED") {
     const due = new Date(req.dueAt);
-    if (due < now) return 2; // Overdue
+    if (due < now) return 2;
     const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    if (due < limit) return 3; // Near due (within 24 hours)
-    return 4; // Normal borrowed
+    if (due < limit) return 3;
+    return 4;
   }
   if (req.status === "RETURNED") return 5;
+  if (req.status === "REJECTED") return 6;
   if (req.status === "CANCELLED") return 6;
   return 7;
+}
+
+const MANAGE_ROLES = ["SUPPORT", "OPERATIONS", "ADMIN"];
+
+function isOwner(req) {
+  return props.session.user.id === req.lecturerId;
+}
+
+function canManage() {
+  return MANAGE_ROLES.includes(props.session.user.role);
+}
+
+function lecturerTeachesOwner(req) {
+  return props.session.user.role === "LECTURER" && req.lecturer?.lecturerId === props.session.user.id;
+}
+
+function canFullyEdit(req) {
+  if (canManage()) return true;
+  if (lecturerTeachesOwner(req)) return true;
+  if (isOwner(req) && req.status === "REQUESTED") return true;
+  return false;
+}
+
+function canExtend(req) {
+  if (!["RESERVED", "BORROWED"].includes(req.status)) return false;
+  return isOwner(req) || canManage() || lecturerTeachesOwner(req);
+}
+
+function purposeText(req) {
+  if (req.purpose === "LAB" || req.purpose === "RESEARCH") return "Research / Project";
+  return req.purpose;
+}
+
+function purposeClass(req) {
+  if (req.purpose === "LAB") return "research";
+  return req.purpose.toLowerCase();
 }
 
 const filteredRequests = computed(() => {
@@ -122,7 +168,11 @@ const filteredRequests = computed(() => {
 
   // Purpose Filter
   if (purposeFilter.value !== "ALL") {
-    list = list.filter(r => r.purpose === purposeFilter.value);
+    if (purposeFilter.value === "RESEARCH") {
+      list = list.filter(r => r.purpose === "RESEARCH" || r.purpose === "LAB");
+    } else {
+      list = list.filter(r => r.purpose === purposeFilter.value);
+    }
   }
 
 
@@ -198,14 +248,14 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
             <option value="NEAR_DUE">⏰ {{ t('Near Due Date') }}</option>
             <option value="OVERDUE">⚠️ {{ t('OVERDUE') }}</option>
             <option value="RETURNED">{{ t('Returned') }}</option>
+            <option value="REJECTED">{{ t('Rejected') }}</option>
             <option value="CANCELLED">{{ t('Cancelled') }}</option>
           </select>
 
           <select v-model="purposeFilter" class="filter-select">
             <option value="ALL">{{ t('All Purposes') }}</option>
             <option value="CLASSROOM">{{ t('Classroom') }}</option>
-            <option value="LAB">{{ t('Lab') }}</option>
-            <option value="RESEARCH">{{ t('Research') }}</option>
+            <option value="RESEARCH">{{ t('Research / Project') }}</option>
             <option value="EVENT">{{ t('Event') }}</option>
           </select>
         </div>
@@ -272,7 +322,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
             <!-- Purpose & Details -->
             <td>
               <div class="details-cell">
-                <span class="purpose-tag" :class="req.purpose.toLowerCase()">{{ t(req.purpose) }}</span>
+                <span class="purpose-tag" :class="purposeClass(req)">{{ t(purposeText(req)) }}</span>
                 <span v-if="req.program" class="program-sub">{{ req.program }}</span>
                 <span v-if="req.unitOrProject" class="unit-sub">{{ t('Unit: ') }}{{ req.unitOrProject }}</span>
               </div>
@@ -315,10 +365,16 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
                     {{ t('Deny') }}
                   </button>
                 </template>
+                <span
+                  v-else-if="!canActOn(req)"
+                  :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')"
+                >
+                  {{ t(approvalStatusText(req)) }}
+                </span>
 
                 <!-- General actions -->
                 <button
-                  v-if="['REQUESTED', 'BORROWED'].includes(req.status) && (session.user.id === req.lecturerId || canActOn(req))"
+                  v-if="canFullyEdit(req)"
                   class="action-btn edit"
                   @click="emit('edit', req)"
                   :title="t('Edit')"
@@ -338,7 +394,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
                 <!-- Extend action -->
                 <button
-                  v-if="req.status === 'BORROWED' && (session.user.id === req.lecturerId || canActOn(req))"
+                  v-if="canExtend(req)"
                   class="action-btn extend"
                   @click="emit('extend', { id: req.id, payload: {} })"
                   :title="t('Extend borrowing by 7 days')"
@@ -614,6 +670,11 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 .purpose-tag.lab { background: #dcfce7; color: #15803d; }
 .purpose-tag.research { background: #fef3c7; color: #b45309; }
 .purpose-tag.event { background: #f3e8ff; color: #6d28d9; }
+
+.status-chip.rejected {
+  background: #ffe7ec;
+  color: #d9182f;
+}
 
 .overdue-text {
   color: #b91c1c;

@@ -1,5 +1,6 @@
 const ACTIVE_REQUEST_STATUSES = ["REQUESTED", "APPROVED", "RESERVED", "BORROWED"];
 const STAFF_ROLES = ["ADMIN", "SUPPORT", "OPERATIONS", "LECTURER", "EVENT_STAFF"];
+const DEFAULT_ITEM_QUANTITY = 5;
 
 function toMillis(value, fallback = 0) {
   if (!value) return fallback;
@@ -65,7 +66,7 @@ export function availableUnitsForEquipment(equipment, requests, equipmentId, win
   }
   const occupied = activeRequestsForEquipment(requests, equipmentId, window, excludeRequestId)
     .reduce((sum, request) => sum + (request.remainingQuantity ?? request.quantity ?? 1), 0);
-  return (item.totalQuantity ?? 1) - occupied;
+  return (item.totalQuantity ?? DEFAULT_ITEM_QUANTITY) - occupied;
 }
 
 export function analyzeBorrowRequest({ equipment = [], requests = [], users = [], payload = {}, requesterId = null }) {
@@ -284,6 +285,7 @@ function requestEventTitle(request) {
   if (request.status === "BORROWED") return "Checked out / borrowed";
   if (request.status === "RESERVED") return "Approved reservation";
   if (request.status === "CANCELLED") return "Cancelled";
+  if (request.status === "REJECTED") return "Rejected";
   return "Requested";
 }
 

@@ -23,34 +23,41 @@ const props = defineProps({
   session: {
     type: Object,
     default: null
+  },
+  units: {
+    type: Array,
+    default: () => []
+  },
+  projects: {
+    type: Array,
+    default: () => []
   }
 });
 
 const emit = defineEmits(["borrow"]);
 
-const reasonOptions = [
-  "Teaching",
-  "Student Presentation",
-  "Exam/Quiz",
-  "Seminar/Workshop",
-  "Lab Session",
-  "Club Activity",
-  "Other"
-];
+function nextOccurrence(dayOfWeek, startHour, endHour) {
+  const now = new Date();
+  const result = new Date(now);
+  result.setHours(startHour, 0, 0, 0);
+  let delta = (dayOfWeek - now.getDay() + 7) % 7;
+  if (delta === 0 && result.getTime() <= now.getTime()) delta = 7;
+  result.setDate(now.getDate() + delta);
+  const end = new Date(result);
+  end.setHours(endHour, 0, 0, 0);
+  return { start: result, end };
+}
 
-const classroomOptions = [
-  "ATC 625",
-  "ATC 628",
-  "BA 701",
-  "LIB DESK",
-  "MED DESK",
-  "EN402",
-  "EN403"
-];
+function toLocalInput(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 const availableEquipment = computed(() => {
   return props.equipment.filter((item) => {
-    if (item.status !== "AVAILABLE" || cart.some(c => c.id === item.id)) {
+    const status = item.displayStatus ?? item.status;
+    const availableNow = item.availableNow ?? 1;
+    if (status !== "AVAILABLE" || availableNow <= 0 || cart.some(c => c.id === item.id)) {
       return false;
     }
     return true;
@@ -58,15 +65,19 @@ const availableEquipment = computed(() => {
 });
 
 const form = reactive({
-  program: "Swinburne",
+  program: null,
   purpose: "CLASSROOM",
-  unitOrProject: "Teaching",
-  classroom: "ATC 625",
+  unitOrProject: "",
+  unitId: null,
+  researchProjectId: null,
+  classroom: "",
   startDate: new Date().toISOString().slice(0, 16),
-  dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16), // 3 hours from now
+  dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16),
   recurrence: "NONE",
   handoverNotes: "Collected for classroom session"
 });
+
+const showEventOption = computed(() => props.userRole === "EVENT_STAFF");
 
 onMounted(() => {
   if (props.userRole === "EVENT_STAFF") {
@@ -75,15 +86,75 @@ onMounted(() => {
   }
 });
 
+function applyUnit(unitId) {
+  const unit = props.units.find((u) => u.id === unitId);
+  if (!unit) return;
+  form.unitId = unit.id;
+  form.unitOrProject = unit.code;
+  form.program = unit.code;
+  form.classroom = unit.classroom;
+  const { start, end } = nextOccurrence(unit.dayOfWeek, unit.startHour, unit.endHour);
+  form.startDate = toLocalInput(start);
+  form.dueAt = toLocalInput(end);
+}
+
+function applyProject(projectId) {
+  const project = props.projects.find((p) => p.id === projectId);
+  if (!project) return;
+  form.researchProjectId = project.id;
+  form.unitOrProject = project.name;
+  form.program = project.name;
+  form.startDate = toLocalInput(new Date());
+  const end = project.endDate ? new Date(project.endDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  form.dueAt = toLocalInput(end);
+}
+
 watch(() => form.purpose, (newVal) => {
+  form.unitId = null;
+  form.researchProjectId = null;
   if (newVal === "CLASSROOM") {
-    form.unitOrProject = "Teaching";
+    form.unitOrProject = "";
+    form.classroom = "";
+    if (props.units.length > 0) {
+      applyUnit(props.units[0].id);
+    }
+  } else if (newVal === "RESEARCH") {
+    form.classroom = "";
+    if (props.projects.length > 0) {
+      applyProject(props.projects[0].id);
+    } else {
+      form.unitOrProject = "";
+    }
+  } else {
+    form.unitOrProject = "";
+    form.classroom = "";
+    form.program = null;
   }
 });
 
-const filteredReasonOptions = computed(() => {
-  return reasonOptions;
+watch(() => form.unitId, (newVal) => {
+  if (form.purpose === "CLASSROOM" && newVal != null) {
+    applyUnit(newVal);
+  }
 });
+
+watch(() => form.researchProjectId, (newVal) => {
+  if (form.purpose === "RESEARCH" && newVal != null) {
+    applyProject(newVal);
+  }
+});
+
+watch(() => props.units, (list) => {
+  if (form.purpose === "CLASSROOM" && form.unitId == null && list.length > 0) {
+    applyUnit(list[0].id);
+  }
+}, { immediate: true });
+
+watch(() => props.projects, (list) => {
+  if (form.purpose === "RESEARCH" && form.researchProjectId == null && list.length > 0) {
+    applyProject(list[0].id);
+  }
+}, { immediate: true });
 
 const search = ref("");
 const cart = reactive([]);
@@ -167,8 +238,10 @@ function submit() {
     dueAt: dueDate.toISOString(),
     handoverNotes: form.handoverNotes,
     purpose: form.purpose,
-    program: form.program,
-    unitOrProject: form.purpose === "CLASSROOM" ? form.unitOrProject : null,
+    program: form.purpose === "EVENT" ? null : form.program,
+    unitOrProject: form.purpose === "EVENT" ? null : form.unitOrProject,
+    unitId: form.purpose === "CLASSROOM" ? form.unitId : null,
+    researchProjectId: form.purpose === "RESEARCH" ? form.researchProjectId : null,
     quantity: item.quantity,
     startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null
@@ -194,31 +267,26 @@ function submit() {
     <div class="stacked-form">
       <!-- Section 1: Details -->
       <div class="wizard-section">
-        <h3 class="section-title">1. University & Purpose</h3>
+        <h3 class="section-title">1. Unit & Purpose</h3>
         <div class="form-grid">
-          <label>
-            University
-            <select v-model="form.program">
-              <option value="Swinburne">Swinburne</option>
-              <option value="Asia">Asia</option>
-              <option value="FPT">FPT</option>
-            </select>
-          </label>
           <label>
             Purpose
             <select v-model="form.purpose">
               <option value="CLASSROOM">Classroom Use</option>
-              <option value="LAB">Lab Session</option>
-              <option value="RESEARCH">Research Project</option>
-              <option value="EVENT">Event Support</option>
+              <option value="RESEARCH">Research / Project</option>
+              <option v-if="showEventOption" value="EVENT">Event Support</option>
             </select>
           </label>
-        </div>
-        <div v-if="form.purpose === 'CLASSROOM'" style="margin-top: 12px;">
-          <label>
-            Reason of Use
-            <select v-model="form.unitOrProject">
-              <option v-for="r in filteredReasonOptions" :key="r" :value="r">{{ r }}</option>
+          <label v-if="form.purpose === 'CLASSROOM'">
+            Unit
+            <select v-model="form.unitId">
+              <option v-for="u in props.units" :key="u.id" :value="u.id">{{ u.code }} - {{ u.name }}</option>
+            </select>
+          </label>
+          <label v-else-if="form.purpose === 'RESEARCH'">
+            Research Project
+            <select v-model="form.researchProjectId">
+              <option v-for="p in props.projects" :key="p.id" :value="p.id">{{ p.name }}</option>
             </select>
           </label>
         </div>
@@ -290,9 +358,7 @@ function submit() {
           <div class="form-grid">
             <label>
               Classroom
-              <select v-model="form.classroom">
-                <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
-              </select>
+              <input v-model="form.classroom" type="text" readonly />
             </label>
             <label>
               Recurrence
