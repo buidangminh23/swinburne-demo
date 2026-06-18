@@ -14,103 +14,154 @@ const props = defineProps({
   userRole: {
     type: String,
     default: ""
+  },
+  units: {
+    type: Array,
+    default: () => []
+  },
+  projects: {
+    type: Array,
+    default: () => []
   }
 });
 
 const emit = defineEmits(["borrow"]);
 
-const reasonOptions = [
-  "Teaching",
-  "Student Presentation",
-  "Exam/Quiz",
-  "Seminar/Workshop",
-  "Lab Session",
-  "Club Activity",
-  "Other"
-];
+function nextOccurrence(dayOfWeek, startHour, endHour) {
+  const now = new Date();
+  const result = new Date(now);
+  result.setHours(startHour, 0, 0, 0);
+  let delta = (dayOfWeek - now.getDay() + 7) % 7;
+  if (delta === 0 && result.getTime() <= now.getTime()) delta = 7;
+  result.setDate(now.getDate() + delta);
+  const end = new Date(result);
+  end.setHours(endHour, 0, 0, 0);
+  return { start: result, end };
+}
 
-const classroomOptions = [
-  "ATC 625",
-  "ATC 628",
-  "BA 701",
-  "LIB DESK",
-  "MED DESK",
-  "EN402",
-  "EN403",
-  "Vovinam Room"
-];
-
-const vovinamEquipment = computed(() => {
-  return props.equipment.filter((item) => {
-    if (item.status !== "AVAILABLE" || cart.some(c => c.id === item.id)) {
-      return false;
-    }
-    return item.assetCode.startsWith("VOV-") || item.category === "Vovinam";
-  });
-});
+function toLocalInput(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 const availableEquipment = computed(() => {
   return props.equipment.filter((item) => {
-    if (item.status !== "AVAILABLE" || cart.some(c => c.id === item.id)) {
+    if (cart.some(c => c.id === item.id)) {
       return false;
     }
-    const isVovinam = item.assetCode.startsWith("VOV-") || item.category === "Vovinam";
-    
-    if (form.purpose === "VOVINAM") {
-      // If purpose is Vovinam Room, ONLY return Vovinam items
-      return isVovinam;
-    }
-    return !isVovinam;
+    return (item.displayStatus ?? item.status) === "AVAILABLE" && (item.availableNow ?? 1) > 0;
   });
 });
 
 const form = reactive({
-  program: "Swinburne",
+  program: null,
   purpose: "CLASSROOM",
-  unitOrProject: "Teaching",
-  classroom: "ATC 625",
+  unitOrProject: "",
+  unitId: null,
+  researchProjectId: null,
+  classroom: "",
   startDate: new Date().toISOString().slice(0, 16),
-  dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16), // 3 hours from now
+  dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16),
   recurrence: "NONE",
   handoverNotes: "Collected for classroom session"
 });
+
+const showEventOption = computed(() => props.userRole === "EVENT_STAFF");
 
 onMounted(() => {
   if (props.userRole === "EVENT_STAFF") {
     form.purpose = "EVENT";
     form.handoverNotes = "Collected for event support";
+  } else if (form.purpose === "CLASSROOM" && props.units.length) {
+    form.unitId = props.units[0].id;
+    applyUnit(props.units[0]);
   }
 });
+
+watch(() => props.units, (list) => {
+  if (form.purpose === "CLASSROOM" && form.unitId == null && list.length) {
+    form.unitId = list[0].id;
+    applyUnit(list[0]);
+  }
+});
+
+watch(() => props.projects, (list) => {
+  if (form.purpose === "RESEARCH" && form.researchProjectId == null && list.length) {
+    form.researchProjectId = list[0].id;
+    applyProject(list[0]);
+  }
+});
+
+function applyUnit(unit) {
+  if (!unit) return;
+  const { start, end } = nextOccurrence(unit.dayOfWeek, unit.startHour, unit.endHour);
+  form.classroom = unit.classroom;
+  form.unitOrProject = unit.code;
+  form.unitId = unit.id;
+  form.program = unit.code;
+  form.startDate = toLocalInput(start);
+  form.dueAt = toLocalInput(end);
+}
+
+function applyProject(project) {
+  if (!project) return;
+  form.unitOrProject = project.name;
+  form.researchProjectId = project.id;
+  form.program = project.name;
+  form.startDate = new Date().toISOString().slice(0, 16);
+  const fallback = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const end = project.endDate ? new Date(project.endDate) : fallback;
+  form.dueAt = toLocalInput(end);
+}
+
+function onUnitChange() {
+  const unit = props.units.find((u) => u.id === form.unitId);
+  applyUnit(unit);
+}
+
+function onProjectChange() {
+  const project = props.projects.find((p) => p.id === form.researchProjectId);
+  applyProject(project);
+}
 
 watch(() => form.purpose, (newVal) => {
-  if (newVal === "VOVINAM") {
-    form.classroom = "Vovinam Room";
-    form.unitOrProject = "Study";
-  } else if (newVal === "CLASSROOM") {
-    form.unitOrProject = "Teaching";
+  if (newVal === "CLASSROOM") {
+    form.researchProjectId = null;
+    const unit = props.units.find((u) => u.id === form.unitId) ?? props.units[0];
+    if (unit) {
+      form.unitId = unit.id;
+      applyUnit(unit);
+    } else {
+      form.unitOrProject = "";
+      form.classroom = "";
+      form.program = null;
+    }
+  } else if (newVal === "RESEARCH") {
+    form.unitId = null;
+    form.classroom = "";
+    const project = props.projects.find((p) => p.id === form.researchProjectId) ?? props.projects[0];
+    if (project) {
+      form.researchProjectId = project.id;
+      applyProject(project);
+    } else {
+      form.unitOrProject = "";
+      form.program = null;
+    }
+  } else {
+    form.unitId = null;
+    form.researchProjectId = null;
+    form.classroom = "";
+    form.unitOrProject = "";
+    form.program = null;
   }
-});
-
-const filteredReasonOptions = computed(() => {
-  if (form.purpose === "VOVINAM") {
-    return ["Study", "Practice", "Group Work"];
-  }
-  return reasonOptions;
 });
 
 const search = ref("");
 const cart = reactive([]);
 
 const filteredAvailable = computed(() => {
-  return availableEquipment.value.filter(item => 
-    item.name.toLowerCase().includes(search.value.toLowerCase()) || 
-    item.assetCode.toLowerCase().includes(search.value.toLowerCase())
-  );
-});
-
-const filteredVovinam = computed(() => {
-  return vovinamEquipment.value.filter(item => 
-    item.name.toLowerCase().includes(search.value.toLowerCase()) || 
+  return availableEquipment.value.filter(item =>
+    item.name.toLowerCase().includes(search.value.toLowerCase()) ||
     item.assetCode.toLowerCase().includes(search.value.toLowerCase())
   );
 });
@@ -136,19 +187,19 @@ function submit() {
     return;
   }
 
-  // We emit the borrow event for each item in the cart
-  // The parent handles single or array requests. Let's map cart into request objects:
   const requests = cart.map(item => ({
     equipmentId: item.id,
-    classroom: form.purpose === "CLASSROOM" || form.purpose === "VOVINAM" ? form.classroom : null,
+    classroom: form.purpose === "CLASSROOM" ? form.classroom : null,
     dueAt: new Date(form.dueAt).toISOString(),
     handoverNotes: form.handoverNotes,
-    purpose: form.purpose === "VOVINAM" ? "CLASSROOM" : form.purpose,
+    purpose: form.purpose,
     program: form.program,
-    unitOrProject: form.purpose === "CLASSROOM" || form.purpose === "VOVINAM" ? form.unitOrProject : null,
+    unitOrProject: form.purpose === "CLASSROOM" || form.purpose === "RESEARCH" ? form.unitOrProject : null,
+    unitId: form.purpose === "CLASSROOM" ? form.unitId : null,
+    researchProjectId: form.purpose === "RESEARCH" ? form.researchProjectId : null,
     quantity: item.quantity,
     startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
-    recurrence: (form.purpose === "CLASSROOM" || form.purpose === "VOVINAM") && form.recurrence !== "NONE" ? form.recurrence : null
+    recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null
   }));
 
   // Emit either first request or all of them depending on parent capability
@@ -172,32 +223,26 @@ function submit() {
     <div class="stacked-form">
       <!-- Section 1: Details -->
       <div class="wizard-section">
-        <h3 class="section-title">1. University & Purpose</h3>
+        <h3 class="section-title">1. Unit & Purpose</h3>
         <div class="form-grid">
-          <label>
-            University
-            <select v-model="form.program">
-              <option value="Swinburne">Swinburne</option>
-              <option value="Asia">Asia</option>
-              <option value="FPT">FPT</option>
-            </select>
-          </label>
           <label>
             Purpose
             <select v-model="form.purpose">
               <option value="CLASSROOM">Classroom Use</option>
-              <option value="VOVINAM">Vovinam Room</option>
-              <option value="LAB">Lab Session</option>
-              <option value="RESEARCH">Research Project</option>
-              <option value="EVENT">Event Support</option>
+              <option value="RESEARCH">Research / Project</option>
+              <option v-if="showEventOption" value="EVENT">Event Support</option>
             </select>
           </label>
-        </div>
-        <div v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'" style="margin-top: 12px;">
-          <label>
-            Reason of Use
-            <select v-model="form.unitOrProject">
-              <option v-for="r in filteredReasonOptions" :key="r" :value="r">{{ r }}</option>
+          <label v-if="form.purpose === 'CLASSROOM'">
+            Unit
+            <select v-model="form.unitId" @change="onUnitChange">
+              <option v-for="u in units" :key="u.id" :value="u.id">{{ u.code }} — {{ u.name }}</option>
+            </select>
+          </label>
+          <label v-else-if="form.purpose === 'RESEARCH'">
+            Research Project
+            <select v-model="form.researchProjectId" @change="onProjectChange">
+              <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
             </select>
           </label>
         </div>
@@ -219,22 +264,6 @@ function submit() {
           </div>
           <div v-if="filteredAvailable.length === 0" class="empty-list-text">
             No matching available equipment.
-          </div>
-        </div>
-
-        <!-- Additional Vovinam Equipment section for all accounts -->
-        <div v-if="(form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM') && form.classroom === 'Vovinam Room'" class="vovinam-equipment-section">
-          <h4 class="vovinam-section-title">🥋 Đồ dùng phòng học võ (Martial Arts Equipment)</h4>
-          <div class="vovinam-items-list">
-            <div v-for="item in filteredVovinam" :key="item.id" class="vovinam-item-row">
-              <span class="vovinam-item-name">{{ item.assetCode }} - {{ item.name }}</span>
-              <button type="button" class="add-to-vov-btn" @click="addToCart(item)">
-                <Plus :size="12" /> Add
-              </button>
-            </div>
-            <div v-if="filteredVovinam.length === 0" class="empty-list-text">
-              Không có đồ dùng học võ khả dụng.
-            </div>
           </div>
         </div>
 
@@ -281,13 +310,11 @@ function submit() {
           </label>
         </div>
 
-        <div v-if="form.purpose === 'CLASSROOM' || form.purpose === 'VOVINAM'" class="classroom-fields">
+        <div v-if="form.purpose === 'CLASSROOM'" class="classroom-fields">
           <div class="form-grid">
             <label>
               Classroom
-              <select v-model="form.classroom" :disabled="form.purpose === 'VOVINAM'">
-                <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
-              </select>
+              <input v-model="form.classroom" type="text" readonly />
             </label>
             <label>
               Recurrence
@@ -456,61 +483,5 @@ function submit() {
   border-radius: 4px;
   padding: 6px 8px;
   margin: 0 0 8px;
-}
-
-.vovinam-equipment-section {
-  margin-top: 16px;
-  background: #f0f7ff;
-  border: 1px solid #cce3f5;
-  border-radius: 6px;
-  padding: 12px;
-}
-.vovinam-section-title {
-  font-size: 12px;
-  font-weight: 800;
-  color: #1d4ed8;
-  margin: 0 0 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.vovinam-items-list {
-  max-height: 150px;
-  overflow-y: auto;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  padding: 4px;
-}
-.vovinam-item-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 8px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 11.5px;
-}
-.vovinam-item-row:last-child {
-  border-bottom: 0;
-}
-.vovinam-item-name {
-  color: #334155;
-  font-weight: 500;
-}
-.add-to-vov-btn {
-  min-height: 22px;
-  padding: 0 8px;
-  font-size: 10px;
-  background: #2563eb;
-  color: white;
-  border: 0;
-  border-radius: 3px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-.add-to-vov-btn:hover {
-  background: #1d4ed8;
 }
 </style>

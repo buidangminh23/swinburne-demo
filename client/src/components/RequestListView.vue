@@ -43,7 +43,39 @@ function canActOn(req) {
   if (role === "LECTURER") {
     return req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
   }
-  return ["SUPPORT", "ADMIN"].includes(role);
+  return ["SUPPORT", "OPERATIONS", "ADMIN"].includes(role);
+}
+
+function approvalStatusText(req) {
+  if (["RESERVED", "BORROWED", "RETURNED"].includes(req.status)) return "Approved";
+  if (req.status === "REJECTED") return "Rejected";
+  if (req.status === "CANCELLED") return "Denied";
+  if (req.status === "REQUESTED") return "Pending Approval";
+  return req.status;
+}
+
+function isOwner(req) {
+  return req.lecturerId === props.session.user.id;
+}
+
+function lecturerTeachesOwner(req) {
+  return props.session.user.role === "LECTURER" && req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
+}
+
+function canManage(req) {
+  return canActOn(req);
+}
+
+function canFullyEdit(req) {
+  if (req.status === "REQUESTED" && (isOwner(req) || canManage(req))) return true;
+  if (isSupportOrAdmin.value) return true;
+  if (lecturerTeachesOwner(req)) return true;
+  return false;
+}
+
+function canExtend(req) {
+  if (!["RESERVED", "BORROWED"].includes(req.status)) return false;
+  return isOwner(req) || canManage(req) || lecturerTeachesOwner(req);
 }
 
 function getPriorityScore(req) {
@@ -59,6 +91,7 @@ function getPriorityScore(req) {
   }
   if (req.status === "RETURNED") return 5;
   if (req.status === "CANCELLED") return 6;
+  if (req.status === "REJECTED") return 6;
   return 7;
 }
 
@@ -103,8 +136,8 @@ const filteredRequests = computed(() => {
 
   // Purpose Filter
   if (purposeFilter.value !== "ALL") {
-    if (purposeFilter.value === "VOVINAM") {
-      list = list.filter(r => r.classroom === "Vovinam Room");
+    if (purposeFilter.value === "RESEARCH") {
+      list = list.filter(r => r.purpose === "RESEARCH" || r.purpose === "LAB");
     } else {
       list = list.filter(r => r.purpose === purposeFilter.value);
     }
@@ -183,15 +216,14 @@ const t = makeTranslator(props.session?.user?.email);
             <option value="NEAR_DUE">⏰ {{ t('Near Due Date') }}</option>
             <option value="OVERDUE">⚠️ {{ t('OVERDUE') }}</option>
             <option value="RETURNED">{{ t('Returned') }}</option>
+            <option value="REJECTED">{{ t('Rejected') }}</option>
             <option value="CANCELLED">{{ t('Cancelled') }}</option>
           </select>
 
           <select v-model="purposeFilter" class="filter-select">
             <option value="ALL">{{ t('All Purposes') }}</option>
             <option value="CLASSROOM">{{ t('Classroom') }}</option>
-            <option value="VOVINAM">{{ t('Vovinam Room') }}</option>
-            <option value="LAB">{{ t('Lab') }}</option>
-            <option value="RESEARCH">{{ t('Research') }}</option>
+            <option value="RESEARCH">{{ t('Research / Project') }}</option>
             <option value="EVENT">{{ t('Event') }}</option>
           </select>
         </div>
@@ -251,7 +283,7 @@ const t = makeTranslator(props.session?.user?.email);
             <!-- Purpose & Details -->
             <td>
               <div class="details-cell">
-                <span class="purpose-tag" :class="req.purpose.toLowerCase()">{{ t(req.purpose) }}</span>
+                <span class="purpose-tag" :class="req.purpose === 'LAB' ? 'research' : req.purpose.toLowerCase()">{{ req.purpose === 'LAB' ? t('Research / Project') : t(req.purpose) }}</span>
                 <span v-if="req.program" class="program-sub">{{ req.program }}</span>
                 <span v-if="req.unitOrProject" class="unit-sub">{{ t('Unit: ') }}{{ req.unitOrProject }}</span>
               </div>
@@ -294,11 +326,17 @@ const t = makeTranslator(props.session?.user?.email);
                     {{ t('Deny') }}
                   </button>
                 </template>
+                <span
+                  v-else-if="req.status === 'REQUESTED' && !canActOn(req)"
+                  :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')"
+                >
+                  {{ t(approvalStatusText(req)) }}
+                </span>
 
                 <!-- General actions -->
-                <button 
-                  v-if="['REQUESTED', 'BORROWED'].includes(req.status) && (session.user.id === req.lecturerId || isSupportOrAdmin)"
-                  class="action-btn edit" 
+                <button
+                  v-if="canFullyEdit(req)"
+                  class="action-btn edit"
                   @click="emit('edit', req)"
                   :title="t('Edit')"
                 >
@@ -316,8 +354,8 @@ const t = makeTranslator(props.session?.user?.email);
                 </button>
 
                 <!-- Extend action -->
-                <button 
-                  v-if="req.status === 'BORROWED'"
+                <button
+                  v-if="canExtend(req)"
                   class="action-btn extend"
                   @click="emit('extend', { id: req.id, payload: {} })"
                   :title="t('Extend borrowing by 7 days')"
@@ -541,6 +579,11 @@ const t = makeTranslator(props.session?.user?.email);
 .purpose-tag.lab { background: #dcfce7; color: #15803d; }
 .purpose-tag.research { background: #fef3c7; color: #b45309; }
 .purpose-tag.event { background: #f3e8ff; color: #6d28d9; }
+
+.status-chip.rejected {
+  background: #ffe7ec;
+  color: #d9182f;
+}
 
 .overdue-text {
   color: #b91c1c;

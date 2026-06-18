@@ -4,6 +4,7 @@ const translations = {
   "Custom": "Tùy chỉnh",
   "All Requests": "Tất cả yêu cầu",
   "Pending Approvals": "Đang chờ duyệt",
+  "Pending Approval Status": "Trạng thái duyệt",
   "Borrow Equipment": "Mượn thiết bị",
   "History Log": "Nhật ký lịch sử",
   "Schedules": "Lịch khả dụng",
@@ -22,6 +23,7 @@ const translations = {
   "Approve": "Duyệt",
   "Deny": "Từ chối",
   "No pending approval requests.": "Không có yêu cầu nào đang chờ duyệt.",
+  "No approval status requests yet.": "Chưa có yêu cầu nào để hiển thị trạng thái duyệt.",
   "Borrower": "Người mượn",
   "Due Date": "Hạn trả",
   "Action": "Thao tác",
@@ -67,6 +69,7 @@ const translations = {
   "Search items, users, classroom...": "Tìm kiếm thiết bị, người dùng, phòng học...",
   "Requested": "Đang chờ duyệt",
   "Approved": "Đã duyệt",
+  "Denied": "Từ chối",
   "Near Due Date": "Sắp đến hạn trả",
   "Overdue": "Quá hạn",
   "Date Created": "Ngày tạo",
@@ -217,12 +220,6 @@ const translations = {
   "Handover Notes": "Ghi chú bàn giao"
 };
 
-export function makeTranslator(email) {
-  const isVovinam = email === "vovinamteacher@fpt.edu.vn";
-  return (text) => {
-    if (!isVovinam) return text;
-    if (typeof text !== "string") return text;
-    const clean = text.trim();
-    return translations[clean] || translations[clean.toLowerCase()] || text;
-  };
+export function makeTranslator() {
+  return (text) => text;
 }

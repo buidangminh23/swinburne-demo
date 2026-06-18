@@ -16,7 +16,9 @@ const state = reactive({
   historyData: { data: [], total: 0, page: 1, limit: 10 },
   sprints: [],
   notifications: [],
-  users: []
+  users: [],
+  myUnits: [],
+  myProjects: []
 });
 
 const isLoggedIn = computed(() => Boolean(session.value?.token));
@@ -38,6 +40,8 @@ async function loadPortal() {
     state.requests = requests;
     state.sprints = sprints;
     state.notifications = notifications;
+    state.myUnits = await api.units?.().catch(() => []);
+    state.myProjects = await api.researchProjects?.().catch(() => []);
 
     if (user?.role === "ADMIN") {
       state.users = await api.users().catch(() => []);

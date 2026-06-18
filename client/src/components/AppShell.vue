@@ -86,12 +86,14 @@ function confirmDeny(id) {
   }
 }
 
-const isStudent = computed(() => ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(props.session.user.role));
-const isAdmin = computed(() => props.session.user.role === "ADMIN");
-const isSupport = computed(() => false);
-const isLecturer = computed(() => props.session.user.role === "LECTURER");
-const isEventStaff = computed(() => false);
-const isOperations = computed(() => props.session.user.role === "OPERATIONS");
+const currentRole = computed(() => props.session?.user?.role || "");
+const isStudent = computed(() => currentRole.value === "STUDENT");
+const isAdmin = computed(() => currentRole.value === "ADMIN");
+const isSupport = computed(() => currentRole.value === "SUPPORT");
+const isLecturer = computed(() => currentRole.value === "LECTURER");
+const isEventStaff = computed(() => currentRole.value === "EVENT_STAFF");
+const isOperations = computed(() => currentRole.value === "OPERATIONS");
+const canApprove = computed(() => ["LECTURER", "SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value));
 const displayEmail = computed(() => props.session.user.email);
 const displayName = computed(() => props.session.user.name);
 
@@ -138,8 +140,53 @@ const nearDueRequests = computed(() => {
 });
 
 const myActiveRequests = computed(() => {
-  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED"].includes(r.status) && r.lecturerId === props.session.user.id);
+  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "CANCELLED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
 });
+
+const isApprovalRequester = computed(() => ["STUDENT", "EVENT_STAFF"].includes(currentRole.value));
+
+const myApprovalStatusRequests = computed(() => {
+  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "CANCELLED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
+});
+
+function canApproveRequest(req) {
+  if (currentRole.value === "LECTURER") {
+    return req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
+  }
+  return ["SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value);
+}
+
+function lecturerTeachesOwner(req) {
+  return currentRole.value === "LECTURER" && req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
+}
+
+function canManageRequest(req) {
+  return ["SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value) || lecturerTeachesOwner(req);
+}
+
+function canFullyEdit(req) {
+  if (req.status === "REQUESTED" && (req.lecturerId === props.session.user.id || canManageRequest(req))) return true;
+  if (["SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value)) return true;
+  if (lecturerTeachesOwner(req)) return true;
+  return false;
+}
+
+function canExtendRequest(req) {
+  if (!["RESERVED", "BORROWED"].includes(req.status)) return false;
+  return req.lecturerId === props.session.user.id || canManageRequest(req);
+}
+
+function approvalStatusText(req) {
+  if (["RESERVED", "BORROWED", "RETURNED"].includes(req.status)) return "Approved";
+  if (req.status === "REJECTED") return "Rejected";
+  if (req.status === "CANCELLED") return "Denied";
+  if (req.status === "REQUESTED") return "Pending Approval";
+  return req.status;
+}
+
+function requesterDisplayStatus(req) {
+  return ["STUDENT", "EVENT_STAFF"].includes(currentRole.value) ? approvalStatusText(req) : getDisplayStatus(req);
+}
 
 function formatDate(dateStr) {
   if (!dateStr) return "-";
@@ -193,13 +240,13 @@ const activeTabDisplay = computed(() => {
         <a v-if="isAdmin" :class="{ active: activeTab === 'admin-equipment' }" href="#" @click.prevent="activeTab = 'admin-equipment'"><Boxes :size="18" /> Equipment Management</a>
         <a v-if="isAdmin" :class="{ active: activeTab === 'admin-users' }" href="#" @click.prevent="activeTab = 'admin-users'"><UserRound :size="18" /> User Management</a>
         
-        <a v-if="isAdmin || isSupport || isLecturer || isOperations" :class="{ active: activeTab === 'equipment' }" href="#" @click.prevent="activeTab = 'equipment'"><Boxes :size="18" /> {{ t('All Requests') }}</a>
-        <a v-if="isAdmin || isSupport || isLecturer || isOperations" :class="{ active: activeTab === 'pending-approvals' }" href="#" @click.prevent="activeTab = 'pending-approvals'"><ShieldCheck :size="18" /> {{ t('Pending Approvals') }}</a>
-        <a v-if="!isAdmin && session.user.email !== 'vovinamteacher@fpt.edu.vn'" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="activeTab = 'borrow'"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
+        <a v-if="canApprove" :class="{ active: activeTab === 'equipment' }" href="#" @click.prevent="activeTab = 'equipment'"><Boxes :size="18" /> {{ t('All Requests') }}</a>
+        <a v-if="canApprove" :class="{ active: activeTab === 'pending-approvals' }" href="#" @click.prevent="activeTab = 'pending-approvals'"><ShieldCheck :size="18" /> {{ t('Pending Approvals') }}</a>
+        <a v-if="!isAdmin" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="activeTab = 'borrow'"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="activeTab = 'history'"><History :size="18" /> {{ t('History Log') }}</a>
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="activeTab = 'schedules'"><CalendarDays :size="18" /> {{ t('Schedules') }}</a>
         <a v-if="isSupport || isAdmin || isOperations" :class="{ active: activeTab === 'returns' }" href="#" @click.prevent="activeTab = 'returns'"><CheckCircle2 :size="18" /> Confirm Return</a>
-        <a v-if="isAdmin || isSupport || isLecturer || isOperations" :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> Update Status</a>
+        <a v-if="canApprove" :class="{ active: activeTab === 'status' }" href="#" @click.prevent="activeTab = 'status'"><Settings2 :size="18" /> Update Status</a>
         <a :class="{ active: activeTab === 'faq' }" href="#" @click.prevent="activeTab = 'faq'"><HelpCircle :size="18" /> {{ t('FAQ') }}</a>
       </nav>
     </aside>
@@ -261,7 +308,7 @@ const activeTabDisplay = computed(() => {
         <template v-if="activeTab === 'dashboard'">
           <div class="dashboard-widgets-grid">
             <!-- 1. PENDING APPROVALS (Lecturer/Support/Admin only) -->
-            <div v-if="!isStudent" class="dashboard-widget panel">
+            <div v-if="canApprove" class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2>{{ t('Pending Approval Requests') }} ({{ pendingRequests.length }})</h2>
               </div>
@@ -271,7 +318,7 @@ const activeTabDisplay = computed(() => {
                     <tr>
                       <th>{{ t('Requester') }}</th>
                       <th>{{ t('Equipment') }}</th>
-                      <th>{{ t('University / Purpose') }}</th>
+                      <th>{{ t('Unit / Purpose') }}</th>
                       <th>{{ t('Classroom') }}</th>
                       <th>{{ t('Actions') }}</th>
                     </tr>
@@ -286,8 +333,11 @@ const activeTabDisplay = computed(() => {
                       </td>
                       <td>{{ req.classroom || "-" }}</td>
                       <td class="action-cell">
-                        <button class="widget-btn approve-btn" @click="$emit('approve', req.id)">{{ t('Approve') }}</button>
-                        <button class="widget-btn deny-btn" @click="confirmDeny(req.id)">{{ t('Deny') }}</button>
+                        <template v-if="canApproveRequest(req)">
+                          <button class="widget-btn approve-btn" @click="$emit('approve', req.id)">{{ t('Approve') }}</button>
+                          <button class="widget-btn deny-btn" @click="confirmDeny(req.id)">{{ t('Deny') }}</button>
+                        </template>
+                        <span v-else :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')">{{ t(approvalStatusText(req)) }}</span>
                       </td>
                     </tr>
                     <tr v-if="pendingRequests.length === 0">
@@ -363,7 +413,40 @@ const activeTabDisplay = computed(() => {
               </div>
             </div>
 
-            <!-- 4. MY REQUESTS & BORROWS -->
+            <!-- 4. PENDING APPROVAL STATUS -->
+            <div v-if="isApprovalRequester" class="dashboard-widget panel">
+              <div class="panel-heading compact border-bottom-0">
+                <h2>{{ t('Pending Approval Status') }} ({{ myApprovalStatusRequests.length }})</h2>
+              </div>
+              <div class="widget-table-wrap">
+                <table class="widget-table">
+                  <thead>
+                    <tr>
+                      <th>{{ t('Equipment') }}</th>
+                      <th>{{ t('Purpose') }}</th>
+                      <th>{{ t('Status') }}</th>
+                      <th>{{ t('Due Date') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="req in myApprovalStatusRequests" :key="'approval-status-' + req.id">
+                      <td>{{ req.equipment?.name }}</td>
+                      <td><span class="purpose-span">{{ t(req.purpose) }}</span></td>
+                      <td><span :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')">{{ t(approvalStatusText(req)) }}</span></td>
+                      <td>
+                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
+                        <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
+                      </td>
+                    </tr>
+                    <tr v-if="myApprovalStatusRequests.length === 0">
+                      <td colspan="4" class="empty-widget-text">{{ t('No approval status requests yet.') }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 5. MY REQUESTS & BORROWS -->
             <div class="dashboard-widget panel">
               <div class="panel-heading compact border-bottom-0">
                 <h2>{{ t('My Requests & Borrows') }} ({{ myActiveRequests.length }})</h2>
@@ -383,16 +466,16 @@ const activeTabDisplay = computed(() => {
                     <tr v-for="req in myActiveRequests" :key="req.id">
                       <td>{{ req.equipment?.name }}</td>
                       <td><span class="purpose-span">{{ t(req.purpose) }}</span></td>
-                      <td><span :class="'status-chip ' + getDisplayStatus(req).toLowerCase().replace('_', '-')">{{ t(getDisplayStatus(req)).replace('_', ' ') }}</span></td>
+                      <td><span :class="'status-chip ' + requesterDisplayStatus(req).toLowerCase().replace('_', '-').replace(' ', '-')">{{ t(requesterDisplayStatus(req)).replace('_', ' ') }}</span></td>
                       <td>
                         <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td class="action-cell">
-                        <button class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> {{ t('Edit') }}</button>
+                        <button v-if="canFullyEdit(req)" class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> {{ t('Edit') }}</button>
                         <button v-if="req.status === 'BORROWED' && (isSupport || isAdmin || isOperations)" class="widget-btn return-btn" @click="activeTab = 'returns'">{{ t('Return') }}</button>
                         <button v-if="req.status === 'RESERVED' && !isStudent" class="widget-btn approve-btn" @click="$emit('check-out', req.id)">{{ t('Check Out') }}</button>
-                        <button v-if="req.status === 'BORROWED'" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
+                        <button v-if="canExtendRequest(req)" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
                         <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> {{ t('Custody') }}</button>
                       </td>
                     </tr>
@@ -406,7 +489,7 @@ const activeTabDisplay = computed(() => {
           </div>
         </template>
         
-        <template v-else-if="activeTab === 'equipment'">
+        <template v-else-if="activeTab === 'equipment' && canApprove">
           <RequestListView 
             key="equipment"
             :requests="state.requests" 
@@ -421,7 +504,7 @@ const activeTabDisplay = computed(() => {
           />
         </template>
 
-        <template v-else-if="activeTab === 'pending-approvals'">
+        <template v-else-if="activeTab === 'pending-approvals' && canApprove">
           <RequestListView 
             key="pending"
             :requests="state.requests" 
@@ -438,7 +521,7 @@ const activeTabDisplay = computed(() => {
         </template>
         
         <template v-else-if="activeTab === 'borrow'">
-          <BorrowPanel :equipment="state.equipment" :is-student="isStudent" :user-role="session.user.role" :session="session" @borrow="$emit('borrow', $event)" />
+          <BorrowPanel :equipment="state.equipment" :is-student="isStudent" :user-role="session.user.role" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" @borrow="$emit('borrow', $event)" />
         </template>
         
         <template v-else-if="activeTab === 'returns' && (isSupport || isAdmin || isOperations)">
@@ -484,7 +567,7 @@ const activeTabDisplay = computed(() => {
       </section>
     </main>
 
-    <EditBorrowModal :request="editingRequest" :session="session" @save="submitEdit" @close="editingRequest = null" />
+    <EditBorrowModal :request="editingRequest" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" @save="submitEdit" @close="editingRequest = null" />
 
     <div v-if="custodyTarget" class="modal-overlay" @click.self="custodyTarget = null">
       <div class="modal-card">
@@ -597,6 +680,11 @@ const activeTabDisplay = computed(() => {
 .text-danger { color: #d9182f; }
 .text-warning { color: #b45309; }
 .border-bottom-0 { border-bottom: 0; }
+
+.status-chip.rejected {
+  background: #ffe7ec;
+  color: #d9182f;
+}
 
 .edit-btn { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
 .edit-btn:hover { background: #4338ca; color: white; }

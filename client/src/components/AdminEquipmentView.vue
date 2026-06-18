@@ -13,13 +13,13 @@ const isEditing = ref(false);
 const editTarget = ref(null);
 const form = reactive({
   assetCode: "", name: "", category: "", location: "",
-  status: "AVAILABLE", conditionNotes: "", totalQuantity: 1
+  status: "AVAILABLE", conditionNotes: "", totalQuantity: 5
 });
 
 function openAdd() {
   isEditing.value = false;
   editTarget.value = null;
-  Object.assign(form, { assetCode: "", name: "", category: "", location: "", status: "AVAILABLE", conditionNotes: "", totalQuantity: 1 });
+  Object.assign(form, { assetCode: "", name: "", category: "", location: "", status: "AVAILABLE", conditionNotes: "", totalQuantity: 5 });
   showModal.value = true;
 }
 
@@ -33,14 +33,14 @@ function openEdit(item) {
     location: item.location,
     status: item.status,
     conditionNotes: item.conditionNotes || "",
-    totalQuantity: item.totalQuantity ?? 1
+    totalQuantity: 5
   });
   showModal.value = true;
 }
 
 function submitForm() {
   if (!form.assetCode || !form.name || !form.category || !form.location) return;
-  const payload = { ...form, totalQuantity: Number(form.totalQuantity) || 1 };
+  const payload = { ...form, totalQuantity: 5 };
   if (isEditing.value) {
     emit("edit-equipment", { id: editTarget.value.id, payload });
   } else {
@@ -125,7 +125,7 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
         <div class="eq-meta">
           <span><Tag :size="12" /> {{ item.category }}</span>
           <span><MapPin :size="12" /> {{ item.location }}</span>
-          <span><Layers :size="12" /> Stock: {{ item.availableNow ?? item.totalQuantity ?? 1 }} / {{ item.totalQuantity ?? 1 }} available now</span>
+          <span><Layers :size="12" /> Stock: {{ item.availableNow ?? 5 }} / 5 available now</span>
           <span v-if="item.conditionNotes" class="eq-notes"><Layers :size="12" /> {{ item.conditionNotes }}</span>
         </div>
 
@@ -169,8 +169,8 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
             </label>
           </div>
           <label>
-            Total Quantity <span class="hint">identical units in stock</span>
-            <input v-model.number="form.totalQuantity" type="number" min="1" />
+            Total Quantity <span class="hint">fixed stock per item</span>
+            <input v-model.number="form.totalQuantity" type="number" min="5" max="5" disabled />
           </label>
           <label>
             Initial Status
