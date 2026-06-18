@@ -134,7 +134,8 @@ function submit() {
     quantity: Math.max(1, Math.floor(Number(form.quantity)) || 1),
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null,
     startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
-    handoverNotes: form.handoverNotes || null
+    handoverNotes: form.handoverNotes || null,
+    isExtendMode: props.isExtendMode
   };
   emit("save", { id: props.request.id, payload });
 

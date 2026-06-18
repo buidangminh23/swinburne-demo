@@ -639,7 +639,7 @@ class DemoRepository {
     }
     const owner = users.find((candidate) => candidate.id === request.lecturerId);
     const ownerIsStudent = owner?.role === "STUDENT";
-    if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED") {
+    if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED" && input.isExtendMode) {
       if (input.dueAt) {
         const origStart = request.startDate ?? request.createdAt;
         const origDay = new Date(origStart).toDateString();
@@ -1223,7 +1223,7 @@ class PrismaRepository {
       throw error;
     }
     const ownerIsStudent = request.lecturer?.role === "STUDENT";
-    if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED") {
+    if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED" && input.isExtendMode) {
       if (input.dueAt) {
         const origStart = request.startDate ?? request.createdAt;
         const origDay = new Date(origStart).toDateString();

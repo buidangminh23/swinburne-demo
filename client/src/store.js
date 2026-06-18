@@ -1112,11 +1112,6 @@ class DemoRepository {
     const owner = users.find((candidate) => candidate.id === request.lecturerId);
     const isOwner = actor != null && actor.id === request.lecturerId;
     const canManage = actor != null && APPROVER_ROLES.includes(actor.role);
-    if (isOwner && owner?.role === "STUDENT" && request.status !== "REQUESTED") {
-      const error = new Error("After approval you can only extend the due date.");
-      error.status = 409;
-      throw error;
-    }
     if (actor != null && !isOwner && !canManage) {
       const teaches = actor.role === "LECTURER" && teachesStudent(actor.id, request.lecturerId);
       if (!teaches) {
@@ -1132,7 +1127,7 @@ class DemoRepository {
       error.status = 400;
       throw error;
     }
-    if (owner?.role === "STUDENT" && request.status !== "REQUESTED") {
+    if (owner?.role === "STUDENT" && request.status !== "REQUESTED" && input.isExtendMode) {
       if (data.dueAt) {
         const origStart = request.startDate ?? request.createdAt;
         const origDay = new Date(origStart).toDateString();

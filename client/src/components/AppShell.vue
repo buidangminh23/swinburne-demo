@@ -85,7 +85,7 @@ function submitCustody() {
 const isExtendMode = ref(false);
 
 function openEditModal(req) {
-  isExtendMode.value = (isStudent.value && ["RESERVED", "BORROWED"].includes(req.status));
+  isExtendMode.value = false;
   editingRequest.value = req;
 }
 
