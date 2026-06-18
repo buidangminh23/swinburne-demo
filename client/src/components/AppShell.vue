@@ -529,21 +529,28 @@ watchEffect(() => {
                   <thead>
                     <tr>
                       <th>{{ t('Equipment') }}</th>
-                      <th>{{ t('Purpose') }}</th>
-                      <th>{{ t('Status') }}</th>
+                      <th>{{ t('Classroom / University') }}</th>
+                      <th>{{ t('Unit / Purpose') }}</th>
+                      <th>{{ t('Quantity') }}</th>
                       <th>{{ t('Due Date') }}</th>
+                      <th>{{ t('Status') }}</th>
                       <th>{{ t('Actions') }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="req in myActiveRequests" :key="req.id">
                       <td>{{ req.equipment?.name }}</td>
-                      <td><span class="purpose-span">{{ t(req.purpose) }}</span></td>
-                      <td><span :class="'status-chip ' + requesterDisplayStatus(req).toLowerCase().replace('_', '-').replace(' ', '-')">{{ t(requesterDisplayStatus(req)).replace('_', ' ') }}</span></td>
+                      <td>{{ req.classroom || '-' }}</td>
+                      <td>
+                        <span v-if="req.program" class="program-span">{{ req.program }}</span>
+                        <span class="purpose-span">{{ t(req.purpose) }}</span>
+                      </td>
+                      <td>{{ req.quantity || 1 }}</td>
                       <td>
                         <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
+                      <td><span :class="'status-chip ' + requesterDisplayStatus(req).toLowerCase().replace(/_/g, '-').replace(/ /g, '-')">{{ t(requesterDisplayStatus(req)).replace(/_/g, ' ') }}</span></td>
                       <td class="action-cell">
                         <button v-if="canFullyEdit(req) || (isStudent && isOwner(req) && ['RESERVED', 'BORROWED'].includes(req.status))" class="widget-btn edit-btn" @click="openEditModal(req)"><Pencil :size="12" /> {{ t('Edit') }}</button>
                         <button v-if="req.status === 'BORROWED' && canConfirmReturn" class="widget-btn return-btn" @click="goToTab('returns')">{{ t('Return') }}</button>
@@ -553,7 +560,7 @@ watchEffect(() => {
                       </td>
                     </tr>
                     <tr v-if="myActiveRequests.length === 0">
-                      <td colspan="5" class="empty-widget-text">{{ t('You have no active requests or borrows.') }}</td>
+                      <td colspan="7" class="empty-widget-text">{{ t('You have no active requests or borrows.') }}</td>
                     </tr>
                   </tbody>
                 </table>
