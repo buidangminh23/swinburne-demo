@@ -710,6 +710,11 @@ class DemoRepository {
 
     const status = isStudent ? "REQUESTED" : "BORROWED";
     const purpose = input.purpose ?? "CLASSROOM";
+    if (user?.role === "EVENT_STAFF" && purpose !== "EVENT") {
+      const error = new Error("Event staff can only borrow equipment for event support");
+      error.status = 400;
+      throw error;
+    }
     const now = new Date().toISOString();
 
     const custody = [];
@@ -1121,6 +1126,31 @@ class DemoRepository {
       }
     }
     const data = buildEditData(input, { toDate: (value) => new Date(value).toISOString() });
+    const nextPurpose = data.purpose ?? request.purpose;
+    if (owner?.role === "EVENT_STAFF" && nextPurpose !== "EVENT") {
+      const error = new Error("Event staff can only borrow equipment for event support");
+      error.status = 400;
+      throw error;
+    }
+    if (owner?.role === "STUDENT" && request.status !== "REQUESTED") {
+      if (data.dueAt) {
+        const origStart = request.startDate ?? request.createdAt;
+        const origDay = new Date(origStart).toDateString();
+        const newDay = new Date(data.dueAt).toDateString();
+        if (origDay !== newDay) {
+          const error = new Error("Extension is only allowed within the same day.");
+          error.status = 400;
+          throw error;
+        }
+      }
+      for (const key of Object.keys(data)) {
+        if (key !== "dueAt" && key !== "startDate" && data[key] !== request[key]) {
+          const error = new Error("After approval you can only extend the due date.");
+          error.status = 409;
+          throw error;
+        }
+      }
+    }
     Object.assign(request, data);
     request.updatedAt = new Date().toISOString();
     recordAudit({

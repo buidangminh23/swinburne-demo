@@ -380,6 +380,11 @@ class DemoRepository {
 
     const status = isStudent ? "REQUESTED" : "BORROWED";
     const purpose = input.purpose ?? "CLASSROOM";
+    if (user?.role === "EVENT_STAFF" && purpose !== "EVENT") {
+      const error = new Error("Event staff can only borrow equipment for event support");
+      error.status = 400;
+      throw error;
+    }
     const dueAt = toValidDate(input.dueAt);
     if (!dueAt) {
       const error = new Error("dueAt is required");
@@ -635,11 +640,32 @@ class DemoRepository {
     const owner = users.find((candidate) => candidate.id === request.lecturerId);
     const ownerIsStudent = owner?.role === "STUDENT";
     if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED") {
-      const error = new Error("After approval you can only extend the due date.");
-      error.status = 409;
-      throw error;
+      if (input.dueAt) {
+        const origStart = request.startDate ?? request.createdAt;
+        const origDay = new Date(origStart).toDateString();
+        const newDay = new Date(input.dueAt).toDateString();
+        if (origDay !== newDay) {
+          const error = new Error("Extension is only allowed within the same day.");
+          error.status = 400;
+          throw error;
+        }
+      }
+      const disallowed = ["classroom", "purpose", "program", "unitOrProject", "quantity", "recurrence"];
+      for (const k of disallowed) {
+        if (input[k] !== undefined && input[k] !== request[k]) {
+          const error = new Error("After approval you can only extend the due date.");
+          error.status = 409;
+          throw error;
+        }
+      }
     }
     const data = buildEditData(input, { toDate: (value) => new Date(value).toISOString() });
+    const nextPurpose = data.purpose ?? request.purpose;
+    if (owner?.role === "EVENT_STAFF" && nextPurpose !== "EVENT") {
+      const error = new Error("Event staff can only borrow equipment for event support");
+      error.status = 400;
+      throw error;
+    }
     Object.assign(request, data);
     request.updatedAt = new Date().toISOString();
     return attachEquipment(request);
@@ -891,6 +917,11 @@ class PrismaRepository {
 
       const status = isStudent ? "REQUESTED" : "BORROWED";
       const purpose = input.purpose ?? "CLASSROOM";
+      if (user?.role === "EVENT_STAFF" && purpose !== "EVENT") {
+        const error = new Error("Event staff can only borrow equipment for event support");
+        error.status = 400;
+        throw error;
+      }
       const dueAt = toValidDate(input.dueAt);
       if (!dueAt) {
         const error = new Error("dueAt is required");
@@ -1193,11 +1224,32 @@ class PrismaRepository {
     }
     const ownerIsStudent = request.lecturer?.role === "STUDENT";
     if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED") {
-      const error = new Error("After approval you can only extend the due date.");
-      error.status = 409;
-      throw error;
+      if (input.dueAt) {
+        const origStart = request.startDate ?? request.createdAt;
+        const origDay = new Date(origStart).toDateString();
+        const newDay = new Date(input.dueAt).toDateString();
+        if (origDay !== newDay) {
+          const error = new Error("Extension is only allowed within the same day.");
+          error.status = 400;
+          throw error;
+        }
+      }
+      const disallowed = ["classroom", "purpose", "program", "unitOrProject", "quantity", "recurrence"];
+      for (const k of disallowed) {
+        if (input[k] !== undefined && input[k] !== request[k]) {
+          const error = new Error("After approval you can only extend the due date.");
+          error.status = 409;
+          throw error;
+        }
+      }
     }
     const data = buildEditData(input, { toDate: (value) => new Date(value) });
+    const nextPurpose = data.purpose ?? request.purpose;
+    if (request.lecturer?.role === "EVENT_STAFF" && nextPurpose !== "EVENT") {
+      const error = new Error("Event staff can only borrow equipment for event support");
+      error.status = 400;
+      throw error;
+    }
     return this.prisma.borrowRequest.update({
       where: { id },
       data,

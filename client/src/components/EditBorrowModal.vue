@@ -30,6 +30,10 @@ const props = defineProps({
   projects: {
     type: Array,
     default: () => []
+  },
+  isExtendMode: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -58,6 +62,8 @@ function toLocalInput(iso) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+const dueAtInput = ref(null);
+
 watch(
   () => props.request,
   (request) => {
@@ -71,6 +77,12 @@ watch(
     form.recurrence = request.recurrence ?? "NONE";
     form.quantity = request.quantity ?? 1;
     form.handoverNotes = request.handoverNotes ?? "";
+    if (props.isExtendMode) {
+      setTimeout(() => {
+        dueAtInput.value?.focus();
+        dueAtInput.value?.select?.();
+      }, 100);
+    }
   },
   { immediate: true }
 );
@@ -94,6 +106,14 @@ function submit() {
   if (dueDate.getTime() <= Date.now()) {
     error.value = t("Return date must be in the future.");
     return;
+  }
+  if (props.isExtendMode) {
+    const origStart = props.request.startDate ?? props.request.createdAt;
+    const baseDateString = new Date(origStart).toDateString();
+    if (dueDate.toDateString() !== baseDateString) {
+      error.value = t("Extension is only allowed within the same day.");
+      return;
+    }
   }
   if (form.startDate) {
     const startDate = new Date(form.startDate);
@@ -132,16 +152,16 @@ function submit() {
       <form class="modal-form" @submit.prevent="submit">
         <label>
           {{ t('Purpose') }}
-          <select v-model="form.purpose">
-            <option value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
-            <option value="RESEARCH">{{ t('Research Work') }}</option>
+          <select v-model="form.purpose" :disabled="props.isExtendMode">
+            <option v-if="props.session?.user?.role !== 'EVENT_STAFF'" value="CLASSROOM">{{ t('Classroom Instruction') }}</option>
+            <option v-if="props.session?.user?.role !== 'EVENT_STAFF'" value="RESEARCH">{{ t('Research Work') }}</option>
             <option value="EVENT">{{ t('Swinburne Event') }}</option>
           </select>
         </label>
 
         <label v-if="form.purpose === 'CLASSROOM'">
           {{ t('Classroom') }}
-          <select v-model="form.classroom">
+          <select v-model="form.classroom" :disabled="props.isExtendMode">
             <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
           </select>
         </label>
@@ -153,12 +173,12 @@ function submit() {
           </label>
           <label>
             {{ t('To') }}
-            <input v-model="form.dueAt" type="datetime-local" />
+            <input ref="dueAtInput" v-model="form.dueAt" type="datetime-local" />
           </label>
         </div>
         <label v-if="form.purpose === 'CLASSROOM'">
           {{ t('Recurrence') }}
-          <select v-model="form.recurrence">
+          <select v-model="form.recurrence" :disabled="props.isExtendMode">
             <option value="NONE">{{ t('Single Session') }}</option>
             <option value="DAILY">{{ t('Repeat Daily') }}</option>
             <option value="WEEKLY">{{ t('Repeat Weekly (Within Semester)') }}</option>
@@ -168,11 +188,11 @@ function submit() {
         </label>
         <label>
           {{ t('Quantity') }}
-          <input v-model="form.quantity" type="number" min="1" step="1" />
+          <input v-model="form.quantity" type="number" min="1" step="1" :disabled="props.isExtendMode" />
         </label>
         <label>
           {{ t('Handover Notes') }}
-          <textarea v-model="form.handoverNotes" rows="2" maxlength="240"></textarea>
+          <textarea v-model="form.handoverNotes" rows="2" maxlength="240" :disabled="props.isExtendMode"></textarea>
         </label>
         <p v-if="error" class="error">{{ error }}</p>
         <div class="modal-actions">

@@ -164,13 +164,13 @@ const bookingForm = reactive({
   end: null,
   label: ""
 });
-
 function openBooking(dayDate, hour) {
   if (cellStatus(dayDate, hour) !== "AVAILABLE") return;
   const { start, end } = cellRange(dayDate, hour);
   bookingForm.start = start.toISOString();
   bookingForm.end = end.toISOString();
   bookingForm.label = `${fmtDay(start)} • ${fmtHour(hour)} - ${fmtHour(hour + 2)}`;
+  bookingForm.purpose = props.session?.user?.role === "EVENT_STAFF" ? "EVENT" : "CLASSROOM";
   isModalOpen.value = true;
 }
 
@@ -371,8 +371,8 @@ function formatDateTime(dateStr) {
           <label>
             {{ t('Purpose') }}:
             <select v-model="bookingForm.purpose">
-              <option value="CLASSROOM">{{ t('Classroom Use') }}</option>
-              <option value="RESEARCH">{{ t('Research / Project') }}</option>
+              <option v-if="props.session?.user?.role !== 'EVENT_STAFF'" value="CLASSROOM">{{ t('Classroom Use') }}</option>
+              <option v-if="props.session?.user?.role !== 'EVENT_STAFF'" value="RESEARCH">{{ t('Research / Project') }}</option>
               <option v-if="showEventOption" value="EVENT">{{ t('Event Support') }}</option>
             </select>
           </label>
