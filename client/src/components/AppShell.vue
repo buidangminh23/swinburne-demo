@@ -489,23 +489,30 @@ watchEffect(() => {
                   <thead>
                     <tr>
                       <th>{{ t('Equipment') }}</th>
-                      <th>{{ t('Purpose') }}</th>
-                      <th>{{ t('Status') }}</th>
+                      <th>{{ t('Classroom / University') }}</th>
+                      <th>{{ t('Unit / Purpose') }}</th>
+                      <th>{{ t('Quantity') }}</th>
                       <th>{{ t('Due Date') }}</th>
+                      <th>{{ t('Status') }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="req in myApprovalStatusRequests" :key="'approval-status-' + req.id">
                       <td>{{ req.equipment?.name }}</td>
-                      <td><span class="purpose-span">{{ t(req.purpose) }}</span></td>
-                      <td><span :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')">{{ t(approvalStatusText(req)) }}</span></td>
+                      <td>{{ req.classroom || '-' }}</td>
+                      <td>
+                        <span v-if="req.program" class="program-span">{{ req.program }}</span>
+                        <span class="purpose-span">{{ t(req.purpose) }}</span>
+                      </td>
+                      <td>{{ req.quantity || 1 }}</td>
                       <td>
                         <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
+                      <td><span :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(/ /g, '-')">{{ t(approvalStatusText(req)) }}</span></td>
                     </tr>
                     <tr v-if="myApprovalStatusRequests.length === 0">
-                      <td colspan="4" class="empty-widget-text">{{ t('No approval status requests yet.') }}</td>
+                      <td colspan="6" class="empty-widget-text">{{ t('No approval status requests yet.') }}</td>
                     </tr>
                   </tbody>
                 </table>

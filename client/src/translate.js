@@ -33,6 +33,11 @@ const translations = {
   "Edit": "Chỉnh sửa",
   "Return": "Trả đồ",
   "You have no active requests or borrows.": "Bạn không có yêu cầu hoặc thiết bị mượn hoạt động nào.",
+  "Pending Approval Status": "Trạng thái phê duyệt",
+  "No approval status requests yet.": "Chưa có yêu cầu nào.",
+  "Unit / Purpose": "Học phần / Mục đích",
+  "Denied": "Bị từ chối",
+  "Rejected": "Bị từ chối",
 
   // Request lists and filters
   "All Requests & Borrows": "Tất cả Yêu cầu & Lượt mượn",
