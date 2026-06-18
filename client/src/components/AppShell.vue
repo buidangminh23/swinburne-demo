@@ -75,6 +75,18 @@ function submitCustody() {
   custodyTarget.value = null;
 }
 
+const isExtendMode = ref(false);
+
+function openEditModal(req) {
+  isExtendMode.value = (isStudent.value && ["RESERVED", "BORROWED"].includes(req.status));
+  editingRequest.value = req;
+}
+
+function openExtendModal(req) {
+  isExtendMode.value = true;
+  editingRequest.value = req;
+}
+
 function submitEdit(event) {
   emit("edit", event);
   editingRequest.value = null;
@@ -404,7 +416,7 @@ const activeTabDisplay = computed(() => {
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td class="action-cell">
-                        <button class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
+                        <button class="widget-btn extend-btn" @click="openExtendModal(req)">{{ t('Extend') }}</button>
                         <button class="widget-btn remind-btn" @click="$emit('remind', req.id)">{{ t('Send Reminder') }}</button>
                       </td>
                     </tr>
@@ -472,10 +484,10 @@ const activeTabDisplay = computed(() => {
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td class="action-cell">
-                        <button v-if="canFullyEdit(req)" class="widget-btn edit-btn" @click="editingRequest = req"><Pencil :size="12" /> {{ t('Edit') }}</button>
+                        <button v-if="canFullyEdit(req) || (isStudent && req.lecturerId === session.user.id && ['RESERVED', 'BORROWED'].includes(req.status))" class="widget-btn edit-btn" @click="openEditModal(req)"><Pencil :size="12" /> {{ t('Edit') }}</button>
                         <button v-if="req.status === 'BORROWED' && (isSupport || isAdmin || isOperations)" class="widget-btn return-btn" @click="activeTab = 'returns'">{{ t('Return') }}</button>
                         <button v-if="req.status === 'RESERVED' && !isStudent" class="widget-btn approve-btn" @click="$emit('check-out', req.id)">{{ t('Check Out') }}</button>
-                        <button v-if="canExtendRequest(req)" class="widget-btn extend-btn" @click="$emit('extend', { id: req.id, payload: {} })">{{ t('Extend 7d') }}</button>
+                        <button v-if="canExtendRequest(req)" class="widget-btn extend-btn" @click="openExtendModal(req)">{{ t('Extend') }}</button>
                         <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> {{ t('Custody') }}</button>
                       </td>
                     </tr>
@@ -567,7 +579,7 @@ const activeTabDisplay = computed(() => {
       </section>
     </main>
 
-    <EditBorrowModal :request="editingRequest" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" @save="submitEdit" @close="editingRequest = null" />
+    <EditBorrowModal :request="editingRequest" :isExtendMode="isExtendMode" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" @save="submitEdit" @close="editingRequest = null" />
 
     <div v-if="custodyTarget" class="modal-overlay" @click.self="custodyTarget = null">
       <div class="modal-card">
