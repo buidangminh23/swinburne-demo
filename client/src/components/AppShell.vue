@@ -158,7 +158,7 @@ const myActiveRequests = computed(() => {
 const isApprovalRequester = computed(() => ["STUDENT", "EVENT_STAFF"].includes(currentRole.value));
 
 const myApprovalStatusRequests = computed(() => {
-  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "CANCELLED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
+  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "RETURNED", "CANCELLED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
 });
 
 function canApproveRequest(req) {
@@ -195,7 +195,8 @@ function canReturn(req) {
 }
 
 function approvalStatusText(req) {
-  if (["RESERVED", "BORROWED", "RETURNED"].includes(req.status)) return "Approved";
+  if (["RESERVED", "BORROWED"].includes(req.status)) return "Accepted";
+  if (req.status === "RETURNED") return "Accepted";
   if (req.status === "REJECTED") return "Rejected";
   if (req.status === "CANCELLED") return "Denied";
   if (req.status === "REQUESTED") return "Pending Approval";
@@ -213,6 +214,16 @@ function formatDate(dateStr) {
   return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
 
+function formatClassroom(val) {
+  if (!val) return '-';
+  if (val.startsWith('HN-')) {
+    const parts = val.split('-');
+    parts[1] = 'DT1';
+    return parts.join('-');
+  }
+  return val;
+}
+
 function getDisplayStatus(req) {
   if (req.status === "BORROWED") {
     const now = new Date();
@@ -225,6 +236,7 @@ function getDisplayStatus(req) {
       return "NEAR_DUE";
     }
   }
+  if (req.status === "RETURNED") return "Returned";
   return req.status;
 }
 
@@ -349,7 +361,7 @@ const activeTabDisplay = computed(() => {
                         <span class="program-span">{{ req.program || "-" }}</span>
                         <span class="purpose-span">{{ t(req.purpose) }}</span>
                       </td>
-                      <td>{{ req.classroom || "-" }}</td>
+                      <td>{{ formatClassroom(req.classroom) }}</td>
                       <td class="action-cell">
                         <template v-if="canApproveRequest(req)">
                           <button class="widget-btn approve-btn" @click="$emit('approve', req.id)">{{ t('Approve') }}</button>

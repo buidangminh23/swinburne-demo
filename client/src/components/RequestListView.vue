@@ -298,7 +298,7 @@ const t = makeTranslator(props.session?.user?.email);
             <!-- Classroom/Location -->
             <td>
               <div class="location-cell">
-                <strong>{{ req.classroom || "-" }}</strong>
+                <strong>{{ req.classroom ? (req.classroom.startsWith('HN-') ? 'HN-DT1-' + req.classroom.split('-').slice(2).join('-') : req.classroom) : '-' }}</strong>
                 <span class="location-sub">{{ req.equipment?.location }}</span>
               </div>
             </td>

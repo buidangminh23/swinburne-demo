@@ -617,7 +617,8 @@ tbody tr:hover {
 }
 
 .status-chip.available,
-.status-chip.approved {
+.status-chip.approved,
+.status-chip.accepted {
   background: #e3f8ef;
   color: #047857;
 }
