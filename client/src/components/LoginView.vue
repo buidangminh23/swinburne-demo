@@ -232,6 +232,7 @@ function getInitial(name) {
               <div class="account-details">
                 <span class="account-name">{{ acc.name }}</span>
                 <span class="account-email">{{ acc.email }}</span>
+                <span v-if="acc.role" class="account-type">{{ acc.role }}</span>
               </div>
             </button>
           </div>
@@ -588,6 +589,20 @@ function getInitial(name) {
   font-size: 12px;
   color: #c4c7c5;
   margin-top: 2px;
+}
+
+.account-type {
+  align-self: flex-start;
+  margin-top: 5px;
+  background: #2a2a2c;
+  color: #c4c7c5;
+  border: 1px solid #444746;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
 }
 
 .google-error-msg {
