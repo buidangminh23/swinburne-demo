@@ -29,7 +29,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(["approve", "deny", "extend", "edit", "custody", "remind", "check-out"]);
+const emit = defineEmits(["approve", "deny", "extend", "extend-modal", "edit", "custody", "remind", "check-out", "return"]);
 
 const searchText = ref("");
 const statusFilter = ref(props.initialStatus || "ALL");
@@ -74,7 +74,13 @@ function canFullyEdit(req) {
 }
 
 function canExtend(req) {
-  if (!["RESERVED", "BORROWED"].includes(req.status)) return false;
+  if (!["RESERVED", "BORROWED", "RETURNED"].includes(req.status)) return false;
+  if (req.status === "RETURNED" && new Date(req.dueAt) >= new Date()) return false;
+  return isOwner(req) || canManage(req) || lecturerTeachesOwner(req);
+}
+
+function canReturn(req) {
+  if (req.status !== "BORROWED") return false;
   return isOwner(req) || canManage(req) || lecturerTeachesOwner(req);
 }
 
@@ -353,14 +359,24 @@ const t = makeTranslator(props.session?.user?.email);
                   {{ t('Check Out') }}
                 </button>
 
+                <!-- Return action -->
+                <button
+                  v-if="canReturn(req)"
+                  class="action-btn return"
+                  @click="emit('return', { id: req.id, payload: { isStatusOk: true } })"
+                  :title="t('Return borrowed equipment')"
+                >
+                  {{ t('Return') }}
+                </button>
+
                 <!-- Extend action -->
                 <button
                   v-if="canExtend(req)"
                   class="action-btn extend"
-                  @click="emit('extend', { id: req.id, payload: {} })"
-                  :title="t('Extend borrowing by 7 days')"
+                  @click="emit('extend-modal', req)"
+                  :title="t('Extend borrowing')"
                 >
-                  {{ t('Extend 7d') }}
+                  {{ t('Extend') }}
                 </button>
 
                 <!-- Custody action for EVENT purposes -->
@@ -657,6 +673,17 @@ const t = makeTranslator(props.session?.user?.email);
 
 .action-btn.extend:hover {
   background: #d97706;
+  color: white;
+}
+
+.action-btn.return {
+  background: #e6fcf5;
+  color: #0ca678;
+  border-color: #c3fae8;
+}
+
+.action-btn.return:hover {
+  background: #0ca678;
   color: white;
 }
 

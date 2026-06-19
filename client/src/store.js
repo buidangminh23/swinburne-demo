@@ -686,6 +686,31 @@ function recomputeStoredStatus(item) {
   item.status = free <= 0 ? "BORROWED" : "AVAILABLE";
 }
 
+function autoReturnExpiredRequests() {
+  const now = new Date();
+  let changed = false;
+  for (const r of borrowRequests) {
+    if (r.status === "BORROWED" && new Date(r.dueAt) < now) {
+      r.status = "RETURNED";
+      r.returnedAt = r.dueAt;
+      r.returnedQuantity = r.quantity ?? 1;
+      r.isStatusOk = true;
+      r.damageReport = "";
+      r.updatedAt = now.toISOString();
+
+      const item = equipment.find((candidate) => candidate.id === r.equipmentId);
+      if (item) {
+        recomputeStoredStatus(item);
+        item.updatedAt = now.toISOString();
+      }
+      changed = true;
+    }
+  }
+  if (changed) {
+    persistState();
+  }
+}
+
 function findLecturerBorrowForTransfer(equipmentId, requesterId, quantity = 1) {
   return borrowRequests.find((request) => {
     if (request.equipmentId !== equipmentId || request.status !== "BORROWED" || request.lecturerId === requesterId) {
@@ -751,6 +776,7 @@ class DemoRepository {
   }
 
   async listEquipment() {
+    autoReturnExpiredRequests();
     const now = new Date().toISOString();
     return equipment.map(item => {
       const itemRequests = borrowRequests
@@ -768,13 +794,19 @@ class DemoRepository {
   }
 
   async listActiveRequests() {
+    autoReturnExpiredRequests();
+    const now = new Date();
     return borrowRequests
-      .filter((request) => !["RETURNED", "CANCELLED"].includes(request.status))
+      .filter((request) =>
+        !["RETURNED", "CANCELLED"].includes(request.status) ||
+        (request.status === "RETURNED" && new Date(request.dueAt) < now)
+      )
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
       .map(attachEquipment);
   }
 
   async listBorrowHistory(userId) {
+    autoReturnExpiredRequests();
     return borrowRequests
       .filter((request) => request.lecturerId === userId)
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
@@ -871,6 +903,7 @@ class DemoRepository {
   }
 
   async confirmReturn(id, input = {}) {
+    autoReturnExpiredRequests();
     const request = borrowRequests.find((candidate) => candidate.id === id);
     if (!request) {
       const error = new Error("Borrow request not found");
@@ -880,11 +913,6 @@ class DemoRepository {
     if (request.status !== "BORROWED") {
       const error = new Error("Only borrowed equipment can be returned");
       error.status = 409;
-      throw error;
-    }
-    if (input.actorId != null && input.actorId === request.lecturerId) {
-      const error = new Error("A different staff member must confirm this return (separation of duties).");
-      error.status = 403;
       throw error;
     }
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
@@ -1045,6 +1073,7 @@ class DemoRepository {
   }
 
   async listAllHistory(query = {}) {
+    autoReturnExpiredRequests();
     let list = [...borrowRequests];
 
     if (query.userId) {
@@ -1133,14 +1162,20 @@ class DemoRepository {
   }
 
   async editRequest(id, input = {}) {
+    autoReturnExpiredRequests();
     const request = borrowRequests.find((candidate) => candidate.id === id);
     if (!request) {
       const error = new Error("Request not found");
       error.status = 404;
       throw error;
     }
-    if (!["REQUESTED", "RESERVED", "BORROWED"].includes(request.status)) {
-      const error = new Error("Only pending, reserved or active borrowings can be edited");
+    if (!["REQUESTED", "RESERVED", "BORROWED", "RETURNED"].includes(request.status)) {
+      const error = new Error("Only pending, reserved, active, or returned borrowings can be edited");
+      error.status = 409;
+      throw error;
+    }
+    if (request.status === "RETURNED" && !input.isExtendMode) {
+      const error = new Error("Returned borrowings can only be edited to extend");
       error.status = 409;
       throw error;
     }
@@ -1191,6 +1226,11 @@ class DemoRepository {
           throw error;
         }
       }
+    }
+    if (request.status === "RETURNED" && input.isExtendMode) {
+      request.status = "BORROWED";
+      request.returnedAt = null;
+      request.returnedQuantity = null;
     }
     Object.assign(request, data);
     request.updatedAt = new Date().toISOString();
@@ -1280,11 +1320,13 @@ class DemoRepository {
   }
 
   async getRequest(id) {
+    autoReturnExpiredRequests();
     const request = borrowRequests.find((candidate) => candidate.id === id);
     return request ? attachEquipment(request) : null;
   }
 
   async summary() {
+    autoReturnExpiredRequests();
     const now = new Date().toISOString();
     let available = 0;
     let fullyBooked = 0;

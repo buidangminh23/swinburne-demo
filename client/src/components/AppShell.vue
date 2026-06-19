@@ -152,7 +152,7 @@ const nearDueRequests = computed(() => {
 });
 
 const myActiveRequests = computed(() => {
-  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "CANCELLED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
+  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "RETURNED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
 });
 
 const isApprovalRequester = computed(() => ["STUDENT", "EVENT_STAFF"].includes(currentRole.value));
@@ -184,7 +184,13 @@ function canFullyEdit(req) {
 }
 
 function canExtendRequest(req) {
-  if (!["RESERVED", "BORROWED"].includes(req.status)) return false;
+  if (!["RESERVED", "BORROWED", "RETURNED"].includes(req.status)) return false;
+  if (req.status === "RETURNED" && new Date(req.dueAt) >= new Date()) return false;
+  return req.lecturerId === props.session.user.id || canManageRequest(req);
+}
+
+function canReturn(req) {
+  if (req.status !== "BORROWED") return false;
   return req.lecturerId === props.session.user.id || canManageRequest(req);
 }
 
@@ -485,7 +491,7 @@ const activeTabDisplay = computed(() => {
                       </td>
                       <td class="action-cell">
                         <button v-if="canFullyEdit(req) || (isStudent && req.lecturerId === session.user.id && ['RESERVED', 'BORROWED'].includes(req.status))" class="widget-btn edit-btn" @click="openEditModal(req)"><Pencil :size="12" /> {{ t('Edit') }}</button>
-                        <button v-if="req.status === 'BORROWED' && (isSupport || isAdmin || isOperations)" class="widget-btn return-btn" @click="activeTab = 'returns'">{{ t('Return') }}</button>
+                        <button v-if="canReturn(req)" class="widget-btn return-btn" @click="$emit('return', { id: req.id, payload: { isStatusOk: true } })">{{ t('Return') }}</button>
                         <button v-if="req.status === 'RESERVED' && !isStudent" class="widget-btn approve-btn" @click="$emit('check-out', req.id)">{{ t('Check Out') }}</button>
                         <button v-if="canExtendRequest(req)" class="widget-btn extend-btn" @click="openExtendModal(req)">{{ t('Extend') }}</button>
                         <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> {{ t('Custody') }}</button>
@@ -508,7 +514,8 @@ const activeTabDisplay = computed(() => {
             :session="session"
             @approve="$emit('approve', $event)"
             @deny="confirmDeny"
-            @extend="$emit('extend', $event)"
+            @extend-modal="openExtendModal"
+            @return="$emit('return', $event)"
             @edit="editingRequest = $event"
             @custody="openCustody"
             @remind="$emit('remind', $event)"
@@ -524,7 +531,8 @@ const activeTabDisplay = computed(() => {
             initialStatus="REQUESTED"
             @approve="$emit('approve', $event)"
             @deny="confirmDeny"
-            @extend="$emit('extend', $event)"
+            @extend-modal="openExtendModal"
+            @return="$emit('return', $event)"
             @edit="editingRequest = $event"
             @custody="openCustody"
             @remind="$emit('remind', $event)"
