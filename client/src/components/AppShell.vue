@@ -54,6 +54,12 @@ function goToTab(tabName) {
   emit("navigate", tabName);
 }
 
+const bookingPrefill = ref(null);
+function onBookSlot(payload) {
+  bookingPrefill.value = { ...payload };
+  goToTab("borrow");
+}
+
 const profileOpen = ref(false);
 const activeTab = ref("dashboard");
 const notifOpen = ref(false);
@@ -652,7 +658,7 @@ watchEffect(() => {
         </template>
 
         <template v-else-if="activeTab === 'borrow' && (isLecturer || isEventStaff)">
-          <BorrowPanel :equipment="state.equipment" :requests="state.requests" :is-student="isStudent" :user-role="session.user.role" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" :managers="state.managers || []" @borrow="$emit('borrow', $event)" />
+          <BorrowPanel :equipment="state.equipment" :requests="state.requests" :is-student="isStudent" :user-role="session.user.role" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" :managers="state.managers || []" :prefill="bookingPrefill" @borrow="$emit('borrow', $event)" />
         </template>
 
         <template v-else-if="activeTab === 'returns' && canConfirmReturn">
@@ -664,7 +670,7 @@ watchEffect(() => {
         </template>
 
         <template v-else-if="activeTab === 'schedules'">
-          <SchedulesView :equipment="state.equipment" :session="session" @borrow="$emit('borrow', $event)" />
+          <SchedulesView :equipment="state.equipment" :session="session" @book-slot="onBookSlot" />
         </template>
 
         <template v-else-if="activeTab === 'notifications'">

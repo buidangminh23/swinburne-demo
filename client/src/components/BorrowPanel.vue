@@ -35,6 +35,10 @@ const props = defineProps({
   managers: {
     type: Array,
     default: () => []
+  },
+  prefill: {
+    type: Object,
+    default: null
   }
 });
 
@@ -185,6 +189,16 @@ const search = ref("");
 const cart = reactive([]);
 const error = ref("");
 const submitting = ref(false);
+
+watch(() => props.prefill, (incoming) => {
+  if (!incoming || !incoming.equipmentId) return;
+  const item = props.equipment.find((candidate) => candidate.id === incoming.equipmentId);
+  if (item && !cart.some((entry) => entry.id === item.id)) {
+    cart.push({ ...item, quantity: 1 });
+  }
+  if (incoming.startDate) form.startDate = toLocalInput(new Date(incoming.startDate));
+  if (incoming.dueAt) form.dueAt = toLocalInput(new Date(incoming.dueAt));
+}, { immediate: true });
 
 const preflightResults = computed(() => {
   return cart.map((item) => analyzeBorrowRequest({

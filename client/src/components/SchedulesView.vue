@@ -1,21 +1,8 @@
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from "vue";
-import { Calendar, Clock, ChevronLeft, ChevronRight } from "@lucide/vue";
+import { ref, computed, watch, onMounted } from "vue";
+import { Clock, Calendar } from "@lucide/vue";
 import { api } from "../api";
-
-const classroomOptions = [
-  "HN-DT-9.1",
-  "HN-DT-9.2",
-  "HN-AT-6.25",
-  "HN-AT-6.28",
-  "HN-BA-7.01",
-  "HN-EN-4.02",
-  "HN-EN-4.03",
-  "HCM-AB-2.1",
-  "HCM-CD-3.2",
-  "HN-LIB-DESK",
-  "HN-MED-DESK"
-];
+import { makeTranslator } from "../translate";
 
 const props = defineProps({
   equipment: {
@@ -28,45 +15,42 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(["borrow"]);
-
-import { makeTranslator } from "../translate";
+const emit = defineEmits(["book-slot"]);
 const t = (text) => makeTranslator(props.session?.user?.email)(text);
-const showEventOption = computed(() => props.session?.user?.role === "EVENT_STAFF");
+const canBook = computed(() => ["LECTURER", "EVENT_STAFF"].includes(props.session?.user?.role));
 
-const selectedEquipmentId = ref(props.equipment[0]?.id ?? null);
+const VISIBLE_HOURS = [8, 10, 12, 14, 16, 18, 20];
+const SLOT_HEIGHT = 44;
+const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const allLocations = computed(() =>
+  [...new Set(props.equipment.map((item) => item.location).filter(Boolean))].sort()
+);
+const selectedLocations = ref([]);
+
+function toggleLocation(location) {
+  const index = selectedLocations.value.indexOf(location);
+  if (index === -1) {
+    selectedLocations.value.push(location);
+  } else {
+    selectedLocations.value.splice(index, 1);
+  }
+}
+
+const filteredEquipment = computed(() => {
+  if (!selectedLocations.value.length) return props.equipment;
+  return props.equipment.filter((item) => selectedLocations.value.includes(item.location));
+});
+
+const selectedEquipmentId = ref(null);
 const selectedItem = computed(() => props.equipment.find((item) => item.id === selectedEquipmentId.value) ?? null);
+const totalUnits = computed(() => selectedItem.value?.totalQuantity ?? 5);
+
+const totalAvailable = computed(() => filteredEquipment.value.reduce((sum, item) => sum + (item.availableNow ?? 0), 0));
+const outOfServiceCount = computed(() => filteredEquipment.value.filter((item) => ["MAINTENANCE", "RETIRED"].includes(item.status)).length);
 
 const weekOffset = ref(0);
 const bookings = ref([]);
-const loading = ref(false);
-
-const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const slotHours = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
-
-const showWorkingHoursOnly = ref(true);
-const filteredSlotHours = computed(() => {
-  if (showWorkingHoursOnly.value) {
-    return [8, 10, 12, 14, 16, 18, 20, 22];
-  }
-  return slotHours;
-});
-
-const statusFilters = reactive({
-  available: true,
-  reserved: true,
-  maintenance: true,
-  past: true
-});
-
-function filteredCellStatusClass(date, hour) {
-  const status = cellStatus(date, hour);
-  if (status === 'AVAILABLE' && !statusFilters.available) return 'hidden-status';
-  if (status === 'RESERVED' && !statusFilters.reserved) return 'hidden-status';
-  if (status === 'MAINTENANCE' && !statusFilters.maintenance) return 'hidden-status';
-  if (status === 'PAST' && !statusFilters.past) return 'hidden-status';
-  return status.toLowerCase();
-}
 
 function startOfWeek(offset) {
   const now = new Date();
@@ -87,43 +71,34 @@ const weekDays = computed(() => {
   });
 });
 
-const weekLabel = computed(() => {
-  const days = weekDays.value;
-  return `${fmtDay(days[0])} - ${fmtDay(days[6])}`;
-});
+const weekLabel = computed(() => `${fmtDay(weekDays.value[0])} - ${fmtDay(weekDays.value[6])}`);
 
 async function fetchSchedule() {
-  if (!selectedEquipmentId.value) return;
-  loading.value = true;
+  if (!selectedEquipmentId.value) {
+    bookings.value = [];
+    return;
+  }
   try {
     const result = await api.schedule(selectedEquipmentId.value);
     bookings.value = result.bookings ?? [];
   } catch {
     bookings.value = [];
-  } finally {
-    loading.value = false;
   }
 }
 
-watch(selectedEquipmentId, fetchSchedule);
-watch(
-  () => props.equipment,
-  () => {
-    if (!selectedEquipmentId.value && props.equipment.length) {
-      selectedEquipmentId.value = props.equipment[0].id;
-    }
-    fetchSchedule();
+watch(filteredEquipment, (list) => {
+  if (!list.some((item) => item.id === selectedEquipmentId.value)) {
+    selectedEquipmentId.value = list[0]?.id ?? null;
   }
-);
+});
+watch(selectedEquipmentId, fetchSchedule);
 
 onMounted(() => {
-  if (!selectedEquipmentId.value && props.equipment.length) {
-    selectedEquipmentId.value = props.equipment[0].id;
-  }
+  selectedEquipmentId.value = filteredEquipment.value[0]?.id ?? null;
   fetchSchedule();
 });
 
-function cellRange(dayDate, hour) {
+function slotRange(dayDate, hour) {
   const start = new Date(dayDate);
   start.setHours(hour, 0, 0, 0);
   const end = new Date(start);
@@ -131,82 +106,59 @@ function cellRange(dayDate, hour) {
   return { start, end };
 }
 
-function bookingFor(dayDate, hour) {
-  const { start, end } = cellRange(dayDate, hour);
-  return (
-    bookings.value.find((booking) => {
-      if (!["RESERVED", "BORROWED"].includes(booking.status)) return false;
-      const bookingStart = new Date(booking.start).getTime();
-      const bookingEnd = new Date(booking.end).getTime();
-      return bookingStart < end.getTime() && bookingEnd > start.getTime();
-    }) ?? null
-  );
+function bookedUnits(dayDate, hour) {
+  const { start, end } = slotRange(dayDate, hour);
+  return bookings.value
+    .filter((booking) => ["RESERVED", "BORROWED"].includes(booking.status))
+    .filter((booking) => new Date(booking.start).getTime() < end.getTime() && new Date(booking.end).getTime() > start.getTime())
+    .reduce((sum, booking) => sum + (booking.quantity ?? 1), 0);
 }
 
-function cellStatus(dayDate, hour) {
-  const { end } = cellRange(dayDate, hour);
-  if (end.getTime() <= Date.now()) {
-    return "PAST";
+function slotState(dayDate, hour) {
+  const { end } = slotRange(dayDate, hour);
+  if (end.getTime() <= Date.now()) return { kind: "past", booked: 0, available: 0 };
+  if (selectedItem.value && ["MAINTENANCE", "RETIRED"].includes(selectedItem.value.status)) {
+    return { kind: "oos", booked: 0, available: 0 };
   }
-  const item = selectedItem.value;
-  if (item && ["MAINTENANCE", "RETIRED"].includes(item.status)) {
-    return "MAINTENANCE";
-  }
-  return bookingFor(dayDate, hour) ? "RESERVED" : "AVAILABLE";
+  const booked = Math.min(totalUnits.value, bookedUnits(dayDate, hour));
+  return { kind: booked > 0 ? "booked" : "open", booked, available: Math.max(0, totalUnits.value - booked) };
 }
 
-const isModalOpen = ref(false);
-const submitting = ref(false);
-const bookingForm = reactive({
-  classroom: "HN-DT1-9.1",
-  purpose: "CLASSROOM",
-  program: null,
-  unitOrProject: null,
-  start: null,
-  end: null,
-  label: ""
-});
-function openBooking(dayDate, hour) {
-  if (cellStatus(dayDate, hour) !== "AVAILABLE") return;
-  const { start, end } = cellRange(dayDate, hour);
-  bookingForm.start = start.toISOString();
-  bookingForm.end = end.toISOString();
-  bookingForm.label = `${fmtDay(start)} • ${fmtHour(hour)} - ${fmtHour(hour + 2)}`;
-  bookingForm.purpose = props.session?.user?.role === "EVENT_STAFF" ? "EVENT" : "CLASSROOM";
-  isModalOpen.value = true;
+function daySegments(dayDate) {
+  const segments = [];
+  for (const hour of VISIBLE_HOURS) {
+    const state = slotState(dayDate, hour);
+    const previous = segments[segments.length - 1];
+    if (previous && previous.kind === state.kind && previous.booked === state.booked && previous.available === state.available) {
+      previous.slots += 1;
+      previous.endHour = hour + 2;
+    } else {
+      segments.push({ kind: state.kind, booked: state.booked, available: state.available, slots: 1, startHour: hour, endHour: hour + 2, date: dayDate });
+    }
+  }
+  return segments;
 }
 
-function handleCellClick(date, hour) {
-  if (cellStatus(date, hour) === 'AVAILABLE' && statusFilters.available) {
-    openBooking(date, hour);
-  }
+const activeSlot = ref(null);
+
+function openSlot(segment) {
+  if (segment.kind !== "open" || !canBook.value) return;
+  activeSlot.value = segment;
 }
 
-const getDefaultNotes = (purpose) => {
-  if (purpose === "CLASSROOM") return "Collected for classroom session";
-  if (purpose === "RESEARCH") return "Equipment needed for research project activity";
-  if (purpose === "LAB") return "Required for laboratory practical session";
-  if (purpose === "EVENT") return "Collected for campus event support";
-  return "Equipment request for academic purpose";
-};
-
-async function confirmBooking() {
-  submitting.value = true;
-  try {
-    emit("borrow", {
-      equipmentId: selectedEquipmentId.value,
-      classroom: bookingForm.classroom,
-      purpose: bookingForm.purpose,
-      program: null,
-      unitOrProject: null,
-      startDate: bookingForm.start,
-      dueAt: bookingForm.end,
-      handoverNotes: getDefaultNotes(bookingForm.purpose)
-    });
-    isModalOpen.value = false;
-  } finally {
-    submitting.value = false;
-  }
+function confirmBook() {
+  const segment = activeSlot.value;
+  if (!segment) return;
+  const start = new Date(segment.date);
+  start.setHours(segment.startHour, 0, 0, 0);
+  const end = new Date(segment.date);
+  end.setHours(segment.endHour, 0, 0, 0);
+  emit("book-slot", {
+    equipmentId: selectedEquipmentId.value,
+    startDate: start.toISOString(),
+    dueAt: end.toISOString()
+  });
+  activeSlot.value = null;
 }
 
 function fmtHour(hour) {
@@ -219,34 +171,14 @@ function fmtDay(date) {
 
 function isToday(date) {
   const today = new Date();
-  return date.getDate() === today.getDate() &&
-         date.getMonth() === today.getMonth() &&
-         date.getFullYear() === today.getFullYear();
+  return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
 }
 
-function isCurrentSlot(date, hour) {
-  if (!isToday(date)) return false;
-  const currentHour = new Date().getHours();
-  return currentHour >= hour && currentHour < hour + 2;
-}
-
-const activeBookingNow = computed(() => {
-  if (!bookings.value.length) return null;
-  const now = new Date();
-  return bookings.value.find(b => {
-    const start = new Date(b.start);
-    const end = new Date(b.end);
-    return now >= start && now <= end;
-  });
+const slotLabel = computed(() => {
+  const segment = activeSlot.value;
+  if (!segment) return "";
+  return `${dayNames[(segment.date.getDay() + 6) % 7]} ${fmtDay(segment.date)} • ${fmtHour(segment.startHour)} - ${fmtHour(segment.endHour)}`;
 });
-
-function formatDateTime(dateStr) {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "";
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
-}
 </script>
 
 <template>
@@ -254,172 +186,167 @@ function formatDateTime(dateStr) {
     <div class="panel-heading">
       <div>
         <h2>{{ t('Equipment Availability Schedule') }}</h2>
-        <p>{{ t('Live 24h × 7-day availability per item from real bookings. Click a green slot to reserve at that exact time.') }}</p>
+        <p>{{ t('Pick equipment to see open and booked time. Click an open block to book it.') }}</p>
       </div>
     </div>
 
-    <div class="schedule-selector">
-      <label>
-        {{ t('Select Equipment:') }}
+    <div class="schedule-controls">
+      <label class="control">
+        {{ t('Equipment') }}
         <select v-model="selectedEquipmentId" class="equipment-select">
-          <option v-for="item in equipment" :key="item.id" :value="item.id">
+          <option v-for="item in filteredEquipment" :key="item.id" :value="item.id">
             {{ item.assetCode }} - {{ item.name }}
           </option>
         </select>
       </label>
 
+      <div v-if="allLocations.length" class="control locations">
+        <span class="control-label">{{ t('Location') }}</span>
+        <div class="location-chips">
+          <button
+            v-for="location in allLocations"
+            :key="location"
+            type="button"
+            :class="['location-chip', { active: selectedLocations.includes(location) }]"
+            @click="toggleLocation(location)"
+          >
+            {{ location }}
+          </button>
+        </div>
+      </div>
+
       <div class="week-nav">
         <button type="button" class="week-btn" @click="weekOffset--">&#8249;</button>
         <span class="week-label">{{ weekLabel }}</span>
         <button type="button" class="week-btn" @click="weekOffset++">&#8250;</button>
-
-        <label class="toggle-hours-label">
-          <input v-model="showWorkingHoursOnly" type="checkbox" />
-          <span>{{ t('Working Hours (08:00 - 22:00)') }}</span>
-        </label>
-      </div>
-
-      <div v-if="selectedItem" class="item-status-summary">
-        <div class="status-meta">
-          <span class="status-indicator">
-            {{ t('Current Status:') }}
-            <span :class="'status-chip ' + (selectedItem.status?.toLowerCase() ?? 'unknown')">{{ t(selectedItem.status ?? 'Unknown') }}</span>
-          </span>
-          <span class="location-indicator">{{ t('Location: ') }}<strong>{{ selectedItem.location }}</strong></span>
-        </div>
-        <div v-if="activeBookingNow" class="active-booking-details">
-          {{ t('Currently borrowed by ') }}<strong>{{ activeBookingNow.borrower || t('a user') }}</strong><template v-if="activeBookingNow.purpose"> ({{ t(activeBookingNow.purpose) }})</template>{{ t(' until ') }}{{ formatDateTime(activeBookingNow.end) }}
-        </div>
       </div>
     </div>
 
-    <div class="calendar-legend">
-      <label class="legend-item filter-checkbox">
-        <input v-model="statusFilters.available" type="checkbox" />
-        <span class="legend-color available"></span>
-        <span>{{ t('Available (Click to book)') }}</span>
-      </label>
-      <label class="legend-item filter-checkbox">
-        <input v-model="statusFilters.reserved" type="checkbox" />
-        <span class="legend-color reserved"></span>
-        <span>{{ t('Reserved / Borrowed') }}</span>
-      </label>
-      <label class="legend-item filter-checkbox">
-        <input v-model="statusFilters.maintenance" type="checkbox" />
-        <span class="legend-color maintenance"></span>
-        <span>{{ t('Out of service') }}</span>
-      </label>
-      <label class="legend-item filter-checkbox">
-        <input v-model="statusFilters.past" type="checkbox" />
-        <span class="legend-color past"></span>
-        <span>{{ t('Past') }}</span>
-      </label>
+    <div class="legend">
+      <span class="legend-item"><span class="dot open"></span>{{ t('Open') }}</span>
+      <span class="legend-item"><span class="dot booked"></span>{{ t('Booked') }}</span>
+      <span class="legend-item"><span class="dot oos"></span>{{ t('Out of service') }}</span>
     </div>
 
     <div class="grid-wrap">
-      <div class="schedule-grid">
-        <div class="grid-header-cell empty"></div>
-        <div v-for="(date, index) in weekDays" :key="date.toISOString()" :class="['grid-header-cell', { today: isToday(date) }]">
+      <div class="sched-head">
+        <div class="corner"></div>
+        <div v-for="(date, index) in weekDays" :key="date.toISOString()" :class="['day-head', { today: isToday(date) }]">
           <span class="day-name">{{ dayNames[index] }}</span>
           <span class="day-date">{{ fmtDay(date) }}</span>
-          <span v-if="isToday(date)" class="today-badge">{{ t('Today') }}</span>
         </div>
+      </div>
 
-        <template v-for="hour in filteredSlotHours" :key="hour">
-          <div class="grid-time-cell">
-            <Clock :size="12" />
-            <span>{{ fmtHour(hour) }}</span>
+      <div class="sched-body">
+        <div class="time-col">
+          <div v-for="hour in VISIBLE_HOURS" :key="hour" class="time-slot">
+            <Clock :size="11" /> {{ fmtHour(hour) }}
           </div>
+        </div>
+        <div v-for="date in weekDays" :key="date.toISOString()" class="day-col">
           <div
-            v-for="date in weekDays"
-            :key="date.toISOString() + '-' + hour"
-            :class="[
-              'schedule-cell',
-              filteredCellStatusClass(date, hour),
-              {
-                clickable: cellStatus(date, hour) === 'AVAILABLE' && statusFilters.available,
-                'today-column': isToday(date),
-                'current-slot': isCurrentSlot(date, hour)
-              }
-            ]"
-            :title="bookingFor(date, hour) ? `Booked by ${bookingFor(date, hour).borrower || 'a user'}${bookingFor(date, hour).purpose ? ' (' + bookingFor(date, hour).purpose + ')' : ''}` : ''"
-            @click="handleCellClick(date, hour)"
+            v-for="(segment, sIndex) in daySegments(date)"
+            :key="sIndex"
+            :class="['seg', segment.kind, { clickable: segment.kind === 'open' && canBook }]"
+            :style="{ flexGrow: segment.slots }"
+            @click="openSlot(segment)"
           >
-            <span v-if="cellStatus(date, hour) === 'AVAILABLE'" class="cell-text available-text">
-              {{ statusFilters.available ? t('Open') : '' }}
-            </span>
-            <span v-else-if="cellStatus(date, hour) === 'RESERVED'" class="cell-text reserved-text">
-              {{ statusFilters.reserved ? t('Booked') : '' }}
-            </span>
-            <span v-else-if="cellStatus(date, hour) === 'MAINTENANCE'" class="cell-text maintenance-text">
-              {{ statusFilters.maintenance ? t('Out') : '' }}
-            </span>
-            <span v-else class="cell-text past-text">
-              {{ statusFilters.past ? '—' : '' }}
-            </span>
+            <span v-if="segment.kind === 'booked'" class="seg-label">{{ segment.booked }} {{ t('booked') }}</span>
+            <span v-else-if="segment.kind === 'open'" class="seg-label">{{ t('Open') }}</span>
+            <span v-else-if="segment.kind === 'oos'" class="seg-label">{{ t('Out') }}</span>
           </div>
-        </template>
+        </div>
       </div>
     </div>
 
-    <div v-if="isModalOpen" class="modal-overlay" @click.self="isModalOpen = false">
+    <div class="totals">
+      <div class="total-card available">
+        <span class="total-num">{{ totalAvailable }}</span>
+        <span class="total-label">{{ t('units available') }}</span>
+      </div>
+      <div class="total-card oos">
+        <span class="total-num">{{ outOfServiceCount }}</span>
+        <span class="total-label">{{ t('out of service') }}</span>
+      </div>
+    </div>
+
+    <div v-if="activeSlot" class="modal-overlay" @click.self="activeSlot = null">
       <div class="modal-card">
         <header class="modal-header">
-          <h3>{{ t('Reserve ') }}{{ selectedItem?.name }}</h3>
-          <button type="button" class="close-btn" @click="isModalOpen = false">&times;</button>
+          <h3>{{ t('Book') }} {{ selectedItem?.name }}</h3>
+          <button type="button" class="close-btn" @click="activeSlot = null">&times;</button>
         </header>
-        <form class="modal-form" @submit.prevent="confirmBooking">
-          <div class="booking-details-summary">
+        <div class="modal-body">
+          <div class="slot-summary">
             <Calendar :size="16" />
-            <span>{{ bookingForm.label }}</span>
+            <span>{{ slotLabel }}</span>
           </div>
-          <label>
-            {{ t('Classroom') }}:
-            <select v-model="bookingForm.classroom">
-              <option v-for="c in classroomOptions" :key="c" :value="c">{{ c }}</option>
-            </select>
-          </label>
-          <label>
-            {{ t('Purpose') }}:
-            <select v-model="bookingForm.purpose">
-              <option v-if="props.session?.user?.role !== 'EVENT_STAFF'" value="CLASSROOM">{{ t('Classroom Use') }}</option>
-              <option v-if="props.session?.user?.role !== 'EVENT_STAFF'" value="RESEARCH">{{ t('Research / Project') }}</option>
-              <option v-if="showEventOption" value="EVENT">{{ t('Event Support') }}</option>
-            </select>
-          </label>
-
+          <p class="avail-line">{{ activeSlot.available }} {{ t('of') }} {{ totalUnits }} {{ t('units available for this time') }}</p>
           <div class="modal-actions">
-            <button type="button" class="btn-cancel" @click="isModalOpen = false">{{ t('Cancel') }}</button>
-            <button type="submit" class="btn-confirm" :disabled="submitting">
-              {{ submitting ? t('Reserving...') : t('Confirm Reservation') }}
-            </button>
+            <button type="button" class="btn-cancel" @click="activeSlot = null">{{ t('Cancel') }}</button>
+            <button type="button" class="btn-confirm" @click="confirmBook">{{ t('Book') }}</button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.schedule-selector {
+.schedule-controls {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 20px;
   padding: 20px 28px;
   background: #fafafa;
   border-bottom: 1px solid #eeeeef;
 }
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #474753;
+}
+.control-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #474753;
+}
 .equipment-select {
-  margin-top: 6px;
-  width: 320px;
+  width: 300px;
   max-width: 100%;
+  height: 38px;
+}
+.location-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.location-chip {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #d8d8e4;
+  background: #ffffff;
+  color: #474753;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.location-chip.active {
+  background: #5f63ff;
+  border-color: #5f63ff;
+  color: #ffffff;
 }
 .week-nav {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: auto;
 }
 .week-btn {
   width: 32px;
@@ -428,21 +355,14 @@ function formatDateTime(dateStr) {
   background: #ffffff;
   border-radius: 4px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #4b5563;
   font-size: 22px;
   font-weight: 300;
   line-height: 1;
-  padding-bottom: 2px;
-  transition: all 0.2s ease;
+  color: #4b5563;
 }
 .week-btn:hover {
-  background: #fafafa;
   border-color: #5f63ff;
   color: #5f63ff;
-  box-shadow: 0 2px 8px rgba(95, 99, 255, 0.15);
 }
 .week-label {
   font-size: 13px;
@@ -451,95 +371,172 @@ function formatDateTime(dateStr) {
   min-width: 110px;
   text-align: center;
 }
-.item-status-summary {
+.legend {
   display: flex;
   gap: 18px;
-  font-size: 13px;
-}
-.calendar-legend {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
   padding: 12px 28px;
   font-size: 12px;
+  font-weight: 600;
+  color: #474753;
 }
 .legend-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-weight: 600;
 }
-.legend-color {
+.dot {
   width: 12px;
   height: 12px;
-  border-radius: 2px;
-}
-.legend-color.available { background: #e3f8ef; border: 1px solid #a7e9cc; }
-.legend-color.reserved { background: #fff1d6; border: 1px solid #fedb9b; }
-.legend-color.maintenance { background: #ffe7ec; border: 1px solid #fec0cb; }
-.legend-color.past { background: #f1f1f5; border: 1px solid #d8d8e4; }
-
-.grid-wrap {
-  padding: 0 28px 30px;
-  overflow-x: auto;
-}
-.schedule-grid {
-  display: grid;
-  grid-template-columns: 84px repeat(7, 1fr);
-  min-width: 880px;
-  border: 1px solid #eeeeef;
   border-radius: 3px;
 }
-.grid-header-cell,
-.grid-time-cell,
-.schedule-cell {
-  padding: 8px;
-  border-bottom: 1px solid #eeeeef;
-  border-right: 1px solid #eeeeef;
+.dot.open {
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+}
+.dot.booked {
+  background: #fde9c8;
+  border: 1px solid #fbbf24;
+}
+.dot.oos {
+  background: #ffe7ec;
+  border: 1px solid #fca5a5;
+}
+
+.grid-wrap {
+  padding: 0 28px;
+  overflow-x: auto;
+}
+.sched-head {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  min-width: 760px;
 }
-.grid-header-cell {
+.corner {
+  width: 64px;
+  flex-shrink: 0;
+}
+.day-head {
+  flex: 1;
+  display: flex;
   flex-direction: column;
-  background: #f7f5ff;
-  font-weight: 800;
-  font-size: 11px;
-  color: #5f63ff;
+  align-items: center;
   gap: 2px;
+  padding: 8px 4px;
+  background: #f7f5ff;
+  border: 1px solid #eeeeef;
+  border-left: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #5f63ff;
 }
-.grid-header-cell.empty {
-  background: #ffffff;
+.day-head:first-of-type {
+  border-left: 1px solid #eeeeef;
+}
+.day-head.today {
+  background: #e0e7ff;
+  border-bottom: 2px solid #5f63ff;
 }
 .day-date {
   font-size: 10px;
   color: #9aa0a6;
   font-weight: 600;
 }
-.grid-time-cell {
-  background: #fafafa;
+.sched-body {
+  display: flex;
+  align-items: stretch;
+  min-width: 760px;
+}
+.time-col {
+  width: 64px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.time-slot {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 10px;
   font-weight: 700;
-  font-size: 10px;
   color: #727285;
-  gap: 4px;
+  background: #fafafa;
+  border: 1px solid #eeeeef;
+  border-top: 0;
 }
-.schedule-cell {
-  font-size: 10px;
-  font-weight: 600;
-  min-height: 34px;
+.day-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
-.schedule-cell.available { background: #e3f8ef; color: #047857; }
-.schedule-cell.reserved { background: #fff1d6; color: #c66b00; }
-.schedule-cell.maintenance { background: #ffe7ec; color: #d9182f; }
-.schedule-cell.past { background: #f6f6f9; color: #b8b8c4; }
-.schedule-cell.available.clickable {
+.seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #eeeeef;
+  border-top: 0;
+  border-left: 0;
+  font-size: 11px;
+  font-weight: 700;
+  min-height: 0;
+}
+.day-col:first-of-type .seg {
+  border-left: 1px solid #eeeeef;
+}
+.seg.open {
+  background: #d1fae5;
+  color: #047857;
+}
+.seg.booked {
+  background: #fde9c8;
+  color: #b45309;
+}
+.seg.oos {
+  background: #ffe7ec;
+  color: #d9182f;
+}
+.seg.past {
+  background: #f6f6f9;
+  color: #cdced8;
+}
+.seg.clickable {
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: filter 0.15s ease;
 }
-.schedule-cell.available.clickable:hover {
-  background: #c2f3dc;
-  transform: scale(1.04);
-  z-index: 2;
+.seg.clickable:hover {
+  filter: brightness(0.95);
+}
+
+.totals {
+  display: flex;
+  gap: 14px;
+  padding: 18px 28px 26px;
+}
+.total-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 18px;
+  border-radius: 6px;
+  min-width: 130px;
+}
+.total-card.available {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+.total-card.oos {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+}
+.total-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1f2937;
+}
+.total-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
 }
 
 .modal-overlay {
@@ -556,7 +553,7 @@ function formatDateTime(dateStr) {
   background: #ffffff;
   border-radius: 8px;
   width: 100%;
-  max-width: 460px;
+  max-width: 420px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   overflow: hidden;
 }
@@ -570,7 +567,7 @@ function formatDateTime(dateStr) {
 }
 .modal-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   color: #3e3e4a;
   font-weight: 800;
 }
@@ -581,16 +578,14 @@ function formatDateTime(dateStr) {
   line-height: 1;
   color: #a7a7b4;
   cursor: pointer;
-  padding: 0;
 }
-.modal-form {
+.modal-body {
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  text-align: left;
 }
-.booking-details-summary {
+.slot-summary {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -602,28 +597,16 @@ function formatDateTime(dateStr) {
   font-size: 13px;
   font-weight: 600;
 }
-.modal-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #474753;
-}
-.modal-form input,
-.modal-form select {
-  height: 38px;
-  border: 1px solid #d8d8e4;
-  border-radius: 4px;
-  padding: 0 10px;
+.avail-line {
+  margin: 0;
   font-size: 13px;
-  outline: none;
+  color: #474753;
+  font-weight: 600;
 }
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 10px;
 }
 .btn-cancel,
 .btn-confirm {
@@ -642,97 +625,5 @@ function formatDateTime(dateStr) {
 .btn-confirm {
   background: #5f63ff;
   color: #ffffff;
-}
-.btn-confirm:disabled {
-  opacity: 0.7;
-  cursor: wait;
-}
-
-.toggle-hours-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  user-select: none;
-  font-size: 12px;
-  font-weight: 600;
-  color: #727285;
-  margin-left: 14px;
-}
-.toggle-hours-label input {
-  cursor: pointer;
-}
-.item-status-summary {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-.status-meta {
-  display: flex;
-  gap: 18px;
-}
-.active-booking-details {
-  font-size: 12px;
-  font-weight: 600;
-  color: #c66b00;
-  background: #fffbeb;
-  border: 1px solid #fef3c7;
-  padding: 6px 12px;
-  border-radius: 4px;
-  width: 100%;
-}
-.grid-header-cell.today {
-  background: #e0e7ff;
-  border-bottom: 2px solid #5f63ff;
-  position: relative;
-}
-.today-badge {
-  font-size: 9px;
-  font-weight: 800;
-  background: #5f63ff;
-  color: #ffffff;
-  padding: 1px 4px;
-  border-radius: 2px;
-  text-transform: uppercase;
-  margin-top: 2px;
-}
-.schedule-cell.today-column {
-  background: #fdfdff;
-}
-.schedule-cell.today-column.available {
-  background: #ecfdf5;
-}
-.schedule-cell.today-column.available.clickable:hover {
-  background: #d1fae5;
-}
-.schedule-cell.current-slot {
-  box-shadow: inset 0 0 0 2px #5f63ff;
-  position: relative;
-  z-index: 1;
-}
-
-.legend-item.filter-checkbox {
-  cursor: pointer;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background 0.15s ease;
-}
-.legend-item.filter-checkbox:hover {
-  background: #f1f1f5;
-}
-.legend-item.filter-checkbox input[type="checkbox"] {
-  cursor: pointer;
-  width: 14px;
-  height: 14px;
-  margin: 0;
-}
-.schedule-cell.hidden-status {
-  background: #ffffff;
-  color: #eeeeef;
-  cursor: not-allowed;
 }
 </style>

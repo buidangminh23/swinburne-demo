@@ -1282,6 +1282,7 @@ class DemoRepository {
         requestId: request.id,
         status: request.status,
         purpose: request.purpose,
+        quantity: request.quantity ?? 1,
         start: request.startDate ?? request.createdAt,
         end: request.dueAt,
         borrower: users.find((user) => user.id === request.lecturerId)?.name ?? null
