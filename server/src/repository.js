@@ -104,7 +104,7 @@ const borrowRequests = [
     equipmentId: 2,
     lecturerId: 1,
     classroom: "HN-EN-4.02",
-    dueAt: new Date("2026-05-29T10:30:00.000Z").toISOString(),
+    dueAt: new Date("2099-05-29T10:30:00.000Z").toISOString(),
     returnedAt: null,
     status: "BORROWED",
     handoverNotes: "Collected by lecturer for morning tutorial",
@@ -138,7 +138,7 @@ const borrowRequests = [
     equipmentId: 5,
     lecturerId: 4,
     classroom: "HN-EN-4.02",
-    dueAt: new Date("2026-05-29T12:00:00.000Z").toISOString(),
+    dueAt: new Date("2099-05-29T12:00:00.000Z").toISOString(),
     returnedAt: null,
     status: "BORROWED",
     handoverNotes: "Microphone set for classroom presentation",
@@ -350,7 +350,45 @@ function closeInMemoryTransferredBorrow(request, recipient, at) {
 }
 
 class DemoRepository {
+  async autoReturnExpiredBorrowRequests() {
+    const now = new Date();
+    for (const request of borrowRequests) {
+      if (request.status === "BORROWED" && new Date(request.dueAt).getTime() <= now.getTime()) {
+        const custody = parseCustody(request.custodyLog);
+        custody.push({
+          at: now.toISOString(),
+          action: "AUTO_RETURNED",
+          actor: "System",
+          notes: "Automatically returned when borrowing time expired"
+        });
+        request.status = "RETURNED";
+        request.returnedAt = now.toISOString();
+        request.returnedQuantity = request.quantity ?? 1;
+        request.isStatusOk = true;
+        request.damageReport = "";
+        request.custodyLog = JSON.stringify(custody);
+        request.updatedAt = now.toISOString();
+
+        const activeCount = borrowRequests.filter(r => 
+          r.equipmentId === request.equipmentId &&
+          ["BORROWED", "RESERVED"].includes(r.status) &&
+          r.id !== request.id
+        ).length;
+
+        if (activeCount === 0) {
+          const item = equipment.find(e => e.id === request.equipmentId);
+          if (item) {
+            item.status = "AVAILABLE";
+            item.conditionNotes = "Automatically returned after due time";
+            item.updatedAt = now.toISOString();
+          }
+        }
+      }
+    }
+  }
+
   async login(email) {
+    await this.autoReturnExpiredBorrowRequests();
     let user = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
     if (!user) {
       // Auto-register new Google account as STUDENT with a generated student ID
@@ -367,6 +405,7 @@ class DemoRepository {
   }
 
   async listEquipment() {
+    await this.autoReturnExpiredBorrowRequests();
     return equipment.map(item => {
       const itemRequests = borrowRequests
         .filter((r) => r.equipmentId === item.id)
@@ -379,13 +418,19 @@ class DemoRepository {
   }
 
   async listActiveRequests() {
+    await this.autoReturnExpiredBorrowRequests();
+    const now = new Date();
     return borrowRequests
-      .filter((request) => !["RETURNED", "CANCELLED"].includes(request.status))
+      .filter((request) => 
+        !["RETURNED", "CANCELLED"].includes(request.status) ||
+        (request.status === "RETURNED" && new Date(request.dueAt) < now)
+      )
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
       .map(attachEquipment);
   }
 
   async listBorrowHistory(userId) {
+    await this.autoReturnExpiredBorrowRequests();
     return borrowRequests
       .filter((request) => request.lecturerId === userId)
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
@@ -493,11 +538,6 @@ class DemoRepository {
     if (request.status !== "BORROWED") {
       const error = new Error("Only borrowed equipment can be returned");
       error.status = 409;
-      throw error;
-    }
-    if (input.actorId != null && input.actorId === request.lecturerId) {
-      const error = new Error("A different staff member must confirm this return (separation of duties).");
-      error.status = 403;
       throw error;
     }
     const returnedQuantity = clampReturnedQuantity(input, request.quantity);
@@ -620,6 +660,7 @@ class DemoRepository {
   }
 
   async listAllHistory(query = {}) {
+    await this.autoReturnExpiredBorrowRequests();
     let list = [...borrowRequests];
 
     if (query.userId) {
@@ -668,14 +709,20 @@ class DemoRepository {
   }
 
   async editRequest(id, input = {}, actor = null) {
+    await this.autoReturnExpiredBorrowRequests();
     const request = borrowRequests.find((candidate) => candidate.id === id);
     if (!request) {
       const error = new Error("Request not found");
       error.status = 404;
       throw error;
     }
-    if (!["REQUESTED", "BORROWED"].includes(request.status)) {
-      const error = new Error("Only pending or active borrowings can be edited");
+    if (!["REQUESTED", "BORROWED", "RETURNED"].includes(request.status)) {
+      const error = new Error("Only pending, active, or returned borrowings can be edited");
+      error.status = 409;
+      throw error;
+    }
+    if (request.status === "RETURNED" && !input.isExtendMode) {
+      const error = new Error("Returned borrowings can only be edited to extend");
       error.status = 409;
       throw error;
     }
@@ -692,7 +739,7 @@ class DemoRepository {
           throw error;
         }
       }
-      const disallowed = ["classroom", "purpose", "program", "unitOrProject", "quantity", "recurrence"];
+      const disallowed = ["classroom", "purpose", "program", "unitOrProject", "quantity", "recurrence", "startDate"];
       for (const k of disallowed) {
         if (input[k] !== undefined && input[k] !== request[k]) {
           const error = new Error("After approval you can only extend the due date.");
@@ -702,6 +749,17 @@ class DemoRepository {
       }
     }
     const data = buildEditData(input, { toDate: (value) => new Date(value).toISOString() });
+    if (request.status === "RETURNED" && input.isExtendMode) {
+      data.status = "BORROWED";
+      data.returnedAt = null;
+      data.returnedQuantity = null;
+      const item = equipment.find((candidate) => candidate.id === request.equipmentId);
+      if (item) {
+        item.status = "BORROWED";
+        item.conditionNotes = "Extended borrow request reactivated";
+        item.updatedAt = new Date().toISOString();
+      }
+    }
     const nextPurpose = data.purpose ?? request.purpose;
     if (owner?.role === "EVENT_STAFF" && nextPurpose !== "EVENT") {
       const error = new Error("Event staff can only borrow equipment for event support");
@@ -796,6 +854,7 @@ class DemoRepository {
   }
 
   async getRequest(id) {
+    await this.autoReturnExpiredBorrowRequests();
     const request = borrowRequests.find((candidate) => candidate.id === id);
     return request ? attachEquipment(request) : null;
   }
@@ -876,6 +935,56 @@ class PrismaRepository {
     this.prisma = new PrismaClient();
   }
 
+  async autoReturnExpiredBorrowRequests() {
+    const now = new Date();
+    const expired = await this.prisma.borrowRequest.findMany({
+      where: { status: "BORROWED", dueAt: { lte: now } },
+      select: { id: true }
+    });
+    for (const r of expired) {
+      await this.prisma.$transaction(async (tx) => {
+        const request = await tx.borrowRequest.findUnique({ where: { id: r.id } });
+        if (!request || request.status !== "BORROWED" || new Date(request.dueAt).getTime() > now.getTime()) {
+          return;
+        }
+        const custody = parseCustody(request.custodyLog);
+        custody.push({
+          at: now.toISOString(),
+          action: "AUTO_RETURNED",
+          actor: "System",
+          notes: "Automatically returned when borrowing time expired"
+        });
+        await tx.borrowRequest.update({
+          where: { id: request.id },
+          data: {
+            status: "RETURNED",
+            returnedAt: now,
+            returnedQuantity: request.quantity ?? 1,
+            isStatusOk: true,
+            damageReport: "",
+            custodyLog: JSON.stringify(custody)
+          }
+        });
+        const activeCount = await tx.borrowRequest.count({
+          where: {
+            equipmentId: request.equipmentId,
+            status: { in: ["BORROWED", "RESERVED"] },
+            id: { not: request.id }
+          }
+        });
+        if (activeCount === 0) {
+          await tx.equipment.update({
+            where: { id: request.equipmentId },
+            data: {
+              status: "AVAILABLE",
+              conditionNotes: "Automatically returned after due time"
+            }
+          });
+        }
+      });
+    }
+  }
+
   async login(email) {
     const user = await this.prisma.user.findUnique({ where: { email: String(email).toLowerCase() } });
     if (!user) {
@@ -887,6 +996,7 @@ class PrismaRepository {
   }
 
   async listEquipment() {
+    await this.autoReturnExpiredBorrowRequests();
     const items = await this.prisma.equipment.findMany({
       include: {
         requests: {
@@ -907,8 +1017,15 @@ class PrismaRepository {
   }
 
   async listActiveRequests() {
+    await this.autoReturnExpiredBorrowRequests();
+    const now = new Date();
     const requests = await this.prisma.borrowRequest.findMany({
-      where: { status: { notIn: ["RETURNED", "CANCELLED"] } },
+      where: {
+        OR: [
+          { status: { notIn: ["RETURNED", "CANCELLED"] } },
+          { status: "RETURNED", dueAt: { lt: now } }
+        ]
+      },
       include: { equipment: true, lecturer: true },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }]
     });
@@ -916,6 +1033,7 @@ class PrismaRepository {
   }
 
   async listBorrowHistory(userId) {
+    await this.autoReturnExpiredBorrowRequests();
     const requests = await this.prisma.borrowRequest.findMany({
       where: { lecturerId: userId },
       include: { equipment: true, lecturer: true },
@@ -1066,12 +1184,6 @@ class PrismaRepository {
       if (request.status !== "BORROWED") {
         const error = new Error("Only borrowed equipment can be returned");
         error.status = 409;
-        throw error;
-      }
-
-      if (input.actorId != null && input.actorId === request.lecturerId) {
-        const error = new Error("A different staff member must confirm this return (separation of duties).");
-        error.status = 403;
         throw error;
       }
 
@@ -1264,19 +1376,24 @@ class PrismaRepository {
   }
 
   async editRequest(id, input = {}, actor = null) {
+    await this.autoReturnExpiredBorrowRequests();
     const request = await this.prisma.borrowRequest.findUnique({ where: { id }, include: { lecturer: true } });
     if (!request) {
       const error = new Error("Request not found");
       error.status = 404;
       throw error;
     }
-    if (!["REQUESTED", "BORROWED"].includes(request.status)) {
-      const error = new Error("Only pending or active borrowings can be edited");
+    if (!["REQUESTED", "BORROWED", "RETURNED"].includes(request.status)) {
+      const error = new Error("Only pending, active, or returned borrowings can be edited");
       error.status = 409;
       throw error;
     }
-    const ownerIsStudent = request.lecturer?.role === "STUDENT";
-    if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED" && input.isExtendMode) {
+    if (request.status === "RETURNED" && !input.isExtendMode) {
+      const error = new Error("Returned borrowings can only be edited to extend");
+      error.status = 409;
+      throw error;
+    }
+    if (actor && request.status !== "REQUESTED" && input.isExtendMode) {
       if (input.dueAt) {
         const origStart = request.startDate ?? request.createdAt;
         const origDay = new Date(origStart).toDateString();
@@ -1287,7 +1404,7 @@ class PrismaRepository {
           throw error;
         }
       }
-      const disallowed = ["classroom", "purpose", "program", "unitOrProject", "quantity", "recurrence"];
+      const disallowed = ["classroom", "purpose", "program", "unitOrProject", "quantity", "recurrence", "startDate"];
       for (const k of disallowed) {
         if (input[k] !== undefined && input[k] !== request[k]) {
           const error = new Error("After approval you can only extend the due date.");
@@ -1297,6 +1414,19 @@ class PrismaRepository {
       }
     }
     const data = buildEditData(input, { toDate: (value) => new Date(value) });
+    if (request.status === "RETURNED" && input.isExtendMode) {
+      data.status = "BORROWED";
+      data.returnedAt = null;
+      data.returnedQuantity = null;
+
+      await this.prisma.equipment.update({
+        where: { id: request.equipmentId },
+        data: {
+          status: "BORROWED",
+          conditionNotes: "Extended borrow request reactivated"
+        }
+      });
+    }
     const nextPurpose = data.purpose ?? request.purpose;
     if (request.lecturer?.role === "EVENT_STAFF" && nextPurpose !== "EVENT") {
       const error = new Error("Event staff can only borrow equipment for event support");
@@ -1418,6 +1548,7 @@ class PrismaRepository {
   }
 
   async getRequest(id) {
+    await this.autoReturnExpiredBorrowRequests();
     const request = await this.prisma.borrowRequest.findUnique({
       where: { id },
       include: { equipment: true, lecturer: true }

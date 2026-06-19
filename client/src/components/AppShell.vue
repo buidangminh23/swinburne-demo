@@ -166,7 +166,7 @@ const nearDueRequests = computed(() => {
 });
 
 const myActiveRequests = computed(() => {
-  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
+  return props.state.requests.filter(r => ["REQUESTED", "RESERVED", "BORROWED", "RETURNED", "REJECTED"].includes(r.status) && r.lecturerId === props.session.user.id);
 });
 
 const pendingTabRequests = computed(() => {
@@ -211,7 +211,13 @@ function canFullyEdit(req) {
 }
 
 function canExtend(req) {
-  if (!["RESERVED", "BORROWED"].includes(req.status)) return false;
+  if (!["RESERVED", "BORROWED", "RETURNED"].includes(req.status)) return false;
+  if (req.status === "RETURNED" && new Date(req.dueAt) >= new Date()) return false;
+  return isOwner(req) || canManageRequest() || lecturerTeachesOwner(req);
+}
+
+function canReturn(req) {
+  if (req.status !== "BORROWED") return false;
   return isOwner(req) || canManageRequest() || lecturerTeachesOwner(req);
 }
 
@@ -564,7 +570,7 @@ watchEffect(() => {
                       <td><span :class="'status-chip ' + requesterDisplayStatus(req).toLowerCase().replace(/_/g, '-').replace(/ /g, '-')">{{ t(requesterDisplayStatus(req)).replace(/_/g, ' ') }}</span></td>
                       <td class="action-cell">
                         <button v-if="canFullyEdit(req) || (isStudent && isOwner(req) && ['RESERVED', 'BORROWED'].includes(req.status))" class="widget-btn edit-btn" @click="openEditModal(req)"><Pencil :size="12" /> {{ t('Edit') }}</button>
-                        <button v-if="req.status === 'BORROWED' && canConfirmReturn" class="widget-btn return-btn" @click="goToTab('returns')">{{ t('Return') }}</button>
+                        <button v-if="canReturn(req)" class="widget-btn return-btn" @click="$emit('return', { id: req.id, payload: { isStatusOk: true } })">{{ t('Return') }}</button>
                         <button v-if="req.status === 'RESERVED' && !isStudent" class="widget-btn approve-btn" @click="$emit('check-out', req.id)">{{ t('Check Out') }}</button>
                         <button v-if="canExtend(req)" class="widget-btn extend-btn" @click="openExtendModal(req)">{{ t('Extend') }}</button>
                         <button v-if="req.purpose === 'EVENT'" class="widget-btn custody-btn" @click="openCustody(req)"><ScrollText :size="12" /> {{ t('Custody') }}</button>
@@ -586,7 +592,8 @@ watchEffect(() => {
               :timelines="state.equipmentTimelines"
               @approve="$emit('approve', $event)"
               @deny="confirmDeny"
-              @extend="$emit('extend', $event)"
+              @extend-modal="openExtendModal"
+              @return="$emit('return', $event)"
               @edit="editingRequest = $event"
               @custody="openCustody"
               @remind="$emit('remind', $event)"
@@ -603,7 +610,8 @@ watchEffect(() => {
             :timelines="state.equipmentTimelines"
             @approve="$emit('approve', $event)"
             @deny="confirmDeny"
-            @extend="$emit('extend', $event)"
+            @extend-modal="openExtendModal"
+            @return="$emit('return', $event)"
             @edit="editingRequest = $event"
             @custody="openCustody"
             @remind="$emit('remind', $event)"
@@ -620,7 +628,8 @@ watchEffect(() => {
             :initialStatus="canApprove ? 'REQUESTED' : 'ALL'"
             @approve="$emit('approve', $event)"
             @deny="confirmDeny"
-            @extend="$emit('extend', $event)"
+            @extend-modal="openExtendModal"
+            @return="$emit('return', $event)"
             @edit="editingRequest = $event"
             @custody="openCustody"
             @remind="$emit('remind', $event)"

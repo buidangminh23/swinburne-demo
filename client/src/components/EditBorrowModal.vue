@@ -195,7 +195,7 @@ function submit() {
         <div class="form-row">
           <label>
             {{ t('From') }}
-            <input v-model="form.startDate" type="datetime-local" />
+            <input v-model="form.startDate" type="datetime-local" :disabled="props.isExtendMode" />
           </label>
           <label>
             {{ t('To') }}

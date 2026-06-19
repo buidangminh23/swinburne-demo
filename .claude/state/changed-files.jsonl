@@ -27,3 +27,4 @@
 {"file":"client/src/store.js","action":"Edit","timestamp":"2026-06-14T01:39:27Z","important":false}
 {"file":"client/src/components/LoginView.vue","action":"Edit","timestamp":"2026-06-14T01:40:17Z","important":false}
 {"file":"server/package.json","action":"Edit","timestamp":"2026-06-14T03:34:46Z","important":false}
+{"file":"client/src/components/RequestListView.vue","action":"Edit","timestamp":"2026-06-19T00:09:11Z","important":false}

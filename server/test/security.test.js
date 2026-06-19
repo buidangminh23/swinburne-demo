@@ -80,21 +80,55 @@ test("rbac: support can change equipment status", async () => {
   assert.equal(res.status, 200);
 });
 
-test("sod: a borrower cannot confirm the return of their own item", async () => {
+test("return: a borrower can return their own borrowed item", async () => {
+  const supportToken = await tokenFor("taolaminhanh1@fpt.edu.vn");
   const token = await tokenFor("buidangminh23@fpt.edu.vn");
-  const res = await fetch(`${base}/api/borrow-requests/1/return`, {
+  const item = await createEquipment(supportToken, "SELF-RETURN");
+  const borrow = await createBorrow(token, item.id);
+
+  const res = await authFetch(token, `/api/borrow-requests/${borrow.id}/return`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ isStatusOk: true })
   });
-  assert.equal(res.status, 403);
+  assert.equal(res.status, 200);
+  const returned = await res.json();
+  assert.equal(returned.status, "RETURNED");
+  assert.ok(returned.returnedAt);
 });
 
-test("sod: a different staff member can confirm the return", async () => {
-  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
-  const res = await fetch(`${base}/api/borrow-requests/1/return`, {
+test("return: a student can return their own approved borrow", async () => {
+  const supportToken = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const studentToken = await tokenFor("buidangminh.lh@fpt.edu.vn");
+  const lecturerToken = await tokenFor("buidangminh23@fpt.edu.vn");
+  const item = await createEquipment(supportToken, "STUDENT-RETURN");
+  const request = await createBorrow(studentToken, item.id);
+  assert.equal(request.status, "REQUESTED");
+
+  const approveRes = await authFetch(lecturerToken, `/api/borrow-requests/${request.id}/approve`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: "{}"
+  });
+  assert.equal(approveRes.status, 200);
+  const approved = await approveRes.json();
+  assert.equal(approved.status, "BORROWED");
+
+  const returnRes = await authFetch(studentToken, `/api/borrow-requests/${request.id}/return`, {
+    method: "POST",
+    body: JSON.stringify({ isStatusOk: true })
+  });
+  assert.equal(returnRes.status, 200);
+  const returned = await returnRes.json();
+  assert.equal(returned.status, "RETURNED");
+});
+
+test("return: a different staff member can still confirm the return", async () => {
+  const supportToken = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const lecturerToken = await tokenFor("buidangminh23@fpt.edu.vn");
+  const item = await createEquipment(supportToken, "STAFF-RETURN");
+  const borrow = await createBorrow(lecturerToken, item.id);
+
+  const res = await authFetch(supportToken, `/api/borrow-requests/${borrow.id}/return`, {
+    method: "POST",
     body: JSON.stringify({ isStatusOk: true })
   });
   assert.equal(res.status, 200);
@@ -105,6 +139,35 @@ function authFetch(token, path, options = {}) {
     ...options,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(options.headers ?? {}) }
   });
+}
+
+async function createEquipment(token, prefix) {
+  const code = `T-${prefix.slice(0, 10)}-${Math.random().toString(36).slice(2, 8)}`;
+  const res = await authFetch(token, "/api/equipment", {
+    method: "POST",
+    body: JSON.stringify({
+      assetCode: code,
+      name: `${prefix} Kit`,
+      category: "Teaching",
+      location: "ATC 610"
+    })
+  });
+  assert.equal(res.status, 201);
+  return res.json();
+}
+
+async function createBorrow(token, equipmentId, dueAt = "2099-12-30T10:00:00.000Z") {
+  const res = await authFetch(token, "/api/borrow-requests", {
+    method: "POST",
+    body: JSON.stringify({
+      equipmentId,
+      classroom: "ATC 610",
+      dueAt,
+      purpose: "CLASSROOM"
+    })
+  });
+  assert.equal(res.status, 201);
+  return res.json();
 }
 
 test("idor: a lecturer without MANAGE_REQUEST cannot edit another user's request", async () => {
@@ -151,12 +214,36 @@ test("validation: an invalid sortBy is rejected, never a 500", async () => {
 });
 
 test("validation: returnedQuantity greater than the borrowed quantity is rejected", async () => {
-  const token = await tokenFor("taolaminhanh1@fpt.edu.vn");
-  const res = await authFetch(token, "/api/borrow-requests/3/return", {
+  const supportToken = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const lecturerToken = await tokenFor("buidangminh23@fpt.edu.vn");
+  const item = await createEquipment(supportToken, "RETURN-QTY");
+  const borrow = await createBorrow(lecturerToken, item.id);
+
+  const res = await authFetch(supportToken, `/api/borrow-requests/${borrow.id}/return`, {
     method: "POST",
     body: JSON.stringify({ returnedQuantity: 99 })
   });
   assert.equal(res.status, 400);
+});
+
+test("auto-return: expired borrowed requests stay in active list as RETURNED so they can be extended", async () => {
+  const supportToken = await tokenFor("taolaminhanh1@fpt.edu.vn");
+  const lecturerToken = await tokenFor("buidangminh23@fpt.edu.vn");
+  const item = await createEquipment(supportToken, "AUTO-RETURN");
+  const borrow = await createBorrow(lecturerToken, item.id, "2000-01-01T00:00:00.000Z");
+  assert.equal(borrow.status, "BORROWED");
+
+  const activeRes = await authFetch(supportToken, "/api/borrow-requests");
+  assert.equal(activeRes.status, 200);
+  const active = await activeRes.json();
+  assert.equal(active.some((request) => request.id === borrow.id), true);
+
+  const historyRes = await authFetch(supportToken, "/api/borrow-history?userId=1");
+  assert.equal(historyRes.status, 200);
+  const history = await historyRes.json();
+  const returned = history.data.find((request) => request.id === borrow.id);
+  assert.equal(returned?.status, "RETURNED");
+  assert.ok(returned?.returnedAt);
 });
 
 test("validation: a non-numeric id returns 400, not a 404 lookup", async () => {

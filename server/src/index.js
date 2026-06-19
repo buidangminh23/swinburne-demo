@@ -532,9 +532,15 @@ app.get("/api/borrow-history", route(async (req, res) => {
   res.json(await repository.listAllHistory(query));
 }));
 
-app.post("/api/borrow-requests/:id/return", requireCapability("CONFIRM_RETURN"), loadRequest, route(async (req, res) => {
-  if (req.borrowRequest.lecturerId === req.user.id) {
-    return res.status(403).json({ message: "A different staff member must confirm this return (separation of duties)." });
+app.post("/api/borrow-requests/:id/return", loadRequest, route(async (req, res) => {
+  const isOwner = req.borrowRequest.lecturerId === req.user.id;
+  const canConfirm = can(req.user.role, "CONFIRM_RETURN");
+  let allowed = isOwner || canConfirm;
+  if (!allowed && req.user.role === "LECTURER") {
+    allowed = await repository.lecturerTeachesStudent(req.user.id, req.borrowRequest.lecturerId);
+  }
+  if (!allowed) {
+    return res.status(403).json({ message: "Bạn chỉ có thể return thiết bị của chính mình hoặc yêu cầu bạn được phân quyền xử lý." });
   }
   const payload = returnSchema.parse(req.body);
   const updated = await repository.confirmReturn(parseId(req.params.id), { ...payload, actorId: req.user.id, actorName: req.user.email });
