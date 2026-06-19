@@ -109,7 +109,7 @@ function slotRange(dayDate, hour) {
 function bookedUnits(dayDate, hour) {
   const { start, end } = slotRange(dayDate, hour);
   return bookings.value
-    .filter((booking) => ["RESERVED", "BORROWED"].includes(booking.status))
+    .filter((booking) => ["REQUESTED", "RESERVED", "BORROWED"].includes(booking.status))
     .filter((booking) => new Date(booking.start).getTime() < end.getTime() && new Date(booking.end).getTime() > start.getTime())
     .reduce((sum, booking) => sum + (booking.quantity ?? 1), 0);
 }

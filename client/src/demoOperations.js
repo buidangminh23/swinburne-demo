@@ -280,6 +280,43 @@ export function filterNotifications(notifications = [], filters = {}, preference
   });
 }
 
+export function planApprovalNotifications(updated, options = {}) {
+  const itemName = updated?.equipment?.name ?? "equipment";
+  const requesterEmail = updated?.lecturer?.email ?? null;
+  const meta = { requestId: updated?.id };
+  // Endorsement: a student's SERVER request "approved" by a lecturer is only
+  // routed to the assigned Server Manager — the store keeps it REQUESTED. It is
+  // NOT yet approved, so we must not tell the requester it was, and we must let
+  // the Server Manager know a request is waiting on them.
+  if (updated?.status === "REQUESTED" && updated?.assignedManagerId != null) {
+    return [
+      {
+        to: requesterEmail,
+        type: "REQUEST_FORWARDED",
+        subject: `Request forwarded • ${itemName}`,
+        message: `Your ${itemName} request was endorsed and is awaiting Server Manager approval.`,
+        meta
+      },
+      {
+        to: options.managerEmail ?? null,
+        type: "BORROW_REQUEST",
+        subject: `Server request to review • ${itemName}`,
+        message: `A server request for ${itemName} was endorsed and needs your approval.`,
+        meta
+      }
+    ];
+  }
+  return [
+    {
+      to: requesterEmail,
+      type: "REQUEST_APPROVED",
+      subject: `Request approved • ${itemName}`,
+      message: `Your borrow request for ${itemName} was approved.`,
+      meta
+    }
+  ];
+}
+
 function requestEventTitle(request) {
   if (request.status === "RETURNED") return "Returned";
   if (request.status === "BORROWED") return "Checked out / borrowed";

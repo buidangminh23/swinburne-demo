@@ -1,5 +1,5 @@
 import { store } from "./store";
-import { filterNotifications } from "./demoOperations";
+import { filterNotifications, planApprovalNotifications } from "./demoOperations";
 
 const ALLOWED_DOMAIN = "@fpt.edu.vn";
 
@@ -152,13 +152,15 @@ export const apiMock = {
   },
   async approve(id, userId) {
     const updated = await store.approveRequest(Number(id), userId ?? currentUser()?.id);
-    pushNotification({
-      to: updated.lecturer?.email,
-      type: "REQUEST_APPROVED",
-      subject: `Request approved • ${itemName(updated)}`,
-      message: `Your borrow request for ${itemName(updated)} was approved.`
-    });
-    if (updated.purpose === "EVENT") {
+    let managerEmail = null;
+    if (updated.status === "REQUESTED" && updated.assignedManagerId != null) {
+      const all = await store.listAllUsers();
+      managerEmail = all.find((u) => u.id === updated.assignedManagerId)?.email ?? null;
+    }
+    for (const notification of planApprovalNotifications(updated, { managerEmail })) {
+      pushNotification(notification);
+    }
+    if (updated.status !== "REQUESTED" && updated.purpose === "EVENT") {
       const activeForItem = await store.listActiveRequests();
       const currentHolders = activeForItem.filter((r) => r.equipmentId === updated.equipmentId && r.id !== updated.id && r.status === "BORROWED");
       for (const holder of currentHolders) {

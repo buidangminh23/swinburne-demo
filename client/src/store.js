@@ -326,6 +326,7 @@ const defaultNotificationPreferences = {
   enabledTypes: [
     "BORROW_REQUEST",
     "REQUEST_APPROVED",
+    "REQUEST_FORWARDED",
     "REQUEST_DENIED",
     "EQUIPMENT_CHECKED_OUT",
     "EQUIPMENT_RETURNED",
@@ -784,7 +785,11 @@ class DemoRepository {
     const isStudent = user?.role === "STUDENT";
     const purpose = input.purpose ?? "CLASSROOM";
     const requiresApproval = isStudent || purpose === "RESEARCH" || purpose === "EVENT" || purpose === "SERVER";
-    const transferSource = !isStudent && !requiresApproval && item.status === "BORROWED"
+    // Taking over an item another lecturer is actively borrowing (auto-returning
+    // their loan) is reserved for EVENT_STAFF. Ordinary lecturers/managers
+    // borrowing an in-use item must be told it is unavailable, never silently
+    // eject the current holder.
+    const transferSource = user?.role === "EVENT_STAFF" && !requiresApproval && item.status === "BORROWED"
       ? findLecturerBorrowForTransfer(item.id, input.lecturerId, quantity)
       : null;
     const available = demoAvailableUnits(item.id, { start, end });
@@ -1239,11 +1244,13 @@ class DemoRepository {
     }
     if (request.status !== "REQUESTED" && input.isExtendMode) {
       if (data.dueAt) {
-        const origStart = request.startDate ?? request.createdAt;
-        const origDay = new Date(origStart).toDateString();
-        const newDay = new Date(data.dueAt).toDateString();
-        if (origDay !== newDay) {
-          const error = new Error("Extension is only allowed within the same day.");
+        // An extension may only push the due date later. Anchoring on the
+        // current due date (not the start date) lets multi-day loans —
+        // research projects, events — actually be extended.
+        const currentDue = new Date(request.dueAt).getTime();
+        const newDue = new Date(data.dueAt).getTime();
+        if (!(newDue > currentDue)) {
+          const error = new Error("An extension must set a later due date.");
           error.status = 400;
           throw error;
         }
