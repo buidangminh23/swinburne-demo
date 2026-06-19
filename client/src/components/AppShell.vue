@@ -141,6 +141,9 @@ const pendingRequests = computed(() => {
   if (props.session.user.role === "LECTURER") {
     return list.filter(r => r.lecturer?.role === "STUDENT" && r.lecturer?.lecturerId === props.session.user.id);
   }
+  if (props.session.user.role === "EQUIPMENT_MANAGER") {
+    return list.filter(r => r.assignedManagerId === props.session.user.id);
+  }
   return list;
 });
 
