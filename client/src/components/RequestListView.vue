@@ -57,7 +57,7 @@ const searchText = ref("");
 const statusFilter = ref(props.initialStatus || "ALL");
 const purposeFilter = ref("ALL");
 
-const APPROVER_ROLES = ["LECTURER", "SUPPORT", "OPERATIONS", "ADMIN"];
+const APPROVER_ROLES = ["LECTURER", "EQUIPMENT_MANAGER", "SERVER_MANAGER", "ADMIN"];
 
 const isStudent = computed(() => props.session.user.role === "STUDENT");
 
@@ -91,7 +91,7 @@ function getPriorityScore(req) {
   return 7;
 }
 
-const MANAGE_ROLES = ["SUPPORT", "OPERATIONS", "ADMIN"];
+const MANAGE_ROLES = ["EQUIPMENT_MANAGER", "SERVER_MANAGER", "ADMIN"];
 
 function isOwner(req) {
   return props.session.user.id === req.lecturerId;

@@ -29,8 +29,8 @@ const displayRole = computed(() => {
   if (role === "LECTURER") return t("Lecturer");
   if (role === "STUDENT") return t("Student");
   if (role === "EVENT_STAFF") return t("Event Coordinator");
-  if (role === "SUPPORT") return t("Support Desk");
-  if (role === "OPERATIONS") return t("Operations");
+  if (role === "EQUIPMENT_MANAGER") return t("Equipment Manager");
+  if (role === "SERVER_MANAGER") return t("Server Manager");
   if (role === "ADMIN") return t("Admin");
   return t("Member");
 });

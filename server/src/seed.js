@@ -16,11 +16,11 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "taolaminhanh1@fpt.edu.vn" },
-    update: { name: "Nguyen Minh Anh", role: "SUPPORT" },
+    update: { name: "Nguyen Minh Anh", role: "EQUIPMENT_MANAGER" },
     create: {
       name: "Nguyen Minh Anh",
       email: "taolaminhanh1@fpt.edu.vn",
-      role: "SUPPORT"
+      role: "EQUIPMENT_MANAGER"
     }
   });
 
@@ -56,11 +56,11 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "operations@fpt.edu.vn" },
-    update: { name: "Operations", role: "OPERATIONS" },
+    update: { name: "Operations", role: "SERVER_MANAGER" },
     create: {
       name: "Operations",
       email: "operations@fpt.edu.vn",
-      role: "OPERATIONS"
+      role: "SERVER_MANAGER"
     }
   });
 

@@ -132,7 +132,7 @@ function statusClass(status) {
 const totalPages = computed(() => Math.ceil(props.historyData.total / filters.limit) || 1);
 
 const canViewAuditLog = computed(() => {
-  return ["ADMIN", "SUPPORT", "OPERATIONS", "LECTURER", "EVENT_STAFF"].includes(props.session.user.role);
+  return ["ADMIN", "EQUIPMENT_MANAGER", "SERVER_MANAGER", "LECTURER", "EVENT_STAFF"].includes(props.session.user.role);
 });
 
 const visiblePages = computed(() => {
@@ -163,7 +163,7 @@ const visiblePages = computed(() => {
 });
 
 onMounted(() => {
-  if (["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(props.session.user.role)) {
+  if (["STUDENT", "EVENT_STAFF", "EQUIPMENT_MANAGER"].includes(props.session.user.role)) {
     filters.userId = props.session.user.id;
   }
   emitFetch();

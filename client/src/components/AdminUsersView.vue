@@ -164,20 +164,20 @@ function cancelRole(user) {
 // ── Lookup tables ───────────────────────────────────────────────
 const roleLabels = {
   ADMIN: "Admin",
-  SUPPORT: "Support Desk",
+  EQUIPMENT_MANAGER: "Equipment Manager",
   LECTURER: "Lecturer",
   STUDENT: "Student",
   EVENT_STAFF: "Event Coordinator",
-  OPERATIONS: "Operations"
+  SERVER_MANAGER: "Server Manager"
 };
 
 const roleIcons = {
   ADMIN: ShieldAlert,
-  SUPPORT: ShieldCheck,
+  EQUIPMENT_MANAGER: ShieldCheck,
   LECTURER: UserCheck,
   STUDENT: UserRound,
   EVENT_STAFF: Shield,
-  OPERATIONS: Shield
+  SERVER_MANAGER: Shield
 };
 </script>
 
@@ -239,7 +239,7 @@ const roleIcons = {
                 <div class="user-info-cell">
                   <div
                     class="avatar-circle"
-                    :style="{ backgroundColor: user.role === 'ADMIN' ? '#ef2335' : user.role === 'SUPPORT' ? '#3b82f6' : '#6b7280' }"
+                    :style="{ backgroundColor: user.role === 'ADMIN' ? '#ef2335' : user.role === 'EQUIPMENT_MANAGER' ? '#3b82f6' : '#6b7280' }"
                   >
                     {{ (user.name || '?').trim().split(/\s+/).at(-1)?.charAt(0)?.toUpperCase() || '?' }}
                   </div>

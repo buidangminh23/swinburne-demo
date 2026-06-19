@@ -42,7 +42,7 @@ const users = [
     id: 9,
     name: "Support Desk",
     email: "support@fpt.edu.vn",
-    role: "SUPPORT",
+    role: "EQUIPMENT_MANAGER",
     groupName: "IT Support"
   }
 ];

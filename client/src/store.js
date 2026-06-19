@@ -49,14 +49,14 @@ function generateStudentId(email) {
 
 const defaultUsers = [
   { id: 1, name: "Minh Bui Dang", email: "buidangminh23@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminh23@fpt.edu.vn"), groupName: "Teaching Team", className: "COS20031" },
-  { id: 2, name: "Nguyen Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT", studentId: generateStudentId("taolaminhanh1@fpt.edu.vn"), groupName: "IT Support", className: "Support Desk" },
+  { id: 2, name: "Nguyen Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "EQUIPMENT_MANAGER", studentId: generateStudentId("taolaminhanh1@fpt.edu.vn"), groupName: "IT Support", className: "Support Desk" },
   { id: 3, name: "Dinh Dung", email: "dindungwork@fpt.edu.vn", role: "ADMIN", studentId: generateStudentId("dindungwork@fpt.edu.vn"), groupName: "Admin", className: "Operations" },
   { id: 4, name: "Dang Minh Bui", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("buidangminh.lh@fpt.edu.vn"), lecturerId: 1, groupName: "Student Cohort", className: "SE Class" },
   { id: 5, name: "Nguyen Hoang Hiep", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", studentId: generateStudentId("hiheho911@fpt.edu.vn"), groupName: "Event Team", className: "Campus Events" },
-  { id: 7, name: "Nguyen Thanh Linh", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT", studentId: generateStudentId("linhnt89_fe@fpt.edu.vn"), groupName: "IT Support", className: "Front Desk" },
+  { id: 7, name: "Nguyen Thanh Linh", email: "linhnt89_fe@fpt.edu.vn", role: "EQUIPMENT_MANAGER", studentId: generateStudentId("linhnt89_fe@fpt.edu.vn"), groupName: "IT Support", className: "Front Desk" },
   { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("cacc80077@fpt.edu.vn"), groupName: "Teaching Team", className: "Demo Class" },
   { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminhcontentcreator@fpt.edu.vn"), groupName: "Media Team", className: "Content Lab" },
-  { id: 11, name: "Operations", email: "operations@fpt.edu.vn", role: "OPERATIONS", studentId: generateStudentId("operations@fpt.edu.vn"), groupName: "Operations", className: "Asset Control" },
+  { id: 11, name: "Operations", email: "operations@fpt.edu.vn", role: "SERVER_MANAGER", studentId: generateStudentId("operations@fpt.edu.vn"), groupName: "Operations", className: "Asset Control" },
   { id: 12, name: "Nguyen Tuan Anh", email: "student2@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("student2@fpt.edu.vn"), lecturerId: 1, groupName: "Student Cohort", className: "SE Class" }
 ];
 
@@ -456,7 +456,7 @@ function attachEquipment(request) {
   return { ...request, equipment: item, lecturer };
 }
 
-const APPROVER_ROLES = ["ADMIN", "SUPPORT", "OPERATIONS"];
+const APPROVER_ROLES = ["ADMIN", "EQUIPMENT_MANAGER", "SERVER_MANAGER"];
 
 function canApproveRequest(actorId, request) {
   const actor = users.find((candidate) => candidate.id === actorId);
@@ -658,9 +658,9 @@ class DemoRepository {
       } else if (namePart.includes("lecturer") || namePart.includes("lec") || namePart.includes("teacher")) {
         role = "LECTURER";
       } else if (namePart.includes("support")) {
-        role = "SUPPORT";
+        role = "EQUIPMENT_MANAGER";
       } else if (namePart.includes("operations") || namePart.includes("ops")) {
-        role = "OPERATIONS";
+        role = "SERVER_MANAGER";
       } else if (namePart.includes("staff")) {
         role = "EVENT_STAFF";
       }

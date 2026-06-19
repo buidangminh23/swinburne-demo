@@ -30,11 +30,11 @@ const demoAccounts = [
   { name: "Minh Bui Dang", email: "buidangminh23@fpt.edu.vn", role: "Lecturer", isDemo: true, color: "#4e5b66" },
   { name: "Dang Minh Bui", email: "buidangminh.lh@fpt.edu.vn", role: "Student", isDemo: true, photo: avatarDangMinh },
   { name: "Nguyen Hoang Hiep", email: "hiheho911@fpt.edu.vn", role: "Event Coordinator", isDemo: true, color: "#3f51b5" },
-  { name: "Nguyen Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "Support Desk", isDemo: true, color: "#d84315" },
+  { name: "Nguyen Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "Equipment Manager", isDemo: true, color: "#d84315" },
   { name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "Lecturer", isDemo: true, color: "#00796b" },
   { name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "Lecturer", isDemo: true, color: "#c62828" },
   { name: "Dinh Dung", email: "dindungwork@fpt.edu.vn", role: "Admin", isDemo: true, photo: avatarDinhDung },
-  { name: "Nguyen Thanh Linh", email: "linhnt89_fe@fpt.edu.vn", role: "Support Desk", isDemo: true, color: "#4338ca" },
+  { name: "Nguyen Thanh Linh", email: "linhnt89_fe@fpt.edu.vn", role: "Equipment Manager", isDemo: true, color: "#4338ca" },
   { name: "Nguyen Tuan Anh", email: "student2@fpt.edu.vn", role: "Student", isDemo: true, color: "#0891b2" }
 ];
 

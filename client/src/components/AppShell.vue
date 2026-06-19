@@ -108,12 +108,12 @@ function confirmDeny(id) {
 const currentRole = computed(() => props.session?.user?.role || "");
 const isStudent = computed(() => currentRole.value === "STUDENT");
 const isAdmin = computed(() => currentRole.value === "ADMIN");
-const isSupport = computed(() => currentRole.value === "SUPPORT");
+const isSupport = computed(() => currentRole.value === "EQUIPMENT_MANAGER");
 const isLecturer = computed(() => currentRole.value === "LECTURER");
 const isEventStaff = computed(() => currentRole.value === "EVENT_STAFF");
-const isOperations = computed(() => currentRole.value === "OPERATIONS");
-const canApprove = computed(() => ["LECTURER", "SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value));
-const canManageEquipment = computed(() => ["SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value));
+const isOperations = computed(() => currentRole.value === "SERVER_MANAGER");
+const canApprove = computed(() => ["LECTURER", "EQUIPMENT_MANAGER", "SERVER_MANAGER", "ADMIN"].includes(currentRole.value));
+const canManageEquipment = computed(() => ["EQUIPMENT_MANAGER", "SERVER_MANAGER", "ADMIN"].includes(currentRole.value));
 const canConfirmReturn = computed(() => canManageEquipment.value);
 const displayEmail = computed(() => props.session?.user?.email || "");
 const displayName = computed(() => props.session?.user?.name || "");
@@ -123,8 +123,8 @@ const displayRole = computed(() => {
   if (role === "LECTURER") return "Lecturer";
   if (role === "STUDENT") return "Student";
   if (role === "EVENT_STAFF") return "Event Coordinator";
-  if (role === "SUPPORT") return "Support Desk";
-  if (role === "OPERATIONS") return "Operations";
+  if (role === "EQUIPMENT_MANAGER") return "Equipment Manager";
+  if (role === "SERVER_MANAGER") return "Server Manager";
   if (role === "ADMIN") return "Admin";
   return "Member";
 });
@@ -186,10 +186,10 @@ function canApproveRequest(req) {
   if (currentRole.value === "LECTURER") {
     return req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
   }
-  return ["SUPPORT", "OPERATIONS", "ADMIN"].includes(currentRole.value);
+  return ["EQUIPMENT_MANAGER", "SERVER_MANAGER", "ADMIN"].includes(currentRole.value);
 }
 
-const MANAGE_ROLES = ["SUPPORT", "OPERATIONS", "ADMIN"];
+const MANAGE_ROLES = ["EQUIPMENT_MANAGER", "SERVER_MANAGER", "ADMIN"];
 
 function isOwner(req) {
   return props.session.user.id === req.lecturerId;
