@@ -168,6 +168,7 @@ model BorrowRequest {
   custodyLog       String?
   unitId           Int?
   researchProjectId Int?
+  assignedManagerId Int?
   equipment        Equipment        @relation(fields: [equipmentId], references: [id])
   lecturer         User             @relation(fields: [lecturerId], references: [id])
   unit             Unit?            @relation(fields: [unitId], references: [id])
@@ -179,4 +180,5 @@ model BorrowRequest {
   @@index([createdAt])
   @@index([unitId])
   @@index([researchProjectId])
+  @@index([assignedManagerId])
 }

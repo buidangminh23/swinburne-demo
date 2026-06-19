@@ -131,6 +131,16 @@ export const apiMock = {
       subject: `Return confirmed • ${itemName(updated)}`,
       message: `Return of ${itemName(updated)} has been confirmed.`
     });
+    const activeAfterReturn = await store.listActiveRequests();
+    const waitingEvents = activeAfterReturn.filter((r) => r.equipmentId === updated.equipmentId && r.id !== updated.id && r.purpose === "EVENT" && ["REQUESTED", "RESERVED"].includes(r.status));
+    for (const ev of waitingEvents) {
+      pushNotification({
+        to: ev.lecturer?.email,
+        type: "EQUIPMENT_AVAILABLE",
+        subject: `Now available • ${itemName(updated)}`,
+        message: `${itemName(updated)} has been returned and is now available for your event request.`
+      });
+    }
     return updated;
   },
   updateStatus(id, payload) {
@@ -148,6 +158,18 @@ export const apiMock = {
       subject: `Request approved • ${itemName(updated)}`,
       message: `Your borrow request for ${itemName(updated)} was approved.`
     });
+    if (updated.purpose === "EVENT") {
+      const activeForItem = await store.listActiveRequests();
+      const currentHolders = activeForItem.filter((r) => r.equipmentId === updated.equipmentId && r.id !== updated.id && r.status === "BORROWED");
+      for (const holder of currentHolders) {
+        pushNotification({
+          to: holder.lecturer?.email,
+          type: "EARLY_RETURN_REQUEST",
+          subject: `Early return requested • ${itemName(updated)}`,
+          message: `${itemName(updated)} is needed for the event "${updated.unitOrProject ?? "event"}". Please return it in advance if you can.`
+        });
+      }
+    }
     return updated;
   },
   async deny(id, userId) {
