@@ -308,6 +308,9 @@ export const apiMock = {
   units() {
     return store.listUnitsForUser(currentUser());
   },
+  importUnits(rows = []) {
+    return store.importUnits(rows);
+  },
   researchProjects() {
     return store.listProjectsForUser(currentUser());
   },

@@ -148,6 +148,18 @@ async function borrowEquipment(payload) {
   }
 }
 
+async function importSchedule(rows) {
+  state.message = "";
+  state.error = "";
+  try {
+    const result = await api.importUnits(rows);
+    await loadPortal();
+    state.message = `Semester timetable imported: ${result.count} unit(s) loaded.`;
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
 async function confirmReturn({ id, payload }) {
   state.message = "";
   state.error = "";
@@ -355,6 +367,7 @@ onMounted(() => {
     @navigate="clearBanners"
     @logout="logout"
     @borrow="borrowEquipment"
+    @import-schedule="importSchedule"
     @return="confirmReturn"
     @status="updateStatus"
     @approve="approveRequest"

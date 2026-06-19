@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { Clock, Calendar } from "@lucide/vue";
 import { api } from "../api";
 import { makeTranslator } from "../translate";
@@ -15,7 +15,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(["book-slot"]);
+const emit = defineEmits(["book-slot", "import-schedule"]);
 const t = (text) => makeTranslator(props.session?.user?.email)(text);
 const canBook = computed(() => ["LECTURER", "EVENT_STAFF"].includes(props.session?.user?.role));
 
@@ -41,6 +41,21 @@ const filteredEquipment = computed(() => {
   if (!selectedLocations.value.length) return props.equipment;
   return props.equipment.filter((item) => selectedLocations.value.includes(item.location));
 });
+
+const locationMenuOpen = ref(false);
+const locationDropdownRef = ref(null);
+const locationSummary = computed(() => {
+  if (!selectedLocations.value.length) return t("All locations");
+  if (selectedLocations.value.length === 1) return selectedLocations.value[0];
+  return `${selectedLocations.value.length} ${t("locations selected")}`;
+});
+function onDocumentClick(event) {
+  if (locationMenuOpen.value && locationDropdownRef.value && !locationDropdownRef.value.contains(event.target)) {
+    locationMenuOpen.value = false;
+  }
+}
+onMounted(() => document.addEventListener("mousedown", onDocumentClick));
+onUnmounted(() => document.removeEventListener("mousedown", onDocumentClick));
 
 const selectedEquipmentId = ref(null);
 const selectedItem = computed(() => props.equipment.find((item) => item.id === selectedEquipmentId.value) ?? null);
@@ -179,6 +194,77 @@ const slotLabel = computed(() => {
   if (!segment) return "";
   return `${dayNames[(segment.date.getDay() + 6) % 7]} ${fmtDay(segment.date)} • ${fmtHour(segment.startHour)} - ${fmtHour(segment.endHour)}`;
 });
+
+function segmentTitle(segment) {
+  if (segment.kind === "booked") return `${t("Booked")}: ${segment.booked} / ${totalUnits.value}`;
+  if (segment.kind === "open") return `${t("Open")} — ${segment.available} ${t("free")}`;
+  if (segment.kind === "oos") return t("Out of service");
+  return "";
+}
+
+const canImportTimetable = computed(() => Boolean(props.session?.user) && props.session.user.role !== "STUDENT");
+const importMessage = ref("");
+
+function splitCsvLine(line) {
+  const cells = [];
+  let value = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quoted) {
+      if (ch === '"' && line[i + 1] === '"') {
+        value += '"';
+        i++;
+      } else if (ch === '"') {
+        quoted = false;
+      } else {
+        value += ch;
+      }
+    } else if (ch === '"') {
+      quoted = true;
+    } else if (ch === ",") {
+      cells.push(value);
+      value = "";
+    } else {
+      value += ch;
+    }
+  }
+  cells.push(value);
+  return cells.map((cell) => cell.trim());
+}
+
+function parseTimetableCsv(text) {
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) return [];
+  const headers = splitCsvLine(lines[0]).map((header) => header.toLowerCase());
+  return lines.slice(1).map((line) => {
+    const cells = splitCsvLine(line);
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = cells[index] ?? "";
+    });
+    return row;
+  });
+}
+
+async function onCsvSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  importMessage.value = "";
+  if (!file) return;
+  try {
+    const rows = parseTimetableCsv(await file.text());
+    if (!rows.length) {
+      importMessage.value = t("No timetable rows found in that file.");
+      return;
+    }
+    emit("import-schedule", rows);
+    importMessage.value = `${t("Imported")} ${rows.length} ${t("timetable rows.")}`;
+  } catch {
+    importMessage.value = t("Could not read the CSV file.");
+  } finally {
+    event.target.value = "";
+  }
+}
 </script>
 
 <template>
@@ -202,18 +288,33 @@ const slotLabel = computed(() => {
 
       <div v-if="allLocations.length" class="control locations">
         <span class="control-label">{{ t('Location') }}</span>
-        <div class="location-chips">
-          <button
-            v-for="location in allLocations"
-            :key="location"
-            type="button"
-            :class="['location-chip', { active: selectedLocations.includes(location) }]"
-            @click="toggleLocation(location)"
-          >
-            {{ location }}
+        <div ref="locationDropdownRef" class="location-dropdown">
+          <button type="button" class="location-toggle" @click="locationMenuOpen = !locationMenuOpen">
+            <span class="location-summary">{{ locationSummary }}</span>
+            <span class="location-caret">▾</span>
           </button>
+          <div v-if="locationMenuOpen" class="location-menu">
+            <button
+              v-for="location in allLocations"
+              :key="location"
+              type="button"
+              :class="['location-option', { active: selectedLocations.includes(location) }]"
+              @click="toggleLocation(location)"
+            >
+              <span class="location-tick">{{ selectedLocations.includes(location) ? '✓' : '' }}</span>
+              {{ location }}
+            </button>
+            <button v-if="selectedLocations.length" type="button" class="location-clear" @click="selectedLocations = []">
+              {{ t('Clear selection') }}
+            </button>
+          </div>
         </div>
       </div>
+
+      <label v-if="canImportTimetable" class="control import-control">
+        {{ t('Semester timetable (CSV)') }}
+        <input type="file" accept=".csv,text/csv" class="csv-input" @change="onCsvSelected" />
+      </label>
 
       <div class="week-nav">
         <button type="button" class="week-btn" @click="weekOffset--">&#8249;</button>
@@ -221,6 +322,8 @@ const slotLabel = computed(() => {
         <button type="button" class="week-btn" @click="weekOffset++">&#8250;</button>
       </div>
     </div>
+
+    <p v-if="importMessage" class="import-message">{{ importMessage }}</p>
 
     <div class="legend">
       <span class="legend-item"><span class="dot open"></span>{{ t('Open') }}</span>
@@ -249,11 +352,10 @@ const slotLabel = computed(() => {
             :key="sIndex"
             :class="['seg', segment.kind, { clickable: segment.kind === 'open' && canBook }]"
             :style="{ flexGrow: segment.slots }"
+            :title="segmentTitle(segment)"
             @click="openSlot(segment)"
           >
-            <span v-if="segment.kind === 'booked'" class="seg-label">{{ segment.booked }} {{ t('booked') }}</span>
-            <span v-else-if="segment.kind === 'open'" class="seg-label">{{ t('Open') }}</span>
-            <span v-else-if="segment.kind === 'oos'" class="seg-label">{{ t('Out') }}</span>
+            <span v-if="segment.kind === 'booked'" class="seg-count">{{ segment.booked }}</span>
           </div>
         </div>
       </div>
@@ -320,27 +422,94 @@ const slotLabel = computed(() => {
   max-width: 100%;
   height: 38px;
 }
-.location-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.location-dropdown {
+  position: relative;
 }
-.location-chip {
-  height: 30px;
+.location-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 190px;
+  height: 38px;
   padding: 0 12px;
-  border-radius: 999px;
   border: 1px solid #d8d8e4;
+  border-radius: 4px;
   background: #ffffff;
   color: #474753;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
 }
-.location-chip.active {
-  background: #5f63ff;
-  border-color: #5f63ff;
-  color: #ffffff;
+.location-caret {
+  color: #9aa0a6;
+  font-size: 11px;
+}
+.location-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  min-width: 190px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #d8d8e4;
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.location-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #474753;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.location-option:hover {
+  background: #f4f3ff;
+}
+.location-option.active {
+  color: #5f63ff;
+}
+.location-tick {
+  width: 12px;
+  color: #5f63ff;
+  font-weight: 800;
+}
+.location-clear {
+  margin-top: 2px;
+  padding: 7px 10px;
+  border: 0;
+  border-top: 1px solid #eeeeef;
+  background: transparent;
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.csv-input {
+  width: 220px;
+  max-width: 100%;
+  font-size: 11px;
+}
+.import-message {
+  margin: 0;
+  padding: 10px 28px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #047857;
 }
 .week-nav {
   display: flex;
@@ -505,6 +674,10 @@ const slotLabel = computed(() => {
 }
 .seg.clickable:hover {
   filter: brightness(0.95);
+}
+.seg-count {
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .totals {

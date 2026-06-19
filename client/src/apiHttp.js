@@ -129,6 +129,7 @@ export const apiHttp = {
   updateUserRole(id, role) {
     return request(`/api/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
   },
+  importUnits: unsupported("Semester CSV import"),
   borrowPreflight: unsupported("Borrow preflight"),
   checkOut: unsupported("Check-out"),
   runAutoReminders: unsupported("Automatic reminders"),

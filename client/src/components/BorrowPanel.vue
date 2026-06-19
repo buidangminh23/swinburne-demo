@@ -348,6 +348,7 @@ function submit() {
             Purpose
             <select v-model="form.purpose">
               <option v-if="!props.isStudent && !isEventStaff" value="CLASSROOM">Classroom Use</option>
+              <option v-if="!props.isStudent && !isEventStaff" value="LAB">Lab Equipment</option>
               <option v-if="!props.isStudent && !isEventStaff" value="RESEARCH">Research / Project</option>
               <option v-if="showEventOption" value="EVENT">Event Support</option>
               <option v-if="!isEventStaff" value="SERVER">Server Usage</option>

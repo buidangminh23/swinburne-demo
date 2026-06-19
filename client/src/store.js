@@ -321,6 +321,7 @@ const SEED_VERSION = "2026-06-20-units-no-vovinam-v7";
 const AUDIT_KEY = "swin-demo-audit-log";
 const PREF_KEY = "swin-demo-notification-preferences";
 const REMINDER_KEY = "swin-demo-reminder-rules";
+const UNITS_KEY = "swin-demo-units";
 
 const defaultNotificationPreferences = {
   enabledTypes: [
@@ -352,6 +353,7 @@ const defaultReminderRules = [
       localStorage.removeItem(AUDIT_KEY);
       localStorage.removeItem(PREF_KEY);
       localStorage.removeItem(REMINDER_KEY);
+      localStorage.removeItem(UNITS_KEY);
       localStorage.setItem("swin-demo-seed-version", SEED_VERSION);
     }
   } catch {
@@ -420,7 +422,14 @@ const reminderRules = (() => {
 })();
 
 const semesters = defaultSemesters.map((semester) => ({ ...semester }));
-const units = defaultUnits.map((unit) => ({ ...unit }));
+const units = (() => {
+  try {
+    const saved = localStorage.getItem(UNITS_KEY);
+    return saved ? JSON.parse(saved) : defaultUnits.map((unit) => ({ ...unit }));
+  } catch {
+    return defaultUnits.map((unit) => ({ ...unit }));
+  }
+})();
 const enrollments = defaultEnrollments.map((enrollment) => ({ ...enrollment }));
 const researchProjects = defaultResearchProjects.map((project) => ({ ...project, memberIds: [...project.memberIds] }));
 const schedules = defaultSchedules.map((schedule) => ({ ...schedule }));
@@ -1376,6 +1385,51 @@ class DemoRepository {
       return units.filter((unit) => unit.lecturerId === user.id).map((unit) => ({ ...unit }));
     }
     return units.map((unit) => ({ ...unit }));
+  }
+
+  async importUnits(rows = []) {
+    const mapped = [];
+    for (const row of rows) {
+      const code = String(row.code ?? row.unitcode ?? "").trim();
+      if (!code) {
+        continue;
+      }
+      const lecturer = users.find((candidate) => candidate.email?.toLowerCase() === String(row.lectureremail ?? "").toLowerCase());
+      const semester = semesters.find((candidate) => candidate.code === String(row.semestercode ?? "").trim()) ?? semesters[0];
+      mapped.push({
+        id: 0,
+        code,
+        name: String(row.name ?? code).trim() || code,
+        semesterId: semester?.id ?? 1,
+        lecturerId: lecturer?.id ?? (Number(row.lecturerid) || 1),
+        dayOfWeek: Number(row.dayofweek) || 1,
+        startHour: Number(row.starthour) || 9,
+        endHour: Number(row.endhour) || 11,
+        classroom: String(row.classroom ?? "").trim()
+      });
+    }
+    if (!mapped.length) {
+      const error = new Error("No valid timetable rows found (a 'code' column is required).");
+      error.status = 400;
+      throw error;
+    }
+    let nextUnitId = nextId(units);
+    for (const unit of mapped) {
+      unit.id = nextUnitId++;
+    }
+    units.splice(0, units.length, ...mapped);
+    try {
+      localStorage.setItem(UNITS_KEY, JSON.stringify(units));
+    } catch {
+      // ignore persistence errors
+    }
+    recordAudit({
+      action: "SEMESTER_TIMETABLE_IMPORTED",
+      entityType: "system",
+      entityId: 0,
+      details: { count: mapped.length }
+    });
+    return { count: mapped.length, units: units.map((unit) => ({ ...unit })) };
   }
 
   async listProjectsForUser(user) {

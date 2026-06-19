@@ -46,7 +46,8 @@ const props = defineProps({
 const emit = defineEmits([
   "logout", "borrow", "return", "status", "approve", "deny", "extend", "edit",
   "custody", "remind", "check-out", "fetch-history", "add-equipment", "edit-equipment", "update-user-role",
-  "update-notification-preferences", "update-reminder-rules", "mark-notification-read", "navigate"
+  "update-notification-preferences", "update-reminder-rules", "mark-notification-read", "navigate",
+  "import-schedule"
 ]);
 
 function goToTab(tabName) {
@@ -673,7 +674,7 @@ watchEffect(() => {
         </template>
 
         <template v-else-if="activeTab === 'schedules'">
-          <SchedulesView :equipment="state.equipment" :session="session" @book-slot="onBookSlot" />
+          <SchedulesView :equipment="state.equipment" :session="session" @book-slot="onBookSlot" @import-schedule="$emit('import-schedule', $event)" />
         </template>
 
         <template v-else-if="activeTab === 'notifications'">
