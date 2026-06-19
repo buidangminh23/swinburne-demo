@@ -486,7 +486,11 @@ app.post("/api/borrow-requests/:id/approve", requireCapability("APPROVE_REQUEST"
     return res.status(403).json({ message: "You cannot approve your own borrow request (separation of duties)." });
   }
   const updated = await repository.approveRequest(parseId(req.params.id), req.user.id);
-  safeNotify(() => notifyBorrower(updated, "REQUEST_APPROVED", `Request approved • ${itemName(updated)}`, `Your borrow request for ${itemName(updated)} was approved. Due ${formatDate(updated.dueAt)}.`));
+  if (updated.status === "REQUESTED") {
+    safeNotify(() => notifyBorrower(updated, "REQUEST_ENDORSED", `Request forwarded • ${itemName(updated)}`, `Your server access request for ${itemName(updated)} was endorsed and forwarded to the Server Manager.`));
+  } else {
+    safeNotify(() => notifyBorrower(updated, "REQUEST_APPROVED", `Request approved • ${itemName(updated)}`, `Your borrow request for ${itemName(updated)} was approved. Due ${formatDate(updated.dueAt)}.`));
+  }
   res.json(updated);
 }));
 
