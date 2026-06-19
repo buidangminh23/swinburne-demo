@@ -36,6 +36,14 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  serverManagers: {
+    type: Array,
+    default: () => []
+  },
+  lecturers: {
+    type: Array,
+    default: () => []
+  },
   prefill: {
     type: Object,
     default: null
@@ -68,7 +76,8 @@ const availableEquipment = computed(() => {
     if (status !== "AVAILABLE" || availableNow <= 0 || cart.some(c => c.id === item.id)) {
       return false;
     }
-    return true;
+    const isServer = item.category === "Server";
+    return form.purpose === "SERVER" ? isServer : !isServer;
   });
 });
 
@@ -88,11 +97,24 @@ const form = reactive({
 });
 
 const showEventOption = computed(() => props.userRole === "EVENT_STAFF");
+const isEventStaff = computed(() => props.userRole === "EVENT_STAFF");
+const needsApprover = computed(() => ["RESEARCH", "EVENT", "SERVER"].includes(form.purpose));
+const approverOptions = computed(() => {
+  if (form.purpose === "SERVER") return props.isStudent ? props.lecturers : props.serverManagers;
+  if (form.purpose === "RESEARCH" || form.purpose === "EVENT") return props.managers;
+  return [];
+});
+const approverLabel = computed(() => {
+  if (form.purpose === "SERVER") return props.isStudent ? "Approver (Lecturer)" : "Approver (Server Manager)";
+  return "Approver (Equipment Manager)";
+});
 
 onMounted(() => {
   if (props.userRole === "EVENT_STAFF") {
     form.purpose = "EVENT";
     form.handoverNotes = "Collected for event support";
+  } else if (props.isStudent) {
+    form.purpose = "SERVER";
   }
 });
 
@@ -152,7 +174,7 @@ watch(() => form.purpose, (newVal, oldVal) => {
     form.classroom = "";
     form.program = null;
   }
-  form.assignedManagerId = (newVal === "RESEARCH" || newVal === "EVENT") ? (props.managers[0]?.id ?? null) : null;
+  form.assignedManagerId = ["RESEARCH", "EVENT", "SERVER"].includes(newVal) ? (approverOptions.value[0]?.id ?? null) : null;
 });
 
 watch(() => form.unitId, (newVal) => {
@@ -179,8 +201,8 @@ watch(() => props.projects, (list) => {
   }
 }, { immediate: true });
 
-watch(() => props.managers, (list) => {
-  if ((form.purpose === "RESEARCH" || form.purpose === "EVENT") && form.assignedManagerId == null && list.length > 0) {
+watch(approverOptions, (list) => {
+  if (needsApprover.value && list.length > 0 && (form.assignedManagerId == null || !list.some((m) => m.id === form.assignedManagerId))) {
     form.assignedManagerId = list[0].id;
   }
 }, { immediate: true });
@@ -273,8 +295,8 @@ function submit() {
     form.handoverNotes = getDefaultNotes(form.purpose);
   }
 
-  if ((form.purpose === "RESEARCH" || form.purpose === "EVENT") && !form.assignedManagerId) {
-    error.value = "Please select an Equipment Manager to approve this request.";
+  if (needsApprover.value && !form.assignedManagerId) {
+    error.value = "Please select an approver for this request.";
     return;
   }
   if (form.purpose === "EVENT" && !form.eventName.trim()) {
@@ -286,7 +308,7 @@ function submit() {
 
   const requests = cart.map(item => ({
     equipmentId: item.id,
-    assignedManagerId: (form.purpose === "RESEARCH" || form.purpose === "EVENT") ? form.assignedManagerId : null,
+    assignedManagerId: needsApprover.value ? form.assignedManagerId : null,
     classroom: form.purpose === "CLASSROOM" ? form.classroom : null,
     dueAt: dueDate.toISOString(),
     handoverNotes: form.handoverNotes,
@@ -325,9 +347,10 @@ function submit() {
           <label>
             Purpose
             <select v-model="form.purpose">
-              <option v-if="props.userRole !== 'EVENT_STAFF'" value="CLASSROOM">Classroom Use</option>
-              <option v-if="props.userRole !== 'EVENT_STAFF'" value="RESEARCH">Research / Project</option>
+              <option v-if="!props.isStudent && !isEventStaff" value="CLASSROOM">Classroom Use</option>
+              <option v-if="!props.isStudent && !isEventStaff" value="RESEARCH">Research / Project</option>
               <option v-if="showEventOption" value="EVENT">Event Support</option>
+              <option v-if="!isEventStaff" value="SERVER">Server Usage</option>
             </select>
           </label>
           <label v-if="form.purpose === 'CLASSROOM'">
@@ -346,10 +369,10 @@ function submit() {
             Event Name
             <input v-model="form.eventName" type="text" placeholder="e.g. Orientation Day" />
           </label>
-          <label v-if="form.purpose === 'RESEARCH' || form.purpose === 'EVENT'">
-            Approver (Equipment Manager)
+          <label v-if="needsApprover">
+            {{ approverLabel }}
             <select v-model="form.assignedManagerId">
-              <option v-for="m in props.managers" :key="m.id" :value="m.id">{{ m.name }}</option>
+              <option v-for="m in approverOptions" :key="m.id" :value="m.id">{{ m.name }}</option>
             </select>
           </label>
         </div>

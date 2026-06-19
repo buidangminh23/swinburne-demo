@@ -145,9 +145,9 @@ const avatarLetter = computed(() => {
 const pendingRequests = computed(() => {
   const list = props.state.requests.filter(r => r.status === "REQUESTED");
   if (props.session.user.role === "LECTURER") {
-    return list.filter(r => r.lecturer?.role === "STUDENT" && r.lecturer?.lecturerId === props.session.user.id);
+    return list.filter(r => r.assignedManagerId === props.session.user.id || (r.lecturer?.role === "STUDENT" && r.lecturer?.lecturerId === props.session.user.id));
   }
-  if (props.session.user.role === "EQUIPMENT_MANAGER") {
+  if (["EQUIPMENT_MANAGER", "SERVER_MANAGER"].includes(props.session.user.role)) {
     return list.filter(r => r.assignedManagerId === props.session.user.id);
   }
   return list;
@@ -301,7 +301,7 @@ const canAccessTab = computed(() => ({
   notifications: true,
   faq: true,
   profile: true,
-  borrow: isLecturer.value || isEventStaff.value,
+  borrow: isLecturer.value || isEventStaff.value || isStudent.value,
   equipment: canApprove.value,
   "pending-approvals": true,
   status: canApprove.value,
@@ -333,7 +333,7 @@ watchEffect(() => {
 
         <a v-if="canApprove" :class="{ active: activeTab === 'equipment' }" href="#" @click.prevent="goToTab('equipment')"><Boxes :size="18" /> {{ t('All Requests') }}</a>
         <a :class="{ active: activeTab === 'pending-approvals' }" href="#" @click.prevent="goToTab('pending-approvals')"><ShieldCheck :size="18" /> {{ canApprove ? t('Pending Approvals') : t('Pending Approval Status') }}</a>
-        <a v-if="isLecturer || isEventStaff" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="goToTab('borrow')"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
+        <a v-if="isLecturer || isEventStaff || isStudent" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="goToTab('borrow')"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="goToTab('history')"><History :size="18" /> {{ t('History Log') }}</a>
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="goToTab('schedules')"><CalendarDays :size="18" /> {{ t('Schedules') }}</a>
         <a :class="{ active: activeTab === 'notifications' }" href="#" @click.prevent="goToTab('notifications')"><Bell :size="18" /> {{ t('Notification Center') }}</a>
@@ -576,7 +576,10 @@ watchEffect(() => {
                   </thead>
                   <tbody>
                     <tr v-for="req in myActiveRequests" :key="req.id">
-                      <td>{{ req.equipment?.name }}</td>
+                      <td>
+                        {{ req.equipment?.name }}
+                        <small v-if="req.accountDetails" style="display:block; color:#2563eb; font-size:10px; margin-top:2px;">🔑 {{ req.accountDetails }}</small>
+                      </td>
                       <td>{{ formatClassroom(req.classroom) }}</td>
                       <td>
                         <span v-if="req.program" class="program-span">{{ req.program }}</span>
@@ -657,8 +660,8 @@ watchEffect(() => {
           />
         </template>
 
-        <template v-else-if="activeTab === 'borrow' && (isLecturer || isEventStaff)">
-          <BorrowPanel :equipment="state.equipment" :requests="state.requests" :is-student="isStudent" :user-role="session.user.role" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" :managers="state.managers || []" :prefill="bookingPrefill" @borrow="$emit('borrow', $event)" />
+        <template v-else-if="activeTab === 'borrow' && (isLecturer || isEventStaff || isStudent)">
+          <BorrowPanel :equipment="state.equipment" :requests="state.requests" :is-student="isStudent" :user-role="session.user.role" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" :managers="state.managers || []" :server-managers="state.serverManagers || []" :lecturers="state.lecturers || []" :prefill="bookingPrefill" @borrow="$emit('borrow', $event)" />
         </template>
 
         <template v-else-if="activeTab === 'returns' && canConfirmReturn">

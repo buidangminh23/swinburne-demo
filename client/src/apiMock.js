@@ -297,6 +297,12 @@ export const apiMock = {
   managers() {
     return store.listEquipmentManagers();
   },
+  serverManagers() {
+    return store.listServerManagers();
+  },
+  lecturers() {
+    return store.listLecturers();
+  },
   units() {
     return store.listUnitsForUser(currentUser());
   },

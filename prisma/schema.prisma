@@ -21,6 +21,7 @@ enum BorrowPurpose {
   LAB
   RESEARCH
   EVENT
+  SERVER
 }
 
 enum EquipmentStatus {
@@ -169,6 +170,7 @@ model BorrowRequest {
   unitId           Int?
   researchProjectId Int?
   assignedManagerId Int?
+  accountDetails   String?
   equipment        Equipment        @relation(fields: [equipmentId], references: [id])
   lecturer         User             @relation(fields: [lecturerId], references: [id])
   unit             Unit?            @relation(fields: [unitId], references: [id])

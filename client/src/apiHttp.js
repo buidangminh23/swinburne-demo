@@ -114,6 +114,12 @@ export const apiHttp = {
   managers() {
     return request("/api/managers");
   },
+  serverManagers() {
+    return request("/api/server-managers");
+  },
+  lecturers() {
+    return request("/api/lecturers");
+  },
   units() {
     return request("/api/units");
   },

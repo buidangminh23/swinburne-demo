@@ -37,3 +37,5 @@
 {"file":"client/src/App.vue","action":"Edit","timestamp":"2026-06-19T09:16:35Z","important":false}
 {"file":"client/src/components/BorrowPanel.vue","action":"Edit","timestamp":"2026-06-19T09:18:28Z","important":false}
 {"file":"client/src/components/SchedulesView.vue","action":"Edit","timestamp":"2026-06-19T09:41:01Z","important":false}
+{"file":"prisma/schema.prisma","action":"Edit","timestamp":"2026-06-19T09:49:25Z","important":false}
+{"file":"client/src/components/AppShell.vue","action":"Edit","timestamp":"2026-06-19T09:54:05Z","important":false}

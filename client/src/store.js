@@ -62,6 +62,28 @@ const defaultUsers = [
 
 const defaultEquipment = [
   {
+    id: 50,
+    assetCode: "SRV-GPU-001",
+    name: "GPU Compute Server",
+    category: "Server",
+    location: "HN-DC-1",
+    status: "AVAILABLE",
+    conditionNotes: "Shared GPU server for research compute",
+    accessories: [],
+    updatedAt: new Date("2026-05-27T08:30:00.000Z").toISOString()
+  },
+  {
+    id: 51,
+    assetCode: "SRV-WEB-002",
+    name: "Web Hosting Server",
+    category: "Server",
+    location: "HN-DC-1",
+    status: "AVAILABLE",
+    conditionNotes: "Hosting / staging server for student projects",
+    accessories: [],
+    updatedAt: new Date("2026-05-27T08:30:00.000Z").toISOString()
+  },
+  {
     id: 1,
     assetCode: "Logitech-LRC-001",
     name: "Logitech Rally Camera Kit",
@@ -761,7 +783,7 @@ class DemoRepository {
     const user = users.find((candidate) => candidate.id === input.lecturerId);
     const isStudent = user?.role === "STUDENT";
     const purpose = input.purpose ?? "CLASSROOM";
-    const requiresApproval = isStudent || purpose === "RESEARCH" || purpose === "EVENT";
+    const requiresApproval = isStudent || purpose === "RESEARCH" || purpose === "EVENT" || purpose === "SERVER";
     const transferSource = !isStudent && !requiresApproval && item.status === "BORROWED"
       ? findLecturerBorrowForTransfer(item.id, input.lecturerId, quantity)
       : null;
@@ -979,6 +1001,23 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
+    const approver = users.find((candidate) => candidate.id === userId);
+    const requester = users.find((candidate) => candidate.id === request.lecturerId);
+    if (request.purpose === "SERVER" && requester?.role === "STUDENT" && approver?.role === "LECTURER") {
+      const serverManager = users.find((candidate) => candidate.role === "SERVER_MANAGER");
+      request.assignedManagerId = serverManager?.id ?? null;
+      request.approvedById = userId;
+      request.updatedAt = new Date().toISOString();
+      recordAudit({
+        action: "SERVER_REQUEST_ENDORSED",
+        actorId: userId,
+        entityType: "borrowRequest",
+        entityId: request.id,
+        details: { routedTo: serverManager?.id ?? null }
+      });
+      persistState();
+      return attachEquipment(request);
+    }
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
     if (!item) {
       const error = new Error("Equipment not found");
@@ -993,6 +1032,9 @@ class DemoRepository {
     }
     request.status = isImmediateStart(request.startDate) ? "BORROWED" : "RESERVED";
     request.approvedById = userId;
+    if (request.purpose === "SERVER") {
+      request.accountDetails = `Server account provisioned for ${requester?.email ?? "user"} — credentials sent separately.`;
+    }
     request.updatedAt = new Date().toISOString();
     recordAudit({
       action: "REQUEST_APPROVED",
@@ -1297,6 +1339,18 @@ class DemoRepository {
   async listEquipmentManagers() {
     return users
       .filter((user) => user.role === "EQUIPMENT_MANAGER")
+      .map((user) => ({ id: user.id, name: user.name, email: user.email, role: user.role }));
+  }
+
+  async listServerManagers() {
+    return users
+      .filter((user) => user.role === "SERVER_MANAGER")
+      .map((user) => ({ id: user.id, name: user.name, email: user.email, role: user.role }));
+  }
+
+  async listLecturers() {
+    return users
+      .filter((user) => user.role === "LECTURER")
       .map((user) => ({ id: user.id, name: user.name, email: user.email, role: user.role }));
   }
 
