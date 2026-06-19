@@ -453,25 +453,32 @@ class DemoRepository {
 
     const user = users.find((candidate) => candidate.id === input.lecturerId);
     const isStudent = user?.role === "STUDENT";
+    const purpose = input.purpose ?? "CLASSROOM";
 
-    const quantity = input.quantity ?? 1;
-    const transferSource = !isStudent && item.status === "BORROWED"
-      ? findInMemoryLecturerBorrowForTransfer(item.id, input.lecturerId, quantity)
-      : null;
-
-    if (item.status !== "AVAILABLE" && !transferSource && !isStudent) {
-      const error = new Error("Equipment is not available");
-      error.status = 409;
+    if (isStudent && ["RESEARCH", "EVENT"].includes(purpose)) {
+      const error = new Error("Students cannot borrow equipment for research or events.");
+      error.status = 403;
       throw error;
     }
-
-    const status = isStudent ? "REQUESTED" : "BORROWED";
-    const purpose = input.purpose ?? "CLASSROOM";
     if (user?.role === "EVENT_STAFF" && purpose !== "EVENT") {
       const error = new Error("Event staff can only borrow equipment for event support");
       error.status = 400;
       throw error;
     }
+
+    const requiresApproval = isStudent || ["RESEARCH", "EVENT", "SERVER"].includes(purpose);
+    const quantity = input.quantity ?? 1;
+    const transferSource = !requiresApproval && item.status === "BORROWED"
+      ? findInMemoryLecturerBorrowForTransfer(item.id, input.lecturerId, quantity)
+      : null;
+
+    if (!requiresApproval && item.status !== "AVAILABLE" && !transferSource) {
+      const error = new Error("Equipment is not available");
+      error.status = 409;
+      throw error;
+    }
+
+    const status = requiresApproval ? "REQUESTED" : "BORROWED";
     const dueAt = toValidDate(input.dueAt);
     if (!dueAt) {
       const error = new Error("dueAt is required");
@@ -484,7 +491,7 @@ class DemoRepository {
     if (purpose === "EVENT") {
       custody.push({
         at: new Date().toISOString(),
-        action: isStudent ? "REQUESTED" : "CHECKED_OUT",
+        action: requiresApproval ? "REQUESTED" : "CHECKED_OUT",
         actor: user?.name ?? `User ${input.lecturerId}`,
         notes: input.handoverNotes ?? ""
       });
@@ -495,6 +502,7 @@ class DemoRepository {
       id: nextId(borrowRequests),
       equipmentId: item.id,
       lecturerId: input.lecturerId,
+      assignedManagerId: input.assignedManagerId ?? null,
       classroom: input.classroom ?? null,
       dueAt: dueAt.toISOString(),
       returnedAt: null,
@@ -517,7 +525,7 @@ class DemoRepository {
       closeInMemoryTransferredBorrow(transferSource, user, now);
     }
 
-    if (!isStudent) {
+    if (status === "BORROWED") {
       item.status = "BORROWED";
       item.conditionNotes = transferSource
         ? `Transferred from ${users.find((candidate) => candidate.id === transferSource.lecturerId)?.name ?? "lecturer"} to ${user?.name ?? "staff"}`
@@ -598,6 +606,15 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
+    const approver = users.find((candidate) => candidate.id === userId);
+    const requester = users.find((candidate) => candidate.id === request.lecturerId);
+    if (request.purpose === "SERVER" && requester?.role === "STUDENT" && approver?.role === "LECTURER") {
+      const serverManager = users.find((candidate) => candidate.role === "SERVER_MANAGER");
+      request.assignedManagerId = serverManager?.id ?? null;
+      request.approvedById = userId;
+      request.updatedAt = new Date().toISOString();
+      return attachEquipment(request);
+    }
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
     if (!item || item.status !== "AVAILABLE") {
       const error = new Error("Equipment is no longer available to approve");
@@ -606,6 +623,9 @@ class DemoRepository {
     }
     request.status = "BORROWED";
     request.approvedById = userId;
+    if (request.purpose === "SERVER") {
+      request.accountDetails = `Server account provisioned for ${requester?.email ?? "user"} — credentials sent separately.`;
+    }
     request.updatedAt = new Date().toISOString();
     item.status = "BORROWED";
     item.conditionNotes = `Approved borrow for ${request.classroom || request.purpose}`;
@@ -727,8 +747,7 @@ class DemoRepository {
       throw error;
     }
     const owner = users.find((candidate) => candidate.id === request.lecturerId);
-    const ownerIsStudent = owner?.role === "STUDENT";
-    if (actor && actor.id === request.lecturerId && ownerIsStudent && request.status !== "REQUESTED" && input.isExtendMode) {
+    if (actor && request.status !== "REQUESTED" && input.isExtendMode) {
       if (input.dueAt) {
         const origStart = request.startDate ?? request.createdAt;
         const origDay = new Date(origStart).toDateString();
@@ -1046,6 +1065,7 @@ class PrismaRepository {
     const request = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id: input.lecturerId } });
       const isStudent = user?.role === "STUDENT";
+      const purpose = input.purpose ?? "CLASSROOM";
 
       const item = await tx.equipment.findUnique({ where: { id: input.equipmentId } });
       if (!item) {
@@ -1060,8 +1080,20 @@ class PrismaRepository {
         throw error;
       }
 
+      if (isStudent && ["RESEARCH", "EVENT"].includes(purpose)) {
+        const error = new Error("Students cannot borrow equipment for research or events.");
+        error.status = 403;
+        throw error;
+      }
+      if (user?.role === "EVENT_STAFF" && purpose !== "EVENT") {
+        const error = new Error("Event staff can only borrow equipment for event support");
+        error.status = 400;
+        throw error;
+      }
+
+      const requiresApproval = isStudent || ["RESEARCH", "EVENT", "SERVER"].includes(purpose);
       const quantity = input.quantity ?? 1;
-      const transferSource = !isStudent && item.status === "BORROWED"
+      const transferSource = !requiresApproval && item.status === "BORROWED"
         ? await tx.borrowRequest.findFirst({
             where: {
               equipmentId: input.equipmentId,
@@ -1075,19 +1107,13 @@ class PrismaRepository {
           })
         : null;
 
-      if (item.status !== "AVAILABLE" && !transferSource && !isStudent) {
+      if (!requiresApproval && item.status !== "AVAILABLE" && !transferSource) {
         const error = new Error("Equipment is not available");
         error.status = 409;
         throw error;
       }
 
-      const status = isStudent ? "REQUESTED" : "BORROWED";
-      const purpose = input.purpose ?? "CLASSROOM";
-      if (user?.role === "EVENT_STAFF" && purpose !== "EVENT") {
-        const error = new Error("Event staff can only borrow equipment for event support");
-        error.status = 400;
-        throw error;
-      }
+      const status = requiresApproval ? "REQUESTED" : "BORROWED";
       const dueAt = toValidDate(input.dueAt);
       if (!dueAt) {
         const error = new Error("dueAt is required");
@@ -1096,7 +1122,7 @@ class PrismaRepository {
       }
       const startDate = toValidDate(input.startDate);
 
-      if (!isStudent && !transferSource) {
+      if (!requiresApproval && !transferSource) {
         const flipped = await tx.equipment.updateMany({
           where: { id: input.equipmentId, status: "AVAILABLE" },
           data: {
@@ -1143,7 +1169,7 @@ class PrismaRepository {
       if (purpose === "EVENT") {
         custody.push({
           at: new Date().toISOString(),
-          action: isStudent ? "REQUESTED" : "CHECKED_OUT",
+          action: requiresApproval ? "REQUESTED" : "CHECKED_OUT",
           actor: user?.name ?? `User ${input.lecturerId}`,
           notes: input.handoverNotes ?? ""
         });
@@ -1153,6 +1179,7 @@ class PrismaRepository {
         data: {
           equipmentId: input.equipmentId,
           lecturerId: input.lecturerId,
+          assignedManagerId: input.assignedManagerId ?? null,
           classroom: input.classroom ?? null,
           dueAt,
           status,
@@ -1235,7 +1262,7 @@ class PrismaRepository {
 
   async approveRequest(id, userId) {
     const request = await this.prisma.$transaction(async (tx) => {
-      const request = await tx.borrowRequest.findUnique({ where: { id } });
+      const request = await tx.borrowRequest.findUnique({ where: { id }, include: { lecturer: true } });
       if (!request) {
         const error = new Error("Request not found");
         error.status = 404;
@@ -1245,6 +1272,18 @@ class PrismaRepository {
         const error = new Error("Only pending requests can be approved");
         error.status = 409;
         throw error;
+      }
+      const approver = await tx.user.findUnique({ where: { id: userId } });
+      if (request.purpose === "SERVER" && request.lecturer?.role === "STUDENT" && approver?.role === "LECTURER") {
+        const serverManager = await tx.user.findFirst({ where: { role: "SERVER_MANAGER" } });
+        return tx.borrowRequest.update({
+          where: { id },
+          data: {
+            assignedManagerId: serverManager?.id ?? null,
+            approvedById: userId
+          },
+          include: { equipment: true, lecturer: true }
+        });
       }
       const flipped = await tx.equipment.updateMany({
         where: { id: request.equipmentId, status: "AVAILABLE" },
@@ -1258,12 +1297,13 @@ class PrismaRepository {
         error.status = 409;
         throw error;
       }
+      const approvalData = { status: "BORROWED", approvedById: userId };
+      if (request.purpose === "SERVER") {
+        approvalData.accountDetails = `Server account provisioned for ${request.lecturer?.email ?? "user"} — credentials sent separately.`;
+      }
       return tx.borrowRequest.update({
         where: { id },
-        data: {
-          status: "BORROWED",
-          approvedById: userId
-        },
+        data: approvalData,
         include: { equipment: true, lecturer: true }
       });
     });

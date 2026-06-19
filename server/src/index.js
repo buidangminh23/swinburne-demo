@@ -57,28 +57,30 @@ const borrowSchema = z.object({
   classroom: z.string().max(40).optional().nullable(),
   dueAt: z.string().datetime(),
   handoverNotes: z.string().max(240).optional().nullable(),
-  purpose: z.enum(["CLASSROOM", "LAB", "RESEARCH", "EVENT"]).optional(),
+  purpose: z.enum(["CLASSROOM", "LAB", "RESEARCH", "EVENT", "SERVER"]).optional(),
   program: z.string().max(100).optional().nullable(),
   unitOrProject: z.string().max(100).optional().nullable(),
   quantity: z.number().int().positive().optional(),
   startDate: z.string().datetime().optional().nullable(),
   recurrence: z.string().max(50).optional().nullable(),
   unitId: z.number().int().positive().optional().nullable(),
-  researchProjectId: z.number().int().positive().optional().nullable()
+  researchProjectId: z.number().int().positive().optional().nullable(),
+  assignedManagerId: z.number().int().positive().optional().nullable()
 });
 
 const editSchema = z.object({
   classroom: z.string().max(40).optional().nullable(),
   dueAt: z.string().datetime().optional(),
   handoverNotes: z.string().max(240).optional().nullable(),
-  purpose: z.enum(["CLASSROOM", "LAB", "RESEARCH", "EVENT"]).optional(),
+  purpose: z.enum(["CLASSROOM", "LAB", "RESEARCH", "EVENT", "SERVER"]).optional(),
   program: z.string().max(100).optional().nullable(),
   unitOrProject: z.string().max(100).optional().nullable(),
   quantity: z.number().int().positive().optional(),
   startDate: z.string().datetime().optional().nullable(),
   recurrence: z.string().max(50).optional().nullable(),
   unitId: z.number().int().positive().optional().nullable(),
-  researchProjectId: z.number().int().positive().optional().nullable()
+  researchProjectId: z.number().int().positive().optional().nullable(),
+  isExtendMode: z.boolean().optional()
 });
 
 const custodySchema = z.object({
@@ -115,7 +117,7 @@ const userRoleSchema = z.object({
 });
 
 const returnSchema = z.object({
-  returnedQuantity: z.number().int().min(0).optional(),
+  returnedQuantity: z.number().int().min(1).optional(),
   isStatusOk: z.boolean().optional(),
   damageReport: z.string().max(240).optional().nullable()
 });
@@ -127,7 +129,7 @@ const extendSchema = z.object({
 const historyQuerySchema = z.object({
   userId: z.coerce.number().int().positive().optional(),
   status: z.enum(["REQUESTED", "RESERVED", "BORROWED", "RETURNED", "CANCELLED", "REJECTED"]).optional(),
-  purpose: z.enum(["CLASSROOM", "LAB", "RESEARCH", "EVENT"]).optional(),
+  purpose: z.enum(["CLASSROOM", "LAB", "RESEARCH", "EVENT", "SERVER"]).optional(),
   search: z.string().max(120).optional(),
   sortBy: z.enum(["createdAt", "dueAt", "returnedAt", "updatedAt", "startDate"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
@@ -195,10 +197,15 @@ async function verifyGoogleToken(accessToken) {
     err.status = 401;
     throw err;
   }
-  if (allowedEmailDomain && !info.email.toLowerCase().endsWith(allowedEmailDomain.toLowerCase())) {
-    const err = new Error("This email domain is not permitted to sign in.");
-    err.status = 403;
-    throw err;
+  if (allowedEmailDomain) {
+    const normalizedDomain = allowedEmailDomain.toLowerCase().replace(/^@/, "");
+    const emailHost = info.email.toLowerCase().split("@").pop();
+    const domainAllowed = emailHost === normalizedDomain || emailHost.endsWith(`.${normalizedDomain}`);
+    if (!domainAllowed) {
+      const err = new Error("This email domain is not permitted to sign in.");
+      err.status = 403;
+      throw err;
+    }
   }
   return info.email;
 }
@@ -483,7 +490,18 @@ app.post("/api/borrow-requests/:id/approve", requireCapability("APPROVE_REQUEST"
   res.json(updated);
 }));
 
-app.post("/api/borrow-requests/:id/deny", requireCapability("DENY_REQUEST"), route(async (req, res) => {
+app.post("/api/borrow-requests/:id/deny", requireCapability("DENY_REQUEST"), loadRequest, route(async (req, res) => {
+  const request = req.borrowRequest;
+  const isOwner = request.lecturerId === req.user.id;
+  const canManage = can(req.user.role, "MANAGE_REQUEST");
+  const isAssignedManager = request.assignedManagerId != null && request.assignedManagerId === req.user.id;
+  let allowed = isOwner || canManage || isAssignedManager;
+  if (!allowed && req.user.role === "LECTURER") {
+    allowed = await repository.lecturerTeachesStudent(req.user.id, request.lecturerId);
+  }
+  if (!allowed) {
+    return res.status(403).json({ message: "Bạn chỉ có thể từ chối yêu cầu của chính mình hoặc yêu cầu bạn được phân quyền duyệt." });
+  }
   const updated = await repository.denyRequest(parseId(req.params.id), req.user.id);
   safeNotify(() => notifyBorrower(updated, "REQUEST_DENIED", `Request denied • ${itemName(updated)}`, `Your borrow request for ${itemName(updated)} was denied.`));
   res.json(updated);
