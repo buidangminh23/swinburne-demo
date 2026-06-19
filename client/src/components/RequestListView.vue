@@ -314,7 +314,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
             </td>
 
             <!-- Classroom -->
-            <td>{{ req.classroom || "-" }}</td>
+            <td>{{ req.classroom ? (req.classroom.startsWith('HN-') ? 'HN-DT1-' + req.classroom.split('-').slice(2).join('-') : req.classroom) : '-' }}</td>
 
             <!-- Unit / Purpose -->
             <td>

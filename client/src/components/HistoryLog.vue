@@ -272,7 +272,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
                 <span class="purpose-badge">{{ t(request.purpose) }}</span>
               </td>
               <td>
-                <span v-if="request.classroom">Room: {{ request.classroom }}</span>
+                <span v-if="request.classroom">Room: {{ request.classroom.startsWith('HN-') ? 'HN-DT1-' + request.classroom.split('-').slice(2).join('-') : request.classroom }}</span>
                 <span v-if="request.program" class="program-sub">{{ request.program }}</span>
               </td>
               <td>{{ formatDateTime(request.createdAt) }}</td>

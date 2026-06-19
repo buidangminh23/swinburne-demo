@@ -224,7 +224,7 @@ function canReturn(req) {
 function approvalStatusText(req) {
   if (req.status === "REQUESTED") return "Pending Approval";
   if (["RESERVED", "BORROWED"].includes(req.status)) return "Accepted";
-  if (req.status === "RETURNED") return "Success";
+  if (req.status === "RETURNED") return "Accepted";
   if (req.status === "CANCELLED") return "Denied";
   if (req.status === "REJECTED") return "Rejected";
   return req.status;
@@ -241,6 +241,16 @@ function formatDate(dateStr) {
   return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
 
+function formatClassroom(val) {
+  if (!val) return '-';
+  if (val.startsWith('HN-')) {
+    const parts = val.split('-');
+    parts[1] = 'DT1';
+    return parts.join('-');
+  }
+  return val;
+}
+
 function getDisplayStatus(req) {
   if (req.status === "BORROWED") {
     const now = new Date();
@@ -253,6 +263,7 @@ function getDisplayStatus(req) {
       return "NEAR_DUE";
     }
   }
+  if (req.status === "RETURNED") return "Returned";
   return req.status;
 }
 
@@ -404,7 +415,7 @@ watchEffect(() => {
                         <code class="student-id-code" style="font-size: 13px; text-transform: uppercase; margin-top: 2px; display: inline-block;">{{ (req.lecturer?.studentId || '-').toUpperCase() }}</code>
                       </td>
                       <td>{{ req.equipment?.name }}</td>
-                      <td>{{ req.classroom || "-" }}</td>
+                      <td>{{ formatClassroom(req.classroom) }}</td>
                       <td>
                         <span class="program-span" style="display: block; font-size: 12px; color: #4e5b66;">{{ req.program || "-" }}</span>
                         <span class="purpose-span" style="display: inline-block; margin-top: 2px;">{{ t(req.purpose) }}</span>
@@ -516,7 +527,7 @@ watchEffect(() => {
                   <tbody>
                     <tr v-for="req in myApprovalStatusRequests" :key="'approval-status-' + req.id">
                       <td>{{ req.equipment?.name }}</td>
-                      <td>{{ req.classroom || '-' }}</td>
+                      <td>{{ formatClassroom(req.classroom) }}</td>
                       <td>
                         <span v-if="req.program" class="program-span">{{ req.program }}</span>
                         <span class="purpose-span">{{ t(req.purpose) }}</span>
@@ -557,7 +568,7 @@ watchEffect(() => {
                   <tbody>
                     <tr v-for="req in myActiveRequests" :key="req.id">
                       <td>{{ req.equipment?.name }}</td>
-                      <td>{{ req.classroom || '-' }}</td>
+                      <td>{{ formatClassroom(req.classroom) }}</td>
                       <td>
                         <span v-if="req.program" class="program-span">{{ req.program }}</span>
                         <span class="purpose-span">{{ t(req.purpose) }}</span>

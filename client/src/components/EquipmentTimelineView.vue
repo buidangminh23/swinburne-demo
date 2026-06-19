@@ -81,7 +81,7 @@ function formatDate(value) {
               </div>
               <div class="event-details">
                 <span v-if="event.details?.purpose">Purpose: {{ event.details.purpose }}</span>
-                <span v-if="event.details?.classroom">Room: {{ event.details.classroom }}</span>
+                <span v-if="event.details?.classroom">Room: {{ event.details.classroom.startsWith('HN-') ? 'HN-DT1-' + event.details.classroom.split('-').slice(2).join('-') : event.details.classroom }}</span>
                 <span v-if="event.details?.quantity != null">Qty: {{ event.details.quantity }}</span>
                 <span v-if="event.details?.remainingQuantity != null">Remaining: {{ event.details.remainingQuantity }}</span>
                 <span v-if="event.details?.conditionAfter">Condition: {{ event.details.conditionAfter }}</span>
