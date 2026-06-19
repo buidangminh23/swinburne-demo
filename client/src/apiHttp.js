@@ -111,6 +111,9 @@ export const apiHttp = {
   users() {
     return request("/api/users");
   },
+  managers() {
+    return request("/api/managers");
+  },
   units() {
     return request("/api/units");
   },

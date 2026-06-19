@@ -463,6 +463,9 @@ function canApproveRequest(actorId, request) {
   if (!actor) {
     return false;
   }
+  if (request.assignedManagerId != null) {
+    return actor.id === request.assignedManagerId || actor.role === "ADMIN";
+  }
   if (actor.role === "LECTURER") {
     const requester = users.find((candidate) => candidate.id === request.lecturerId);
     return requester?.role === "STUDENT" && requester.lecturerId === actor.id;
@@ -757,7 +760,9 @@ class DemoRepository {
     }
     const user = users.find((candidate) => candidate.id === input.lecturerId);
     const isStudent = user?.role === "STUDENT";
-    const transferSource = !isStudent && item.status === "BORROWED"
+    const purpose = input.purpose ?? "CLASSROOM";
+    const requiresApproval = isStudent || purpose === "RESEARCH" || purpose === "EVENT";
+    const transferSource = !isStudent && !requiresApproval && item.status === "BORROWED"
       ? findLecturerBorrowForTransfer(item.id, input.lecturerId, quantity)
       : null;
     const available = demoAvailableUnits(item.id, { start, end });
@@ -768,8 +773,7 @@ class DemoRepository {
     }
     const preflight = await this.analyzeBorrow(input, input.lecturerId);
 
-    const status = isStudent ? "REQUESTED" : "BORROWED";
-    const purpose = input.purpose ?? "CLASSROOM";
+    const status = requiresApproval ? "REQUESTED" : "BORROWED";
     if (user?.role === "EVENT_STAFF" && purpose !== "EVENT") {
       const error = new Error("Event staff can only borrow equipment for event support");
       error.status = 400;
@@ -781,7 +785,7 @@ class DemoRepository {
     if (purpose === "EVENT") {
       custody.push({
         at: now,
-        action: isStudent ? "REQUESTED" : "CHECKED_OUT",
+        action: "REQUESTED",
         actor: user?.name ?? `User ${input.lecturerId}`,
         notes: input.handoverNotes ?? ""
       });
@@ -795,6 +799,7 @@ class DemoRepository {
       id: nextId(borrowRequests),
       equipmentId: item.id,
       lecturerId: input.lecturerId,
+      assignedManagerId: input.assignedManagerId ?? null,
       classroom: input.classroom ?? null,
       dueAt: end,
       returnedAt: null,
@@ -825,7 +830,7 @@ class DemoRepository {
         transferredFromRequestId: transferSource?.id ?? null
       }
     });
-    if (!isStudent) {
+    if (status === "BORROWED") {
       const transferHolder = transferSource ? users.find((candidate) => candidate.id === transferSource.lecturerId) : null;
       item.conditionNotes = transferSource
         ? `Transferred from ${transferHolder?.name ?? "lecturer"} to ${user?.name ?? "staff"}`
@@ -1286,6 +1291,12 @@ class DemoRepository {
 
   async listStaff() {
     return users.filter((user) => user.role !== "STUDENT");
+  }
+
+  async listEquipmentManagers() {
+    return users
+      .filter((user) => user.role === "EQUIPMENT_MANAGER")
+      .map((user) => ({ id: user.id, name: user.name, email: user.email, role: user.role }));
   }
 
   async getUser(id) {

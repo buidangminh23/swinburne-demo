@@ -31,6 +31,10 @@ const props = defineProps({
   projects: {
     type: Array,
     default: () => []
+  },
+  managers: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -70,6 +74,8 @@ const form = reactive({
   unitOrProject: "",
   unitId: null,
   researchProjectId: null,
+  assignedManagerId: null,
+  eventName: "",
   classroom: "",
   startDate: new Date().toISOString().slice(0, 16),
   dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16),
@@ -142,6 +148,7 @@ watch(() => form.purpose, (newVal, oldVal) => {
     form.classroom = "";
     form.program = null;
   }
+  form.assignedManagerId = (newVal === "RESEARCH" || newVal === "EVENT") ? (props.managers[0]?.id ?? null) : null;
 });
 
 watch(() => form.unitId, (newVal) => {
@@ -165,6 +172,12 @@ watch(() => props.units, (list) => {
 watch(() => props.projects, (list) => {
   if (form.purpose === "RESEARCH" && form.researchProjectId == null && list.length > 0) {
     applyProject(list[0].id);
+  }
+}, { immediate: true });
+
+watch(() => props.managers, (list) => {
+  if ((form.purpose === "RESEARCH" || form.purpose === "EVENT") && form.assignedManagerId == null && list.length > 0) {
+    form.assignedManagerId = list[0].id;
   }
 }, { immediate: true });
 
@@ -246,16 +259,26 @@ function submit() {
     form.handoverNotes = getDefaultNotes(form.purpose);
   }
 
+  if ((form.purpose === "RESEARCH" || form.purpose === "EVENT") && !form.assignedManagerId) {
+    error.value = "Please select an Equipment Manager to approve this request.";
+    return;
+  }
+  if (form.purpose === "EVENT" && !form.eventName.trim()) {
+    error.value = "Please enter the event name.";
+    return;
+  }
+
   submitting.value = true;
 
   const requests = cart.map(item => ({
     equipmentId: item.id,
+    assignedManagerId: (form.purpose === "RESEARCH" || form.purpose === "EVENT") ? form.assignedManagerId : null,
     classroom: form.purpose === "CLASSROOM" ? form.classroom : null,
     dueAt: dueDate.toISOString(),
     handoverNotes: form.handoverNotes,
     purpose: form.purpose,
     program: form.purpose === "EVENT" ? null : form.program,
-    unitOrProject: form.purpose === "EVENT" ? null : form.unitOrProject,
+    unitOrProject: form.purpose === "EVENT" ? form.eventName : form.unitOrProject,
     unitId: form.purpose === "CLASSROOM" ? form.unitId : null,
     researchProjectId: form.purpose === "RESEARCH" ? form.researchProjectId : null,
     quantity: item.quantity,
@@ -303,6 +326,16 @@ function submit() {
             Research Project
             <select v-model="form.researchProjectId">
               <option v-for="p in props.projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+            </select>
+          </label>
+          <label v-if="form.purpose === 'EVENT'">
+            Event Name
+            <input v-model="form.eventName" type="text" placeholder="e.g. Orientation Day" />
+          </label>
+          <label v-if="form.purpose === 'RESEARCH' || form.purpose === 'EVENT'">
+            Approver (Equipment Manager)
+            <select v-model="form.assignedManagerId">
+              <option v-for="m in props.managers" :key="m.id" :value="m.id">{{ m.name }}</option>
             </select>
           </label>
         </div>
@@ -362,11 +395,11 @@ function submit() {
         <div class="form-grid" style="margin-bottom: 12px;">
           <label>
             From
-            <input v-model="form.startDate" type="datetime-local" />
+            <input v-model="form.startDate" type="datetime-local" :readonly="form.purpose === 'CLASSROOM'" />
           </label>
           <label>
             To
-            <input v-model="form.dueAt" type="datetime-local" />
+            <input v-model="form.dueAt" type="datetime-local" :readonly="form.purpose === 'CLASSROOM'" />
           </label>
         </div>
 

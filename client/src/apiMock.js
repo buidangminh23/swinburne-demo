@@ -272,6 +272,9 @@ export const apiMock = {
   users() {
     return store.listAllUsers();
   },
+  managers() {
+    return store.listEquipmentManagers();
+  },
   units() {
     return store.listUnitsForUser(currentUser());
   },

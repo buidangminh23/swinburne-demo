@@ -31,3 +31,8 @@
 {"file":"client/src/components/AppShell.vue","action":"Edit","timestamp":"2026-06-19T07:37:33Z","important":false}
 {"file":"client/src/demoOperations.js","action":"Edit","timestamp":"2026-06-19T07:40:25Z","important":false}
 {"file":"client/test/demoOperations.test.js","action":"Edit","timestamp":"2026-06-19T07:40:33Z","important":true}
+{"file":"client/src/store.js","action":"Edit","timestamp":"2026-06-19T09:14:30Z","important":false}
+{"file":"client/src/apiMock.js","action":"Edit","timestamp":"2026-06-19T09:15:55Z","important":false}
+{"file":"client/src/apiHttp.js","action":"Edit","timestamp":"2026-06-19T09:16:14Z","important":false}
+{"file":"client/src/App.vue","action":"Edit","timestamp":"2026-06-19T09:16:35Z","important":false}
+{"file":"client/src/components/BorrowPanel.vue","action":"Edit","timestamp":"2026-06-19T09:18:28Z","important":false}

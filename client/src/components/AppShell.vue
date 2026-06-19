@@ -292,7 +292,7 @@ const canAccessTab = computed(() => ({
   notifications: true,
   faq: true,
   profile: true,
-  borrow: !isAdmin.value && !isSupport.value && !isOperations.value,
+  borrow: isLecturer.value || isEventStaff.value,
   equipment: canApprove.value,
   "pending-approvals": true,
   status: canApprove.value,
@@ -324,7 +324,7 @@ watchEffect(() => {
 
         <a v-if="canApprove" :class="{ active: activeTab === 'equipment' }" href="#" @click.prevent="goToTab('equipment')"><Boxes :size="18" /> {{ t('All Requests') }}</a>
         <a :class="{ active: activeTab === 'pending-approvals' }" href="#" @click.prevent="goToTab('pending-approvals')"><ShieldCheck :size="18" /> {{ canApprove ? t('Pending Approvals') : t('Pending Approval Status') }}</a>
-        <a v-if="!isAdmin && !isSupport && !isOperations" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="goToTab('borrow')"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
+        <a v-if="isLecturer || isEventStaff" :class="{ active: activeTab === 'borrow' }" href="#" @click.prevent="goToTab('borrow')"><ClipboardList :size="18" /> {{ t('Borrow Equipment') }}</a>
         <a :class="{ active: activeTab === 'history' }" href="#" @click.prevent="goToTab('history')"><History :size="18" /> {{ t('History Log') }}</a>
         <a :class="{ active: activeTab === 'schedules' }" href="#" @click.prevent="goToTab('schedules')"><CalendarDays :size="18" /> {{ t('Schedules') }}</a>
         <a :class="{ active: activeTab === 'notifications' }" href="#" @click.prevent="goToTab('notifications')"><Bell :size="18" /> {{ t('Notification Center') }}</a>
@@ -648,8 +648,8 @@ watchEffect(() => {
           />
         </template>
 
-        <template v-else-if="activeTab === 'borrow' && !isAdmin && !isSupport && !isOperations">
-          <BorrowPanel :equipment="state.equipment" :requests="state.requests" :is-student="isStudent" :user-role="session.user.role" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" @borrow="$emit('borrow', $event)" />
+        <template v-else-if="activeTab === 'borrow' && (isLecturer || isEventStaff)">
+          <BorrowPanel :equipment="state.equipment" :requests="state.requests" :is-student="isStudent" :user-role="session.user.role" :session="session" :units="state.myUnits || []" :projects="state.myProjects || []" :managers="state.managers || []" @borrow="$emit('borrow', $event)" />
         </template>
 
         <template v-else-if="activeTab === 'returns' && canConfirmReturn">

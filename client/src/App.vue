@@ -23,7 +23,8 @@ const state = reactive({
   reminderRules: [],
   equipmentTimelines: [],
   myUnits: [],
-  myProjects: []
+  myProjects: [],
+  managers: []
 });
 
 const isLoggedIn = computed(() => Boolean(session.value?.token && session.value?.user?.role));
@@ -73,6 +74,7 @@ async function loadPortal() {
     } else {
       state.users = [];
     }
+    state.managers = await api.managers?.().catch(() => []);
 
     const historyParams = ["STUDENT", "EVENT_STAFF", "EQUIPMENT_MANAGER"].includes(user?.role) ? { userId: user.id } : {};
     const histResult = await api.history(historyParams);
