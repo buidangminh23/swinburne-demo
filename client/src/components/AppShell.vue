@@ -348,11 +348,11 @@ watchEffect(() => {
       <header class="portal-topbar">
         <div class="topbar-actions">
           <div class="notif-wrap">
-            <button class="icon-button" aria-label="Notifications" @click="notifOpen = !notifOpen">
+            <button class="icon-button" aria-label="Notifications" aria-haspopup="true" :aria-expanded="notifOpen" aria-controls="notif-menu" @click="notifOpen = !notifOpen">
               <Bell :size="18" />
               <span v-if="state.notifications.length > 0">{{ state.notifications.length }}</span>
             </button>
-            <div v-if="notifOpen" class="notif-menu">
+            <div v-if="notifOpen" id="notif-menu" class="notif-menu">
               <div class="notif-head">{{ t('Notifications') }}</div>
               <div v-if="state.notifications.length === 0" class="notif-empty">{{ t('No notifications yet.') }}</div>
               <div v-for="n in state.notifications" :key="n.id" class="notif-item">
@@ -363,10 +363,10 @@ watchEffect(() => {
             </div>
           </div>
           <span>{{ t('Hi, ') }}{{ session.user.name.split(" ").at(-1) }}</span>
-          <button class="avatar-button" aria-label="Open profile menu" @click="profileOpen = !profileOpen">
+          <button class="avatar-button" aria-label="Open profile menu" aria-haspopup="true" :aria-expanded="profileOpen" aria-controls="profile-menu" @click="profileOpen = !profileOpen">
             <span class="avatar">{{ avatarLetter }}</span>
           </button>
-          <div v-if="profileOpen" class="profile-menu">
+          <div v-if="profileOpen" id="profile-menu" class="profile-menu">
             <div class="profile-menu-hero">
               <div class="profile-menu-avatar">{{ avatarLetter }}</div>
               <div>
@@ -387,7 +387,7 @@ watchEffect(() => {
         <div class="breadcrumb">
           <span>Swinburne</span>
           <ChevronLeft :size="12" style="transform: rotate(180deg);" />
-          <span>{{ activeTabDisplay }}</span>
+          <h1 class="breadcrumb-title">{{ activeTabDisplay }}</h1>
         </div>
       </section>
 

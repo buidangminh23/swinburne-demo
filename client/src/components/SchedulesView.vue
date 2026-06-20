@@ -277,9 +277,9 @@ async function onCsvSelected(event) {
     </div>
 
     <div class="schedule-controls">
-      <label class="control">
+      <label class="control" for="schedule-equipment">
         {{ t('Equipment') }}
-        <select v-model="selectedEquipmentId" class="equipment-select">
+        <select id="schedule-equipment" v-model="selectedEquipmentId" class="equipment-select">
           <option v-for="item in filteredEquipment" :key="item.id" :value="item.id">
             {{ item.assetCode }} - {{ item.name }}
           </option>
@@ -289,7 +289,7 @@ async function onCsvSelected(event) {
       <div v-if="allLocations.length" class="control locations">
         <span class="control-label">{{ t('Location') }}</span>
         <div ref="locationDropdownRef" class="location-dropdown">
-          <button type="button" class="location-toggle" @click="locationMenuOpen = !locationMenuOpen">
+          <button type="button" class="location-toggle" aria-haspopup="true" :aria-expanded="locationMenuOpen" @click="locationMenuOpen = !locationMenuOpen">
             <span class="location-summary">{{ locationSummary }}</span>
             <span class="location-caret">▾</span>
           </button>
@@ -311,9 +311,9 @@ async function onCsvSelected(event) {
         </div>
       </div>
 
-      <label v-if="canImportTimetable" class="control import-control">
+      <label v-if="canImportTimetable" class="control import-control" for="schedule-csv">
         {{ t('Semester timetable (CSV)') }}
-        <input type="file" accept=".csv,text/csv" class="csv-input" @change="onCsvSelected" />
+        <input id="schedule-csv" type="file" accept=".csv,text/csv" class="csv-input" @change="onCsvSelected" />
       </label>
 
       <div class="week-nav">
@@ -595,7 +595,7 @@ async function onCsvSelected(event) {
   border-left: 0;
   font-size: 11px;
   font-weight: 800;
-  color: #5f63ff;
+  color: #4338ca;
 }
 .day-head:first-of-type {
   border-left: 1px solid #eeeeef;
@@ -606,7 +606,7 @@ async function onCsvSelected(event) {
 }
 .day-date {
   font-size: 10px;
-  color: #9aa0a6;
+  color: #5b6470;
   font-weight: 600;
 }
 .sched-body {
@@ -709,7 +709,7 @@ async function onCsvSelected(event) {
 .total-label {
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: #5d6470;
 }
 
 .modal-overlay {
