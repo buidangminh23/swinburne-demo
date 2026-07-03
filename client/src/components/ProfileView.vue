@@ -21,13 +21,18 @@ function formatSimpleDate(dateStr) {
   return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+import { makeTranslator } from "../translate";
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
+
 const displayRole = computed(() => {
   const role = props.session.user.role;
   if (role === "LECTURER") return t("Lecturer");
   if (role === "STUDENT") return t("Student");
   if (role === "EVENT_STAFF") return t("Event Coordinator");
-  if (role === "SUPPORT") return t("Support Desk");
-  return t("Admin");
+  if (role === "EQUIPMENT_MANAGER") return t("Equipment Manager");
+  if (role === "SERVER_MANAGER") return t("Server Manager");
+  if (role === "ADMIN") return t("Admin");
+  return t("Member");
 });
 
 const avatarLetter = computed(() => {
@@ -66,9 +71,6 @@ const totalHistoryCount = computed(() => {
 const recentActivities = computed(() => {
   return myHistory.value.slice(0, 5);
 });
-
-import { makeTranslator } from "../translate";
-const t = makeTranslator(props.session?.user?.email);
 </script>
 
 <template>
@@ -83,7 +85,7 @@ const t = makeTranslator(props.session?.user?.email);
           <div class="profile-email">
             <Mail :size="14" /> {{ session.user.email }}
           </div>
-          
+
           <div class="profile-info-grid">
             <div class="profile-info-item">
               <span class="info-label">{{ t('Role') }}</span>
@@ -118,7 +120,7 @@ const t = makeTranslator(props.session?.user?.email);
               <span class="stat-number">{{ activeBorrowsCount }}</span>
             </div>
           </div>
-          
+
           <div class="stat-card pending-requests">
             <div class="stat-icon-wrap">
               <Clock :size="20" />
@@ -128,7 +130,7 @@ const t = makeTranslator(props.session?.user?.email);
               <span class="stat-number">{{ pendingRequestsCount }}</span>
             </div>
           </div>
-          
+
           <div class="stat-card total-transactions">
             <div class="stat-icon-wrap">
               <Activity :size="20" />

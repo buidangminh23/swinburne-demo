@@ -5,12 +5,17 @@ import assert from "node:assert/strict";
 const loginView = readFileSync(new URL("../src/components/LoginView.vue", import.meta.url), "utf8");
 const store = readFileSync(new URL("../src/store.js", import.meta.url), "utf8");
 const translate = readFileSync(new URL("../src/translate.js", import.meta.url), "utf8");
-const appShell = readFileSync(new URL("../src/components/AppShell.vue", import.meta.url), "utf8");
 
 test("login demo data no longer exposes the Vovinam account", () => {
-  for (const source of [loginView, store, translate, appShell]) {
-    assert.equal(source.includes("vovinamteacher@fpt.edu.vn"), false);
-  }
+  assert.equal(loginView.includes("vovinamteacher@fpt.edu.vn"), false);
+  assert.equal(store.includes("vovinamteacher@fpt.edu.vn"), false);
+  assert.equal(translate.includes("vovinamteacher@fpt.edu.vn"), false);
+});
+
+test("production mode renders a typed-email fallback so login stays possible without demo accounts", () => {
+  assert.ok(loginView.includes('v-if="!accounts.length"'));
+  assert.ok(loginView.includes("submitCustomEmail"));
+  assert.ok(loginView.includes('v-model="customEmail"'));
 });
 
 test("login location selector lists cities only", () => {

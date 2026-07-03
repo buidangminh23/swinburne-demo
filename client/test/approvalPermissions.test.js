@@ -79,3 +79,18 @@ test("requesters see approval status instead of moderation actions", () => {
   assert.ok(requestList.includes("!canActOn(req)"));
   assert.equal(requestList.includes('"EVENT_STAFF", "SUPPORT", "OPERATIONS", "ADMIN"'), false);
 });
+
+test("borrowed rows expose return beside extend for eligible accounts", () => {
+  const appShell = readFileSync(new URL("../src/components/AppShell.vue", import.meta.url), "utf8");
+  const requestList = readFileSync(new URL("../src/components/RequestListView.vue", import.meta.url), "utf8");
+
+  assert.match(requestList, /defineEmits\(\[[\s\S]*"return"[\s\S]*\]\)/);
+  assert.match(requestList, /function canReturn\(req\)/);
+  assert.match(requestList, /v-if="canReturn\(req\)"[\s\S]*@click="emit\('return', \{ id: req\.id, payload: \{ isStatusOk: true \} \}\)"/);
+  assert.match(requestList, /v-if="canReturn\(req\)"[\s\S]*\{\{ t\('Return'\) \}\}[\s\S]*v-if="canExtend\(req\)"/);
+
+  assert.match(appShell, /function canReturn\(req\)/);
+  assert.match(appShell, /@return="\$emit\('return', \$event\)"/);
+  assert.match(appShell, /v-if="canReturn\(req\)"[\s\S]*@click="\$emit\('return', \{ id: req\.id, payload: \{ isStatusOk: true \} \}\)"/);
+  assert.match(appShell, /v-if="canReturn\(req\)"[\s\S]*\{\{ t\('Return'\) \}\}[\s\S]*v-if="canExtend\(req\)"/);
+});

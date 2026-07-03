@@ -1,11 +1,16 @@
 <script setup>
-import { reactive, watch, onMounted, computed } from "vue";
+import { reactive, ref, watch, onMounted, computed } from "vue";
 import { Search, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight } from "@lucide/vue";
+import AuditLogView from "./AuditLogView.vue";
 
 const props = defineProps({
   historyData: {
     type: Object,
     required: true
+  },
+  auditLog: {
+    type: Array,
+    default: () => []
   },
   session: {
     type: Object,
@@ -14,6 +19,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["fetch"]);
+
+const DERIVED_FILTERS = ["NEAR_DUE", "OVERDUE"];
 
 const filters = reactive({
   search: "",
@@ -25,20 +32,51 @@ const filters = reactive({
   limit: 10
 });
 
-watch(filters, () => {
-  emitFetch();
+const derivedFilter = ref("");
+const loading = ref(false);
+let fetchTimer = null;
+
+watch(derivedFilter, (value) => {
+  filters.status = DERIVED_FILTERS.includes(value) ? "" : value;
+});
+
+watch(() => filters.search, () => {
+  if (fetchTimer) {
+    clearTimeout(fetchTimer);
+  }
+  fetchTimer = setTimeout(() => {
+    emitFetch();
+  }, 300);
+});
+
+watch(
+  () => [filters.status, filters.purpose, filters.sortBy, filters.sortOrder, filters.page, filters.limit],
+  () => {
+    emitFetch();
+  }
+);
+
+watch(() => props.historyData, () => {
+  loading.value = false;
 }, { deep: true });
 
 watch(() => props.historyData.total, () => {
   const pageCount = Math.ceil(props.historyData.total / filters.limit) || 1;
-  if (filters.page > pageCount) {
-    filters.page = 1;
-  }
+  filters.page = Math.min(filters.page, pageCount);
 });
 
 function emitFetch() {
+  loading.value = true;
   emit("fetch", { ...filters });
 }
+
+const rows = computed(() => {
+  const list = props.historyData.data ?? [];
+  if (!DERIVED_FILTERS.includes(derivedFilter.value)) {
+    return list;
+  }
+  return list.filter((request) => getDisplayStatus(request) === derivedFilter.value);
+});
 
 function prevPage() {
   if (filters.page > 1) {
@@ -93,11 +131,15 @@ function statusClass(status) {
 
 const totalPages = computed(() => Math.ceil(props.historyData.total / filters.limit) || 1);
 
+const canViewAuditLog = computed(() => {
+  return ["ADMIN", "EQUIPMENT_MANAGER", "SERVER_MANAGER", "LECTURER", "EVENT_STAFF"].includes(props.session.user.role);
+});
+
 const visiblePages = computed(() => {
   const total = totalPages.value;
   const current = filters.page;
   const pages = [];
-  
+
   if (total <= 7) {
     for (let i = 1; i <= total; i++) {
       pages.push(i);
@@ -121,172 +163,180 @@ const visiblePages = computed(() => {
 });
 
 onMounted(() => {
-  if (["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(props.session.user.role)) {
+  if (["STUDENT", "EVENT_STAFF", "EQUIPMENT_MANAGER"].includes(props.session.user.role)) {
     filters.userId = props.session.user.id;
   }
   emitFetch();
 });
 
 import { makeTranslator } from "../translate";
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 </script>
 
 <template>
-  <section class="panel history-log-panel">
-    <div class="panel-heading">
-      <div>
-        <h2>{{ t('Borrowing History Log') }}</h2>
-        <p>{{ t('Search, filter, and view past and active borrow requests.') }}</p>
-      </div>
-    </div>
-
-    <!-- Filters Toolbar -->
-    <div class="filters-bar">
-      <div class="filter-group search-box">
-        <Search :size="16" class="filter-icon" />
-        <input 
-          v-model="filters.search" 
-          type="text" 
-          :placeholder="t('Search items, users, classroom...')" 
-          class="filter-input"
-        />
+  <div class="history-log-stack">
+    <section class="panel history-log-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>{{ t('Borrowing History Log') }}</h2>
+          <p>{{ t('Search, filter, and view past and active borrow requests.') }}</p>
+        </div>
       </div>
 
-      <div class="filter-group">
-        <Filter :size="16" class="filter-icon" />
-        <select v-model="filters.status" class="filter-select">
-          <option value="">{{ t('All Statuses') }}</option>
-          <option value="REQUESTED">{{ t('Requested') }}</option>
-          <option value="APPROVED">{{ t('Approved') }}</option>
-          <option value="BORROWED">{{ t('Borrowed') }}</option>
-          <option value="NEAR_DUE">{{ t('Near Due Date') }}</option>
-          <option value="OVERDUE">{{ t('Overdue') }}</option>
-          <option value="RETURNED">{{ t('Returned') }}</option>
-          <option value="CANCELLED">{{ t('Cancelled') }}</option>
-        </select>
-      </div>
+      <!-- Filters Toolbar -->
+      <div class="filters-bar">
+        <div class="filter-group search-box">
+          <Search :size="16" class="filter-icon" />
+          <input
+            v-model="filters.search"
+            type="text"
+            :placeholder="t('Search items, users, classroom...')"
+            class="filter-input"
+          />
+        </div>
 
-      <div class="filter-group">
-        <select v-model="filters.purpose" class="filter-select">
-          <option value="">{{ t('All Purposes') }}</option>
-          <option value="CLASSROOM">{{ t('Classroom') }}</option>
-          <option value="RESEARCH">{{ t('Research / Project') }}</option>
-          <option value="EVENT">{{ t('Event') }}</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <Filter :size="16" class="filter-icon" />
+          <select v-model="derivedFilter" class="filter-select">
+            <option value="">{{ t('All Statuses') }}</option>
+            <option value="REQUESTED">{{ t('Requested') }}</option>
+            <option value="RESERVED">{{ t('Reserved') }}</option>
+            <option value="BORROWED">{{ t('Borrowed') }}</option>
+            <option value="NEAR_DUE">{{ t('Near Due Date') }}</option>
+            <option value="OVERDUE">{{ t('Overdue') }}</option>
+            <option value="RETURNED">{{ t('Returned') }}</option>
+            <option value="CANCELLED">{{ t('Cancelled') }}</option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <select v-model="filters.sortBy" class="filter-select">
-          <option value="createdAt">{{ t('Date Created') }}</option>
-          <option value="startDate">{{ t('Start Date') }}</option>
-          <option value="dueAt">{{ t('Due Date') }}</option>
-          <option value="returnedAt">{{ t('Returned Date') }}</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <select v-model="filters.purpose" class="filter-select">
+            <option value="">{{ t('All Purposes') }}</option>
+            <option value="CLASSROOM">{{ t('Classroom') }}</option>
+            <option value="RESEARCH">{{ t('Research / Project') }}</option>
+            <option value="EVENT">{{ t('Event') }}</option>
+          </select>
+        </div>
 
-      <div class="filter-group toggle-sort">
-        <button 
-          type="button" 
-          class="sort-toggle-btn"
-          @click="filters.sortOrder = filters.sortOrder === 'asc' ? 'desc' : 'asc'"
-        >
-          <SortAsc v-if="filters.sortOrder === 'asc'" :size="16" />
-          <SortDesc v-else :size="16" />
-          {{ filters.sortOrder === 'asc' ? t('Ascending') : t('Descending') }}
-        </button>
-      </div>
-    </div>
+        <div class="filter-group">
+          <select v-model="filters.sortBy" class="filter-select">
+            <option value="createdAt">{{ t('Date Created') }}</option>
+            <option value="dueAt">{{ t('Due Date') }}</option>
+            <option value="returnedAt">{{ t('Returned Date') }}</option>
+          </select>
+        </div>
 
-    <!-- Table -->
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 60px;">{{ t('No.') }}</th>
-            <th>{{ t('User') }}</th>
-            <th>{{ t('Equipment') }}</th>
-            <th>{{ t('Purpose') }}</th>
-            <th>{{ t('Classroom / Unit') }}</th>
-            <th>{{ t('Borrowed At') }}</th>
-            <th>{{ t('Due At') }}</th>
-            <th>{{ t('Returned At') }}</th>
-            <th>{{ t('Status') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(request, index) in historyData.data" :key="request.id">
-            <td style="color: #727285; font-weight: 600;">
-              {{ (filters.page - 1) * filters.limit + index + 1 }}
-            </td>
-            <td>
-              <strong>{{ request.lecturer?.name }}</strong>
-              <span class="user-sub">{{ request.lecturer?.email }}</span>
-            </td>
-            <td>
-              <strong>{{ request.equipment?.name }}</strong>
-              <span class="asset-sub">{{ request.equipment?.assetCode }}</span>
-            </td>
-            <td>
-              <span class="purpose-badge">{{ t(request.purpose) }}</span>
-            </td>
-            <td>
-              <span v-if="request.classroom">Room: {{ request.classroom.startsWith('HN-') ? 'HN-DT1-' + request.classroom.split('-').slice(2).join('-') : request.classroom }}</span>
-              <span v-if="request.program" class="program-sub">{{ request.program }}</span>
-            </td>
-            <td>{{ formatDateTime(request.createdAt) }}</td>
-            <td>{{ formatDateTime(request.dueAt) }}</td>
-            <td>{{ request.returnedAt ? formatDateTime(request.returnedAt) : "-" }}</td>
-            <td>
-              <span :class="statusClass(getDisplayStatus(request))">{{ t(getDisplayStatus(request)).replace('_', ' ') }}</span>
-            </td>
-          </tr>
-          <tr v-if="historyData.data.length === 0">
-            <td colspan="9" class="empty-row-text">{{ t('No borrow history records match filters.') }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination Footer -->
-    <div class="pagination-footer">
-      <div class="pagination-info">
-        {{ t('Showing ') }}{{ historyData.data.length }}{{ t(' of ') }}{{ historyData.total }}{{ t(' records') }}
-      </div>
-      <div class="pagination-actions">
-        <button 
-          type="button" 
-          class="pagination-btn"
-          :disabled="filters.page <= 1"
-          @click="prevPage"
-        >
-          <ChevronLeft :size="16" /> {{ t('Previous') }}
-        </button>
-        <div class="page-numbers">
-          <button 
-            v-for="(p, idx) in visiblePages" 
-            :key="idx" 
-            type="button" 
-            :class="['page-num-btn', { active: p === filters.page, ellipsis: p === '...' }]"
-            :disabled="p === '...'"
-            @click="changePage(p)"
+        <div class="filter-group toggle-sort">
+          <button
+            type="button"
+            class="sort-toggle-btn"
+            @click="filters.sortOrder = filters.sortOrder === 'asc' ? 'desc' : 'asc'"
           >
-            {{ p }}
+            <SortAsc v-if="filters.sortOrder === 'asc'" :size="16" />
+            <SortDesc v-else :size="16" />
+            {{ filters.sortOrder === 'asc' ? t('Ascending') : t('Descending') }}
           </button>
         </div>
-        <button 
-          type="button" 
-          class="pagination-btn"
-          :disabled="filters.page >= totalPages"
-          @click="nextPage"
-        >
-          {{ t('Next') }} <ChevronRight :size="16" />
-        </button>
       </div>
-    </div>
-  </section>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 60px;">{{ t('No.') }}</th>
+              <th>{{ t('User') }}</th>
+              <th>{{ t('Equipment') }}</th>
+              <th>{{ t('Purpose') }}</th>
+              <th>{{ t('Classroom / Unit') }}</th>
+              <th>{{ t('Borrowed At') }}</th>
+              <th>{{ t('Due At') }}</th>
+              <th>{{ t('Returned At') }}</th>
+              <th>{{ t('Status') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(request, index) in rows" :key="request.id">
+              <td style="color: #727285; font-weight: 600;">
+                {{ (filters.page - 1) * filters.limit + index + 1 }}
+              </td>
+              <td>
+                <strong>{{ request.lecturer?.name }}</strong>
+                <span class="user-sub">{{ request.lecturer?.email }}</span>
+              </td>
+              <td>
+                <strong>{{ request.equipment?.name }}</strong>
+                <span class="asset-sub">{{ request.equipment?.assetCode }}</span>
+              </td>
+              <td>
+                <span class="purpose-badge">{{ t(request.purpose) }}</span>
+              </td>
+              <td>
+                <span v-if="request.classroom">Room: {{ request.classroom.startsWith('HN-') ? 'HN-DT1-' + request.classroom.split('-').slice(2).join('-') : request.classroom }}</span>
+                <span v-if="request.program" class="program-sub">{{ request.program }}</span>
+              </td>
+              <td>{{ formatDateTime(request.createdAt) }}</td>
+              <td>{{ formatDateTime(request.dueAt) }}</td>
+              <td>{{ request.returnedAt ? formatDateTime(request.returnedAt) : "-" }}</td>
+              <td>
+                <span :class="statusClass(getDisplayStatus(request))">{{ t(getDisplayStatus(request)).replace('_', ' ') }}</span>
+              </td>
+            </tr>
+            <tr v-if="!loading && rows.length === 0">
+              <td colspan="9" class="empty-row-text">{{ t('No borrow history records match filters.') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="pagination-footer">
+        <div class="pagination-info">
+          {{ t('Showing ') }}{{ rows.length }}{{ t(' of ') }}{{ historyData.total }}{{ t(' records') }}
+        </div>
+        <div class="pagination-actions">
+          <button
+            type="button"
+            class="pagination-btn"
+            :disabled="filters.page <= 1"
+            @click="prevPage"
+          >
+            <ChevronLeft :size="16" /> {{ t('Previous') }}
+          </button>
+          <div class="page-numbers">
+            <button
+              v-for="(p, idx) in visiblePages"
+              :key="idx"
+              type="button"
+              :class="['page-num-btn', { active: p === filters.page, ellipsis: p === '...' }]"
+              :disabled="p === '...'"
+              @click="changePage(p)"
+            >
+              {{ p }}
+            </button>
+          </div>
+          <button
+            type="button"
+            class="pagination-btn"
+            :disabled="filters.page >= totalPages"
+            @click="nextPage"
+          >
+            {{ t('Next') }} <ChevronRight :size="16" />
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <AuditLogView v-if="canViewAuditLog" :entries="auditLog" :session="session" />
+  </div>
 </template>
 
 <style scoped>
+.history-log-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 .filters-bar {
   display: flex;
   flex-wrap: wrap;

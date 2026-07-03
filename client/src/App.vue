@@ -17,39 +17,70 @@ const state = reactive({
   sprints: [],
   notifications: [],
   users: [],
+  smartAlerts: [],
+  auditLog: [],
+  notificationPreferences: null,
+  reminderRules: [],
+  equipmentTimelines: [],
   myUnits: [],
-  myProjects: []
+  myProjects: [],
+  managers: [],
+  serverManagers: [],
+  lecturers: []
 });
 
-const isLoggedIn = computed(() => Boolean(session.value?.token));
+const isLoggedIn = computed(() => Boolean(session.value?.token && session.value?.user?.role));
 
 async function loadPortal() {
   state.loading = true;
   state.error = "";
   try {
     const user = session.value?.user;
-    const [summary, equipment, requests, sprints, notifications] = await Promise.all([
-      api.summary(),
-      api.equipment(),
-      api.borrowRequests(),
-      api.sprints(),
-      api.notifications().catch(() => [])
+    await api.runAutoReminders?.().catch(() => null);
+    const failed = [];
+    const core = await Promise.all([
+      api.summary().catch((error) => { failed.push(error); return null; }),
+      api.equipment().catch((error) => { failed.push(error); return []; }),
+      api.borrowRequests().catch((error) => { failed.push(error); return []; }),
+      api.sprints().catch((error) => { failed.push(error); return []; })
+    ]);
+    if (failed.length) {
+      throw new Error(failed[0]?.message || "Failed to load portal data.");
+    }
+    const [summary, equipment, requests, sprints] = core;
+    const [notifications, smartAlerts, auditLog, notificationPreferences, reminderRules, equipmentTimelines, myUnits, myProjects] = await Promise.all([
+      api.notifications().catch(() => []),
+      api.smartAlerts?.().catch(() => []),
+      api.auditLog?.().catch(() => []),
+      api.notificationPreferences?.().catch(() => null),
+      api.reminderRules?.().catch(() => []),
+      api.equipmentTimelines?.().catch(() => []),
+      api.units?.().catch(() => []),
+      api.researchProjects?.().catch(() => [])
     ]);
     state.summary = summary;
     state.equipment = equipment;
     state.requests = requests;
     state.sprints = sprints;
     state.notifications = notifications;
-    state.myUnits = await api.units?.().catch(() => []);
-    state.myProjects = await api.researchProjects?.().catch(() => []);
+    state.smartAlerts = smartAlerts;
+    state.auditLog = auditLog;
+    state.notificationPreferences = notificationPreferences;
+    state.reminderRules = reminderRules;
+    state.equipmentTimelines = equipmentTimelines;
+    state.myUnits = myUnits;
+    state.myProjects = myProjects;
 
     if (user?.role === "ADMIN") {
       state.users = await api.users().catch(() => []);
     } else {
       state.users = [];
     }
+    state.managers = await api.managers?.().catch(() => []);
+    state.serverManagers = await api.serverManagers?.().catch(() => []);
+    state.lecturers = await api.lecturers?.().catch(() => []);
 
-    const historyParams = ["STUDENT", "EVENT_STAFF", "SUPPORT"].includes(user?.role) ? { userId: user.id } : {};
+    const historyParams = ["STUDENT", "EVENT_STAFF", "EQUIPMENT_MANAGER"].includes(user?.role) ? { userId: user.id } : {};
     const histResult = await api.history(historyParams);
     state.borrowHistory = histResult.data || [];
     state.historyData = histResult;
@@ -75,9 +106,33 @@ async function login(payload) {
 }
 
 async function logout() {
-  await api.logout();
   session.value = null;
+  state.message = "";
+  state.error = "";
   localStorage.removeItem("portal-session");
+  const demoKeys = [
+    "swin-demo-users",
+    "swin-demo-equipment",
+    "swin-demo-borrowRequests",
+    "swin-demo-notifications",
+    "swin-demo-audit-log",
+    "swin-demo-notification-preferences",
+    "swin-demo-reminder-rules",
+    "swin-demo-seed-version"
+  ];
+  for (const key of demoKeys) {
+    localStorage.removeItem(key);
+  }
+  try {
+    await api.logout();
+  } catch {
+    session.value = null;
+  }
+}
+
+function clearBanners() {
+  state.message = "";
+  state.error = "";
 }
 
 async function borrowEquipment(payload) {
@@ -88,6 +143,18 @@ async function borrowEquipment(payload) {
     await api.borrow(body);
     await loadPortal();
     state.message = "Borrow request submitted successfully for approval.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function importSchedule(rows) {
+  state.message = "";
+  state.error = "";
+  try {
+    const result = await api.importUnits(rows);
+    await loadPortal();
+    state.message = `Semester timetable imported: ${result.count} unit(s) loaded.`;
   } catch (error) {
     state.error = error.message;
   }
@@ -227,13 +294,46 @@ async function editEquipment({ id, payload }) {
   }
 }
 
-async function updateUserRole({ id, role, lecturerId }) {
+async function updateUserRole({ id, role, lecturerId, groupName, className }) {
   state.message = "";
   state.error = "";
   try {
-    await api.updateUserRole(id, role, lecturerId);
+    await api.updateUserRole(id, role, lecturerId, { groupName, className });
     await loadPortal();
     state.message = "User updated successfully.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function updateNotificationPreferences(payload) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.updateNotificationPreferences(payload);
+    await loadPortal();
+    state.message = "Notification preferences updated.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function updateReminderRules(rules) {
+  state.message = "";
+  state.error = "";
+  try {
+    await api.updateReminderRules(rules);
+    await loadPortal();
+    state.message = "Auto reminder rules updated.";
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
+async function markNotificationRead(id) {
+  try {
+    await api.markNotificationRead(id);
+    state.notifications = await api.notifications().catch(() => state.notifications);
   } catch (error) {
     state.error = error.message;
   }
@@ -264,8 +364,10 @@ onMounted(() => {
     v-else
     :session="session"
     :state="state"
+    @navigate="clearBanners"
     @logout="logout"
     @borrow="borrowEquipment"
+    @import-schedule="importSchedule"
     @return="confirmReturn"
     @status="updateStatus"
     @approve="approveRequest"
@@ -279,5 +381,8 @@ onMounted(() => {
     @add-equipment="addEquipment"
     @edit-equipment="editEquipment"
     @update-user-role="updateUserRole"
+    @update-notification-preferences="updateNotificationPreferences"
+    @update-reminder-rules="updateReminderRules"
+    @mark-notification-read="markNotificationRead"
   />
 </template>

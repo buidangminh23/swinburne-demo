@@ -10,7 +10,7 @@ const props = defineProps({
 });
 
 import { makeTranslator } from "../translate";
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 const faqs = ref([
   {
@@ -64,15 +64,15 @@ function toggleFaq(index) {
 
     <div class="faq-grid">
       <div class="faq-list">
-        <div 
-          v-for="(faq, index) in faqs" 
-          :key="index" 
-          class="faq-item" 
+        <div
+          v-for="(faq, index) in faqs"
+          :key="index"
+          class="faq-item"
           :class="{ 'faq-item-open': faq.open }"
         >
-          <button 
-            type="button" 
-            class="faq-question" 
+          <button
+            type="button"
+            class="faq-question"
             @click="toggleFaq(index)"
             :aria-expanded="faq.open"
           >

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, watch, onMounted } from "vue";
+import { isProductionMode } from "../config";
 import swinburneLogo from "../assets/swinburne-vietnam-logo.svg";
 import avatarDangMinh from "../assets/avatar-dang-minh.png";
 import avatarDinhDung from "../assets/avatar-dinh-dung.png";
@@ -25,20 +26,21 @@ const locations = [
   { value: "CT", label: "Can Tho" }
 ];
 
-const accounts = [
-  { name: "LECTURER", email: "buidangminh23@fpt.edu.vn", isDemo: true, color: "#4e5b66" },
-  { name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", isDemo: true, photo: avatarDangMinh },
-  { name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", isDemo: true, color: "#3f51b5" },
-  { name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", isDemo: true, color: "#d84315" },
-  { name: "Test Account", email: "cacc80077@fpt.edu.vn", isDemo: false, color: "#00796b" },
-  { name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", isDemo: false, color: "#c62828" },
-  { name: "ADMIN", email: "dindungwork@fpt.edu.vn", isDemo: true, photo: avatarDinhDung },
-  { name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", isDemo: true, color: "#4338ca" },
-  { name: "STUDENT 2", email: "student2@fpt.edu.vn", isDemo: true, color: "#0891b2" }
+const demoAccounts = [
+  { name: "Minh Bui Dang", email: "buidangminh23@fpt.edu.vn", role: "Lecturer", isDemo: true, color: "#4e5b66" },
+  { name: "Dang Minh Bui", email: "buidangminh.lh@fpt.edu.vn", role: "Student", isDemo: true, photo: avatarDangMinh },
+  { name: "Nguyen Hoang Hiep", email: "hiheho911@fpt.edu.vn", role: "Event Coordinator", isDemo: true, color: "#3f51b5" },
+  { name: "Nguyen Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "Equipment Manager", isDemo: true, color: "#d84315" },
+  { name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "Lecturer", isDemo: true, color: "#00796b" },
+  { name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "Lecturer", isDemo: true, color: "#c62828" },
+  { name: "Dinh Dung", email: "dindungwork@fpt.edu.vn", role: "Admin", isDemo: true, photo: avatarDinhDung },
+  { name: "Nguyen Thanh Linh", email: "linhnt89_fe@fpt.edu.vn", role: "Equipment Manager", isDemo: true, color: "#4338ca" },
+  { name: "Nguyen Tuan Anh", email: "student2@fpt.edu.vn", role: "Student", isDemo: true, color: "#0891b2" }
 ];
 
+const accounts = isProductionMode ? [] : demoAccounts;
+
 const loginError = ref("");
-const showCustomInput = ref(false);
 const customEmail = ref("");
 
 onMounted(() => {
@@ -62,7 +64,7 @@ function handleGoogleClick() {
     showError.value = true;
     return;
   }
-  
+
   showError.value = false;
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -75,17 +77,17 @@ function handleGoogleClick() {
         callback: async (response) => {
           if (response.error) {
             busy.value = false;
-            loginError.value = "Google sign-in failed: " + response.error;
+            loginError.value = "Google sign-in could not be completed. Please try again.";
             step.value = "google";
             return;
           }
-          
+
           try {
             await emit("login", {
               accessToken: response.access_token
             });
           } catch (err) {
-            loginError.value = err.message;
+            loginError.value = "Sign-in failed. Please try again or contact support.";
             step.value = "google";
           } finally {
             busy.value = false;
@@ -109,7 +111,7 @@ async function selectAccount(account) {
     loginError.value = "This account has not been granted access to Swinburne Equipment Portal.";
     return;
   }
-  
+
   loginError.value = "";
   busy.value = true;
   try {
@@ -130,7 +132,7 @@ async function submitCustomEmail() {
       email: customEmail.value
     });
   } catch (err) {
-    loginError.value = err.message || "Login failed.";
+    loginError.value = "Sign-in failed. Please check the email and try again.";
   } finally {
     busy.value = false;
   }
@@ -152,7 +154,7 @@ function getInitial(name) {
     <!-- STEP 1: CHOOSE LOCATION -->
     <section v-if="step === 'location'" class="location-card">
       <img class="logo-img" :src="swinburneLogo" alt="Swinburne Vietnam logo" />
-      
+
       <div class="dropdown-wrap" :class="{ 'has-error': showError }">
         <select v-model="selectedLocation" class="location-dropdown">
           <option value="" disabled selected>Choose location</option>
@@ -167,9 +169,9 @@ function getInitial(name) {
       </div>
       <p v-if="showError" class="facility-error-msg">You have not selected the facility</p>
 
-      <button 
-        type="button" 
-        class="google-btn-red" 
+      <button
+        type="button"
+        class="google-btn-red"
         :disabled="busy"
         @click="handleGoogleClick"
       >
@@ -211,11 +213,11 @@ function getInitial(name) {
 
         <!-- Right column -->
         <div class="google-right-col">
-          <div v-if="!showCustomInput" class="accounts-list">
-            <button 
-              v-for="acc in accounts" 
-              :key="acc.email" 
-              type="button" 
+          <div class="accounts-list">
+            <button
+              v-for="acc in accounts"
+              :key="acc.email"
+              type="button"
               class="account-row"
               :disabled="busy"
               @click="selectAccount(acc)"
@@ -229,41 +231,36 @@ function getInitial(name) {
               <div class="account-details">
                 <span class="account-name">{{ acc.name }}</span>
                 <span class="account-email">{{ acc.email }}</span>
+                <span v-if="acc.role" class="account-type">{{ acc.role }}</span>
               </div>
             </button>
 
-            <!-- Use another account -->
-            <button type="button" class="account-row another-account-row" :disabled="busy" @click="showCustomInput = true">
-              <div class="avatar-circle another">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </div>
-              <div class="account-details">
-                <span class="account-name">Use another account</span>
-              </div>
-            </button>
-          </div>
-
-          <div v-else class="custom-email-input-wrap">
-            <form class="custom-email-form" @submit.prevent="submitCustomEmail">
-              <label class="custom-email-label">
-                Email address
-                <input v-model="customEmail" type="email" placeholder="username@fpt.edu.vn" required class="custom-email-input" :disabled="busy" />
-              </label>
-              <div class="custom-email-actions">
-                <button type="button" class="custom-email-back-btn" @click="showCustomInput = false" :disabled="busy">Back</button>
-                <button type="submit" class="custom-email-submit-btn" :disabled="busy">Sign In</button>
-              </div>
-            </form>
+            <div v-if="!accounts.length" class="custom-email-input-wrap">
+              <form class="custom-email-form" @submit.prevent="submitCustomEmail">
+                <label class="custom-email-label">
+                  Enter your email
+                  <input
+                    v-model="customEmail"
+                    type="email"
+                    class="custom-email-input"
+                    placeholder="name@fpt.edu.vn"
+                    autocomplete="email"
+                    :disabled="busy"
+                  />
+                </label>
+                <div class="custom-email-actions">
+                  <button type="button" class="custom-email-back-btn" :disabled="busy" @click="step = 'location'; selectedLocation = '';">Back</button>
+                  <button type="submit" class="custom-email-submit-btn" :disabled="busy || !customEmail">Next</button>
+                </div>
+              </form>
+            </div>
           </div>
 
           <p v-if="loginError" class="google-error-msg">{{ loginError }}</p>
           <p v-if="error" class="google-error-msg">{{ error }}</p>
         </div>
       </div>
-      
+
       <!-- Footer bar for the Google screen -->
       <footer class="google-footer">
         <div class="footer-content">
@@ -611,6 +608,20 @@ function getInitial(name) {
   font-size: 12px;
   color: #c4c7c5;
   margin-top: 2px;
+}
+
+.account-type {
+  align-self: flex-start;
+  margin-top: 5px;
+  background: #2a2a2c;
+  color: #c4c7c5;
+  border: 1px solid #444746;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
 }
 
 .google-error-msg {

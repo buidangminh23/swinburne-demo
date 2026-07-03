@@ -1,3 +1,12 @@
+import { isProductionMode } from "./config.js";
+import {
+  analyzeBorrowRequest,
+  applyPartialReturnSnapshot,
+  availableUnitsForEquipment,
+  buildEquipmentTimelines,
+  buildSmartAlerts
+} from "./demoOperations.js";
+
 const DAY = 24 * 60 * 60 * 1000;
 const DEFAULT_ITEM_QUANTITY = 5;
 const fromNow = (ms) => new Date(Date.now() + ms).toISOString();
@@ -7,13 +16,6 @@ const relativeDate = (days, hours) => {
   d.setHours(hours, 0, 0, 0);
   return d.toISOString();
 };
-
-const HOLD_STATUSES = ["RESERVED", "BORROWED"];
-
-function rangesOverlap(aStart, aEnd, bStart, bEnd) {
-  return new Date(aStart).getTime() < new Date(bEnd).getTime() &&
-    new Date(bStart).getTime() < new Date(aEnd).getTime();
-}
 
 function requestWindow(request) {
   return {
@@ -26,7 +28,7 @@ function isImmediateStart(startDate) {
   if (!startDate) {
     return true;
   }
-  return new Date(startDate).getTime() <= Date.now() + 60 * 1000;
+  return new Date(startDate).getTime() <= Date.now();
 }
 
 function withDefaultItemQuantity(item) {
@@ -36,28 +38,60 @@ function withDefaultItemQuantity(item) {
   };
 }
 
+function generateStudentId(email) {
+  const prefix = email.split("@")[0].toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < prefix.length; i++) {
+    hash = (hash * 31 + prefix.charCodeAt(i)) & 0xfffff;
+  }
+  return "SWH" + String(hash % 100000).padStart(5, "0");
+}
+
 const defaultUsers = [
-  { id: 1, name: "LECTURER", email: "buidangminh23@fpt.edu.vn", role: "LECTURER" },
-  { id: 2, name: "SUPPORT", email: "taolaminhanh1@fpt.edu.vn", role: "SUPPORT" },
-  { id: 3, name: "ADMIN", email: "dindungwork@fpt.edu.vn", role: "ADMIN" },
-  { id: 4, name: "STUDENT", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", lecturerId: 1 },
-  { id: 5, name: "EVENT_STAFF", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF" },
-  { id: 7, name: "SUPPORT", email: "linhnt89_fe@fpt.edu.vn", role: "SUPPORT" },
-  { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER" },
-  { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER" },
-  { id: 11, name: "OPERATIONS", email: "operations@fpt.edu.vn", role: "OPERATIONS" },
-  { id: 12, name: "STUDENT 2", email: "student2@fpt.edu.vn", role: "STUDENT", lecturerId: 1 }
+  { id: 1, name: "Minh Bui Dang", email: "buidangminh23@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminh23@fpt.edu.vn"), groupName: "Teaching Team", className: "COS20031" },
+  { id: 2, name: "Nguyen Minh Anh", email: "taolaminhanh1@fpt.edu.vn", role: "EQUIPMENT_MANAGER", studentId: generateStudentId("taolaminhanh1@fpt.edu.vn"), groupName: "IT Support", className: "Support Desk" },
+  { id: 3, name: "Dinh Dung", email: "dindungwork@fpt.edu.vn", role: "ADMIN", studentId: generateStudentId("dindungwork@fpt.edu.vn"), groupName: "Admin", className: "Operations" },
+  { id: 4, name: "Dang Minh Bui", email: "buidangminh.lh@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("buidangminh.lh@fpt.edu.vn"), lecturerId: 1, groupName: "Student Cohort", className: "SE Class" },
+  { id: 5, name: "Nguyen Hoang Hiep", email: "hiheho911@fpt.edu.vn", role: "EVENT_STAFF", studentId: generateStudentId("hiheho911@fpt.edu.vn"), groupName: "Event Team", className: "Campus Events" },
+  { id: 7, name: "Nguyen Thanh Linh", email: "linhnt89_fe@fpt.edu.vn", role: "EQUIPMENT_MANAGER", studentId: generateStudentId("linhnt89_fe@fpt.edu.vn"), groupName: "IT Support", className: "Front Desk" },
+  { id: 9, name: "Test Account", email: "cacc80077@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("cacc80077@fpt.edu.vn"), groupName: "Teaching Team", className: "Demo Class" },
+  { id: 10, name: "Minh", email: "buidangminhcontentcreator@fpt.edu.vn", role: "LECTURER", studentId: generateStudentId("buidangminhcontentcreator@fpt.edu.vn"), groupName: "Media Team", className: "Content Lab" },
+  { id: 11, name: "Operations", email: "operations@fpt.edu.vn", role: "SERVER_MANAGER", studentId: generateStudentId("operations@fpt.edu.vn"), groupName: "Operations", className: "Asset Control" },
+  { id: 12, name: "Nguyen Tuan Anh", email: "student2@fpt.edu.vn", role: "STUDENT", studentId: generateStudentId("student2@fpt.edu.vn"), lecturerId: 1, groupName: "Student Cohort", className: "SE Class" }
 ];
 
 const defaultEquipment = [
+  {
+    id: 50,
+    assetCode: "SRV-GPU-001",
+    name: "GPU Compute Server",
+    category: "Server",
+    location: "HN-DC-1",
+    status: "AVAILABLE",
+    conditionNotes: "Shared GPU server for research compute",
+    accessories: [],
+    updatedAt: new Date("2026-05-27T08:30:00.000Z").toISOString()
+  },
+  {
+    id: 51,
+    assetCode: "SRV-WEB-002",
+    name: "Web Hosting Server",
+    category: "Server",
+    location: "HN-DC-1",
+    status: "AVAILABLE",
+    conditionNotes: "Hosting / staging server for student projects",
+    accessories: [],
+    updatedAt: new Date("2026-05-27T08:30:00.000Z").toISOString()
+  },
   {
     id: 1,
     assetCode: "Logitech-LRC-001",
     name: "Logitech Rally Camera Kit",
     category: "Video",
-    location: "HN-ATC-625",
+    location: "HN-AT-6.25",
     status: "AVAILABLE",
     conditionNotes: "Ready for classroom recording",
+    accessories: ["HDMI cable", "USB-C cable", "Remote", "Tripod mount"],
     updatedAt: new Date("2026-05-27T08:30:00.000Z").toISOString()
   },
   {
@@ -67,7 +101,8 @@ const defaultEquipment = [
     category: "Teaching",
     location: "HN-LIB-DESK",
     status: "BORROWED",
-    conditionNotes: "Borrowed for tutorial room HN-ATC-625",
+    conditionNotes: "Borrowed for tutorial room HN-AT-6.25",
+    accessories: ["USB receiver", "AAA batteries", "Carry pouch"],
     updatedAt: new Date("2026-05-27T09:10:00.000Z").toISOString()
   },
   {
@@ -75,9 +110,10 @@ const defaultEquipment = [
     assetCode: "Epson-PPR-003",
     name: "Portable Projector",
     category: "Display",
-    location: "HN-BA-701",
+    location: "HN-BA-7.01",
     status: "MAINTENANCE",
     conditionNotes: "Lamp replacement required",
+    accessories: ["Power cable", "HDMI cable", "Remote"],
     updatedAt: new Date("2026-05-26T17:15:00.000Z").toISOString()
   },
   {
@@ -85,9 +121,10 @@ const defaultEquipment = [
     assetCode: "Elgato-HCA-004",
     name: "HDMI Capture Adapter",
     category: "Video",
-    location: "HN-ATC-628",
+    location: "HN-AT-6.28",
     status: "AVAILABLE",
     conditionNotes: "Checked by support staff",
+    accessories: ["HDMI cable", "USB cable"],
     updatedAt: new Date("2026-05-27T07:45:00.000Z").toISOString()
   },
   {
@@ -98,57 +135,8 @@ const defaultEquipment = [
     location: "HN-MED-DESK",
     status: "AVAILABLE",
     conditionNotes: "Batteries replaced",
+    accessories: ["2 lapel mics", "Receiver", "Charging cable", "Carry case"],
     updatedAt: new Date("2026-05-27T10:20:00.000Z").toISOString()
-  },
-  {
-    id: 6,
-    assetCode: "VOV-GIA-006",
-    name: "Vovinam Protective Gear",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "Standard size L, good condition",
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 7,
-    assetCode: "VOV-GAN-007",
-    name: "Boxing Gloves",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "12oz, red colour",
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 8,
-    assetCode: "VOV-CON-008",
-    name: "Wooden Nunchaku",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "Linked with cord, polished",
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 9,
-    assetCode: "VOV-THA-009",
-    name: "Training Mat",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "EVA foam, blue/red reversible",
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 10,
-    assetCode: "VOV-KIE-010",
-    name: "Wooden Sword",
-    category: "Vovinam",
-    location: "HN-VOVINAM",
-    status: "AVAILABLE",
-    conditionNotes: "Bokken type, oak wood",
-    updatedAt: new Date().toISOString()
   }
 ];
 
@@ -162,7 +150,7 @@ const defaultBorrowRequests = [
     id: 1,
     equipmentId: 1,
     lecturerId: 1,
-    classroom: "ATC 625",
+    classroom: "HN-AT-6.25",
     startDate: relativeDate(0, 14),
     dueAt: relativeDate(0, 16),
     returnedAt: null,
@@ -180,7 +168,7 @@ const defaultBorrowRequests = [
     id: 3,
     equipmentId: 2,
     lecturerId: 1,
-    classroom: "EN402",
+    classroom: "HN-EN-4.02",
     startDate: relativeDate(0, 8),
     dueAt: relativeDate(0, 12),
     returnedAt: null,
@@ -198,7 +186,7 @@ const defaultBorrowRequests = [
     id: 5,
     equipmentId: 4,
     lecturerId: 4,
-    classroom: "ATC 625",
+    classroom: "HN-AT-6.25",
     startDate: relativeDate(-4, 10),
     dueAt: relativeDate(-4, 12),
     returnedAt: relativeDate(-4, 12),
@@ -217,7 +205,7 @@ const defaultBorrowRequests = [
     id: 6,
     equipmentId: 4,
     lecturerId: 1,
-    classroom: "EN403",
+    classroom: "HN-EN-4.03",
     startDate: relativeDate(1, 16),
     dueAt: relativeDate(1, 20),
     returnedAt: null,
@@ -235,7 +223,7 @@ const defaultBorrowRequests = [
     id: 7,
     equipmentId: 5,
     lecturerId: 4,
-    classroom: "EN402",
+    classroom: "HN-EN-4.02",
     startDate: relativeDate(0, 18),
     dueAt: relativeDate(0, 20),
     returnedAt: null,
@@ -248,136 +236,12 @@ const defaultBorrowRequests = [
     unitOrProject: "COS20031.1",
     quantity: 1
   },
-  // Equipment 6: Vovinam Protective Gear
-  {
-    id: 8,
-    equipmentId: 6,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(0, 10),
-    dueAt: relativeDate(0, 12),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Martial arts practice",
-    createdAt: relativeDate(-1, 8),
-    updatedAt: relativeDate(-1, 8),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 2
-  },
-  {
-    id: 9,
-    equipmentId: 6,
-    lecturerId: 1,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Official class training session",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "FPT",
-    unitOrProject: "Study",
-    quantity: 5
-  },
-  // Equipment 7: Boxing Gloves
-  {
-    id: 10,
-    equipmentId: 7,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(0, 10),
-    dueAt: relativeDate(0, 12),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Martial arts practice",
-    createdAt: relativeDate(-1, 8),
-    updatedAt: relativeDate(-1, 8),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 2
-  },
-  {
-    id: 11,
-    equipmentId: 7,
-    lecturerId: 1,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Official class training session",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "FPT",
-    unitOrProject: "Study",
-    quantity: 4
-  },
-  // Equipment 8: Wooden Nunchaku
-  {
-    id: 12,
-    equipmentId: 8,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(2, 8),
-    dueAt: relativeDate(2, 10),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Nunchaku practice",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 2
-  },
-  // Equipment 9: Training Mat
-  {
-    id: 13,
-    equipmentId: 9,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(0, 10),
-    dueAt: relativeDate(0, 12),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Training floor setups",
-    createdAt: relativeDate(-1, 8),
-    updatedAt: relativeDate(-1, 8),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 5
-  },
-  // Equipment 10: Wooden Sword
-  {
-    id: 14,
-    equipmentId: 10,
-    lecturerId: 1,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "BORROWED",
-    handoverNotes: "Wooden sword kata drills",
-    createdAt: relativeDate(0, 8),
-    updatedAt: relativeDate(0, 8),
-    purpose: "CLASSROOM",
-    program: "FPT",
-    unitOrProject: "Study",
-    quantity: 3
-  },
   // Pending Approval Requests for Demo
   {
     id: 15,
     equipmentId: 1,
     lecturerId: 1,
-    classroom: "ATC 625",
+    classroom: "HN-AT-6.25",
     startDate: relativeDate(1, 9),
     dueAt: relativeDate(1, 11),
     returnedAt: null,
@@ -391,27 +255,10 @@ const defaultBorrowRequests = [
     quantity: 1
   },
   {
-    id: 16,
-    equipmentId: 6,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "REQUESTED",
-    handoverNotes: "Student training gear request",
-    createdAt: relativeDate(0, -1),
-    updatedAt: relativeDate(0, -1),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 3
-  },
-  {
     id: 18,
     equipmentId: 4,
     lecturerId: 10,
-    classroom: "EN402",
+    classroom: "HN-EN-4.02",
     startDate: relativeDate(1, 10),
     dueAt: relativeDate(1, 12),
     returnedAt: null,
@@ -425,27 +272,10 @@ const defaultBorrowRequests = [
     quantity: 1
   },
   {
-    id: 19,
-    equipmentId: 7,
-    lecturerId: 4,
-    classroom: "Vovinam Room",
-    startDate: relativeDate(1, 14),
-    dueAt: relativeDate(1, 16),
-    returnedAt: null,
-    status: "REQUESTED",
-    handoverNotes: "Extra gloves for sparring session",
-    createdAt: relativeDate(0, -1),
-    updatedAt: relativeDate(0, -1),
-    purpose: "CLASSROOM",
-    program: "Swinburne",
-    unitOrProject: "Practice",
-    quantity: 2
-  },
-  {
     id: 20,
     equipmentId: 5,
     lecturerId: 12,
-    classroom: "EN402",
+    classroom: "HN-EN-4.02",
     startDate: relativeDate(1, 9),
     dueAt: relativeDate(1, 11),
     returnedAt: null,
@@ -460,34 +290,58 @@ const defaultBorrowRequests = [
   }
 ];
 
-const semesters = [
+const defaultSemesters = [
   { id: 1, code: "2026-S1", name: "Semester 1 2026", startDate: "2026-03-02", endDate: "2026-06-19" }
 ];
 
-const units = [
-  { id: 1, code: "COS20031", name: "Technical Software Development", semesterId: 1, lecturerId: 1, dayOfWeek: 1, startHour: 9, endHour: 11, classroom: "HN-DT1-9.1" },
-  { id: 2, code: "COS30008", name: "Data Structures and Patterns", semesterId: 1, lecturerId: 1, dayOfWeek: 3, startHour: 13, endHour: 15, classroom: "HN-DT1-9.2" },
-  { id: 3, code: "COS20007", name: "Object Oriented Programming", semesterId: 1, lecturerId: 10, dayOfWeek: 2, startHour: 10, endHour: 12, classroom: "HN-ATC-6.25" }
+const defaultUnits = [
+  { id: 1, code: "COS20031", name: "Technical Software Development", semesterId: 1, lecturerId: 1, dayOfWeek: 1, startHour: 9, endHour: 11, classroom: "HN-DT-9.1" },
+  { id: 2, code: "COS30008", name: "Data Structures and Patterns", semesterId: 1, lecturerId: 1, dayOfWeek: 3, startHour: 13, endHour: 15, classroom: "HN-DT-9.2" },
+  { id: 3, code: "COS20007", name: "Object Oriented Programming", semesterId: 1, lecturerId: 10, dayOfWeek: 2, startHour: 10, endHour: 12, classroom: "HN-AT-6.25" }
 ];
 
-const researchProjects = [
-  { id: 1, name: "Data Science Capstone", lecturerId: 1, startDate: "2026-03-09", endDate: "2026-06-12", memberIds: [4, 12] },
-  { id: 2, name: "Computer Vision Lab", lecturerId: 10, startDate: "2026-03-09", endDate: "2026-06-12", memberIds: [12] }
-];
-
-const enrollments = [
+const defaultEnrollments = [
   { studentId: 4, unitId: 1 },
   { studentId: 4, unitId: 2 },
   { studentId: 12, unitId: 1 }
 ];
 
-const schedules = [
+const defaultResearchProjects = [
+  { id: 1, name: "Data Science Capstone", lecturerId: 1, startDate: "2026-03-09", endDate: "2026-06-12", memberIds: [4, 12] },
+  { id: 2, name: "Computer Vision Lab", lecturerId: 10, startDate: "2026-03-09", endDate: "2026-06-12", memberIds: [12] }
+];
+
+const defaultSchedules = [
   { id: 1, ownerType: "CLASS", ownerId: 1, startDate: "2026-03-02", endDate: "2026-06-19" },
   { id: 2, ownerType: "CLASS", ownerId: 2, startDate: "2026-03-04", endDate: "2026-06-19" },
   { id: 3, ownerType: "PROJECT", ownerId: 1, startDate: "2026-03-09", endDate: "2026-06-12" }
 ];
 
-const SEED_VERSION = "2026-06-17-five-units-per-item";
+const SEED_VERSION = "2026-06-20-units-no-vovinam-v7";
+const AUDIT_KEY = "swin-demo-audit-log";
+const PREF_KEY = "swin-demo-notification-preferences";
+const REMINDER_KEY = "swin-demo-reminder-rules";
+const UNITS_KEY = "swin-demo-units";
+
+const defaultNotificationPreferences = {
+  enabledTypes: [
+    "BORROW_REQUEST",
+    "REQUEST_APPROVED",
+    "REQUEST_FORWARDED",
+    "REQUEST_DENIED",
+    "EQUIPMENT_CHECKED_OUT",
+    "EQUIPMENT_RETURNED",
+    "OVERDUE_REMINDER",
+    "MAINTENANCE_ALERT"
+  ],
+  channels: ["inApp"],
+  quietHours: false
+};
+
+const defaultReminderRules = [
+  { id: 1, type: "NEAR_DUE", enabled: true, offsetHours: 24 },
+  { id: 2, type: "OVERDUE", enabled: true, offsetHours: 0 }
+];
 
 (() => {
   try {
@@ -496,6 +350,10 @@ const SEED_VERSION = "2026-06-17-five-units-per-item";
       localStorage.removeItem("swin-demo-equipment");
       localStorage.removeItem("swin-demo-borrowRequests");
       localStorage.removeItem("swin-demo-notifications");
+      localStorage.removeItem(AUDIT_KEY);
+      localStorage.removeItem(PREF_KEY);
+      localStorage.removeItem(REMINDER_KEY);
+      localStorage.removeItem(UNITS_KEY);
       localStorage.setItem("swin-demo-seed-version", SEED_VERSION);
     }
   } catch {
@@ -506,9 +364,9 @@ const SEED_VERSION = "2026-06-17-five-units-per-item";
 const users = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-users");
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : (isProductionMode ? [] : defaultUsers);
   } catch {
-    return [];
+    return isProductionMode ? [] : defaultUsers;
   }
 })();
 
@@ -524,17 +382,66 @@ const equipment = (() => {
 const borrowRequests = (() => {
   try {
     const saved = localStorage.getItem("swin-demo-borrowRequests");
+    const validEquipmentIds = new Set(equipment.map((item) => item.id));
+    if (saved) {
+      return JSON.parse(saved).filter((request) => validEquipmentIds.has(request.equipmentId));
+    }
+    const seeded = defaultBorrowRequests.filter((request) => validEquipmentIds.has(request.equipmentId));
+    return isProductionMode ? [] : seeded;
+  } catch {
+    const validEquipmentIds = new Set(equipment.map((item) => item.id));
+    return isProductionMode ? [] : defaultBorrowRequests.filter((request) => validEquipmentIds.has(request.equipmentId));
+  }
+})();
+
+const auditLog = (() => {
+  try {
+    const saved = localStorage.getItem(AUDIT_KEY);
     return saved ? JSON.parse(saved) : [];
   } catch {
     return [];
   }
 })();
 
+const notificationPreferences = (() => {
+  try {
+    const saved = localStorage.getItem(PREF_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+})();
+
+const reminderRules = (() => {
+  try {
+    const saved = localStorage.getItem(REMINDER_KEY);
+    return saved ? JSON.parse(saved) : defaultReminderRules;
+  } catch {
+    return defaultReminderRules;
+  }
+})();
+
+const semesters = defaultSemesters.map((semester) => ({ ...semester }));
+const units = (() => {
+  try {
+    const saved = localStorage.getItem(UNITS_KEY);
+    return saved ? JSON.parse(saved) : defaultUnits.map((unit) => ({ ...unit }));
+  } catch {
+    return defaultUnits.map((unit) => ({ ...unit }));
+  }
+})();
+const enrollments = defaultEnrollments.map((enrollment) => ({ ...enrollment }));
+const researchProjects = defaultResearchProjects.map((project) => ({ ...project, memberIds: [...project.memberIds] }));
+const schedules = defaultSchedules.map((schedule) => ({ ...schedule }));
+
 function persistState() {
   try {
     localStorage.setItem("swin-demo-users", JSON.stringify(users));
     localStorage.setItem("swin-demo-equipment", JSON.stringify(equipment));
     localStorage.setItem("swin-demo-borrowRequests", JSON.stringify(borrowRequests));
+    localStorage.setItem(AUDIT_KEY, JSON.stringify(auditLog));
+    localStorage.setItem(PREF_KEY, JSON.stringify(notificationPreferences));
+    localStorage.setItem(REMINDER_KEY, JSON.stringify(reminderRules));
   } catch (e) {
     console.error("Failed to persist state", e);
   }
@@ -581,12 +488,15 @@ function attachEquipment(request) {
   return { ...request, equipment: item, lecturer };
 }
 
-const APPROVER_ROLES = ["ADMIN", "SUPPORT", "OPERATIONS"];
+const APPROVER_ROLES = ["ADMIN", "EQUIPMENT_MANAGER", "SERVER_MANAGER"];
 
 function canApproveRequest(actorId, request) {
   const actor = users.find((candidate) => candidate.id === actorId);
   if (!actor) {
     return false;
+  }
+  if (request.assignedManagerId != null) {
+    return actor.id === request.assignedManagerId || actor.role === "ADMIN";
   }
   if (actor.role === "LECTURER") {
     const requester = users.find((candidate) => candidate.id === request.lecturerId);
@@ -599,14 +509,42 @@ function nextId(rows) {
   return rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
 }
 
-function lecturerTeachesStudent(lecturerId, studentId) {
-  return enrollments.some((enrollment) => {
-    if (enrollment.studentId !== studentId) {
-      return false;
-    }
-    const unit = units.find((candidate) => candidate.id === enrollment.unitId);
-    return unit?.lecturerId === lecturerId;
-  });
+function unitIdsForStudent(studentId) {
+  return enrollments.filter((enrollment) => enrollment.studentId === studentId).map((enrollment) => enrollment.unitId);
+}
+
+function unitsForStudent(studentId) {
+  const ids = new Set(unitIdsForStudent(studentId));
+  return units.filter((unit) => ids.has(unit.id));
+}
+
+function projectsForStudent(studentId) {
+  return researchProjects.filter((project) => project.memberIds.includes(studentId));
+}
+
+function teachesStudent(lecturerId, studentId) {
+  const taughtUnitIds = new Set(units.filter((unit) => unit.lecturerId === lecturerId).map((unit) => unit.id));
+  return enrollments.some((enrollment) => enrollment.studentId === studentId && taughtUnitIds.has(enrollment.unitId));
+}
+
+function recordAudit({ action, actorId = null, actorName = "", entityType, entityId, details = {} }) {
+  const actor = actorId ? users.find((candidate) => candidate.id === actorId) : null;
+  const entry = {
+    id: nextId(auditLog),
+    action,
+    actorId,
+    actorName: actor?.email ?? actor?.name ?? actorName,
+    actor,
+    entityType,
+    entityId,
+    details,
+    createdAt: new Date().toISOString()
+  };
+  auditLog.unshift(entry);
+  if (auditLog.length > 250) {
+    auditLog.length = 250;
+  }
+  return entry;
 }
 
 function parseCustody(value) {
@@ -659,22 +597,7 @@ function computeDisplayStatus(item, availableNow) {
 }
 
 function demoAvailableUnits(equipmentId, window, excludeRequestId = null) {
-  const item = equipment.find((candidate) => candidate.id === equipmentId);
-  if (!item) {
-    return 0;
-  }
-  if (["MAINTENANCE", "RETIRED"].includes(item.status)) {
-    return 0;
-  }
-  const occupied = borrowRequests
-    .filter((request) =>
-      request.equipmentId === equipmentId &&
-      request.id !== excludeRequestId &&
-      HOLD_STATUSES.includes(request.status) &&
-      rangesOverlap(requestWindow(request).start, requestWindow(request).end, window.start, window.end)
-    )
-    .reduce((sum, request) => sum + (request.quantity ?? 1), 0);
-  return DEFAULT_ITEM_QUANTITY - occupied;
+  return availableUnitsForEquipment(equipment, borrowRequests, equipmentId, window, excludeRequestId);
 }
 
 function recomputeStoredStatus(item) {
@@ -703,6 +626,15 @@ function autoReturnExpiredRequests() {
         recomputeStoredStatus(item);
         item.updatedAt = now.toISOString();
       }
+
+      recordAudit({
+        action: "AUTO_RETURNED",
+        actorId: null,
+        actorName: "System",
+        entityType: "borrowRequest",
+        entityId: r.id,
+        details: { dueAt: r.dueAt }
+      });
       changed = true;
     }
   }
@@ -740,30 +672,42 @@ function closeTransferredBorrow(request, recipient, actorName, at) {
   request.custodyLog = JSON.stringify(custody);
 }
 
+function getDefaultNotes(purpose) {
+  if (purpose === "CLASSROOM") return "Collected for classroom session";
+  if (purpose === "RESEARCH") return "Equipment needed for research project activity";
+  if (purpose === "LAB") return "Required for laboratory practical session";
+  if (purpose === "EVENT") return "Collected for campus event support";
+  return "Equipment request for academic purpose";
+}
+
 class DemoRepository {
   async login(email) {
+    autoReturnExpiredRequests();
     let candidate = users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
     if (!candidate) {
       const newId = nextId(users);
-      let role = "ADMIN"; // Default to admin for convenience
+      let role = "STUDENT";
       const namePart = email.split("@")[0].toLowerCase();
       if (namePart.includes("student") || namePart.includes("std")) {
         role = "STUDENT";
       } else if (namePart.includes("lecturer") || namePart.includes("lec") || namePart.includes("teacher")) {
         role = "LECTURER";
       } else if (namePart.includes("support")) {
-        role = "SUPPORT";
+        role = "EQUIPMENT_MANAGER";
       } else if (namePart.includes("operations") || namePart.includes("ops")) {
-        role = "OPERATIONS";
+        role = "SERVER_MANAGER";
       } else if (namePart.includes("staff")) {
         role = "EVENT_STAFF";
       }
-      
+
       candidate = {
         id: newId,
         name: namePart.toUpperCase(),
         email: email.toLowerCase(),
-        role: role
+        role: role,
+        studentId: generateStudentId(email),
+        groupName: role === "STUDENT" ? "Student Cohort" : "Demo Users",
+        className: role === "STUDENT" ? "Unassigned Class" : "Staff"
       };
       users.push(candidate);
       persistState();
@@ -785,6 +729,7 @@ class DemoRepository {
       const availableNow = demoAvailableUnits(item.id, { start: now, end: now });
       return {
         ...item,
+        accessories: item.accessories ?? [],
         totalQuantity: DEFAULT_ITEM_QUANTITY,
         availableNow: Math.max(0, availableNow),
         displayStatus: computeDisplayStatus(item, availableNow),
@@ -797,7 +742,7 @@ class DemoRepository {
     autoReturnExpiredRequests();
     const now = new Date();
     return borrowRequests
-      .filter((request) =>
+      .filter((request) => 
         !["RETURNED", "CANCELLED"].includes(request.status) ||
         (request.status === "RETURNED" && new Date(request.dueAt) < now)
       )
@@ -811,6 +756,16 @@ class DemoRepository {
       .filter((request) => request.lecturerId === userId)
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
       .map(attachEquipment);
+  }
+
+  async analyzeBorrow(input, requesterId = null) {
+    return analyzeBorrowRequest({
+      equipment,
+      users,
+      requests: borrowRequests,
+      payload: input,
+      requesterId: requesterId ?? input.lecturerId
+    });
   }
 
   async borrowEquipment(input) {
@@ -837,7 +792,13 @@ class DemoRepository {
     }
     const user = users.find((candidate) => candidate.id === input.lecturerId);
     const isStudent = user?.role === "STUDENT";
-    const transferSource = !isStudent && item.status === "BORROWED"
+    const purpose = input.purpose ?? "CLASSROOM";
+    const requiresApproval = isStudent || purpose === "RESEARCH" || purpose === "EVENT" || purpose === "SERVER";
+    // Taking over an item another lecturer is actively borrowing (auto-returning
+    // their loan) is reserved for EVENT_STAFF. Ordinary lecturers/managers
+    // borrowing an in-use item must be told it is unavailable, never silently
+    // eject the current holder.
+    const transferSource = user?.role === "EVENT_STAFF" && !requiresApproval && item.status === "BORROWED"
       ? findLecturerBorrowForTransfer(item.id, input.lecturerId, quantity)
       : null;
     const available = demoAvailableUnits(item.id, { start, end });
@@ -846,9 +807,9 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
+    const preflight = await this.analyzeBorrow(input, input.lecturerId);
 
-    const status = isStudent ? "REQUESTED" : "BORROWED";
-    const purpose = input.purpose ?? "CLASSROOM";
+    const status = requiresApproval ? "REQUESTED" : "BORROWED";
     if (user?.role === "EVENT_STAFF" && purpose !== "EVENT") {
       const error = new Error("Event staff can only borrow equipment for event support");
       error.status = 400;
@@ -860,7 +821,7 @@ class DemoRepository {
     if (purpose === "EVENT") {
       custody.push({
         at: now,
-        action: isStudent ? "REQUESTED" : "CHECKED_OUT",
+        action: "REQUESTED",
         actor: user?.name ?? `User ${input.lecturerId}`,
         notes: input.handoverNotes ?? ""
       });
@@ -874,11 +835,12 @@ class DemoRepository {
       id: nextId(borrowRequests),
       equipmentId: item.id,
       lecturerId: input.lecturerId,
+      assignedManagerId: input.assignedManagerId ?? null,
       classroom: input.classroom ?? null,
       dueAt: end,
       returnedAt: null,
       status,
-      handoverNotes: input.handoverNotes ?? "",
+      handoverNotes: (input.handoverNotes && input.handoverNotes.trim()) ? input.handoverNotes : getDefaultNotes(purpose),
       createdAt: now,
       updatedAt: now,
       purpose,
@@ -890,7 +852,21 @@ class DemoRepository {
       custodyLog: JSON.stringify(custody)
     };
     borrowRequests.push(request);
-    if (!isStudent) {
+    recordAudit({
+      action: "BORROW_REQUEST_CREATED",
+      actorId: input.lecturerId,
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: {
+        equipmentId: item.id,
+        quantity,
+        startDate: start,
+        dueAt: end,
+        duplicates: preflight.duplicates.length,
+        transferredFromRequestId: transferSource?.id ?? null
+      }
+    });
+    if (status === "BORROWED") {
       const transferHolder = transferSource ? users.find((candidate) => candidate.id === transferSource.lecturerId) : null;
       item.conditionNotes = transferSource
         ? `Transferred from ${transferHolder?.name ?? "lecturer"} to ${user?.name ?? "staff"}`
@@ -917,32 +893,35 @@ class DemoRepository {
     }
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
 
-    const borrowedQuantity = request.quantity ?? 1;
-    const requestedReturn = Number(input.returnedQuantity ?? borrowedQuantity);
-    request.status = "RETURNED";
-    request.returnedQuantity = Math.min(
-      Math.max(0, Number.isFinite(requestedReturn) ? requestedReturn : borrowedQuantity),
-      borrowedQuantity
-    );
-    request.isStatusOk = input.isStatusOk !== false;
-    request.damageReport = input.damageReport ?? "";
-    request.returnedAt = new Date().toISOString();
-    request.updatedAt = new Date().toISOString();
+    Object.assign(request, applyPartialReturnSnapshot(request, {
+      ...input,
+      at: new Date().toISOString()
+    }));
 
-    if (item && !request.isStatusOk) {
-      item.status = "MAINTENANCE";
-      item.conditionNotes = `Returned damaged: ${request.damageReport}`;
+    if (item) {
+      if (!request.isStatusOk) {
+        item.status = "MAINTENANCE";
+        item.conditionNotes = `Returned with issue: ${request.damageReport || request.conditionAfter || "Accessory or condition issue"}`;
+      } else if (request.status === "RETURNED") {
+        recomputeStoredStatus(item);
+        item.conditionNotes = request.conditionAfter || "Returned and confirmed OK";
+      }
       item.updatedAt = new Date().toISOString();
     }
 
-    const custody = parseCustody(request.custodyLog);
-    custody.push({
-      at: request.returnedAt,
-      action: request.isStatusOk ? "RETURNED_OK" : "RETURNED_DAMAGED",
-      actor: input.actorName ?? "Staff",
-      notes: request.damageReport || ""
+    recordAudit({
+      action: request.status === "RETURNED" ? "RETURN_CONFIRMED" : "PARTIAL_RETURN_RECORDED",
+      actorId: input.actorId ?? null,
+      actorName: input.actorName ?? "Staff",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: {
+        returnedQuantity: request.returnedQuantity,
+        remainingQuantity: request.remainingQuantity,
+        receiptId: request.latestReceipt?.id,
+        accessoriesMissing: request.accessoriesMissing ?? []
+      }
     });
-    request.custodyLog = JSON.stringify(custody);
     persistState();
     return attachEquipment(request);
   }
@@ -961,6 +940,19 @@ class DemoRepository {
     }
     request.status = "BORROWED";
     request.updatedAt = new Date().toISOString();
+    request.latestReceipt = {
+      id: `RCPT-${request.id}-${Date.now()}`,
+      type: "HANDOVER",
+      requestId: request.id,
+      equipmentId: request.equipmentId,
+      lecturerId: request.lecturerId,
+      actorName: input.actorName ?? "Staff",
+      conditionBefore: input.conditionBefore ?? "",
+      photoBeforeUrl: input.photoBeforeUrl ?? "",
+      accessoriesReturned: [],
+      accessoriesMissing: [],
+      createdAt: request.updatedAt
+    };
     if (request.purpose === "EVENT") {
       const log = parseCustody(request.custodyLog);
       log.push({
@@ -971,6 +963,13 @@ class DemoRepository {
       });
       request.custodyLog = JSON.stringify(log);
     }
+    recordAudit({
+      action: "EQUIPMENT_CHECKED_OUT",
+      actorName: input.actorName ?? "Staff",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: { receiptId: request.latestReceipt.id }
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -987,6 +986,14 @@ class DemoRepository {
       item.conditionNotes = input.conditionNotes;
     }
     item.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "EQUIPMENT_STATUS_UPDATED",
+      actorId: input.actorId ?? null,
+      actorName: input.actorName ?? "",
+      entityType: "equipment",
+      entityId: item.id,
+      details: { status: item.status, conditionNotes: item.conditionNotes }
+    });
     persistState();
     return item;
   }
@@ -1008,6 +1015,23 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
+    const approver = users.find((candidate) => candidate.id === userId);
+    const requester = users.find((candidate) => candidate.id === request.lecturerId);
+    if (request.purpose === "SERVER" && requester?.role === "STUDENT" && approver?.role === "LECTURER") {
+      const serverManager = users.find((candidate) => candidate.role === "SERVER_MANAGER");
+      request.assignedManagerId = serverManager?.id ?? null;
+      request.approvedById = userId;
+      request.updatedAt = new Date().toISOString();
+      recordAudit({
+        action: "SERVER_REQUEST_ENDORSED",
+        actorId: userId,
+        entityType: "borrowRequest",
+        entityId: request.id,
+        details: { routedTo: serverManager?.id ?? null }
+      });
+      persistState();
+      return attachEquipment(request);
+    }
     const item = equipment.find((candidate) => candidate.id === request.equipmentId);
     if (!item) {
       const error = new Error("Equipment not found");
@@ -1022,7 +1046,17 @@ class DemoRepository {
     }
     request.status = isImmediateStart(request.startDate) ? "BORROWED" : "RESERVED";
     request.approvedById = userId;
+    if (request.purpose === "SERVER") {
+      request.accountDetails = `Server account provisioned for ${requester?.email ?? "user"} — credentials sent separately.`;
+    }
     request.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "REQUEST_APPROVED",
+      actorId: userId,
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: { status: request.status }
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -1044,9 +1078,24 @@ class DemoRepository {
       error.status = 409;
       throw error;
     }
+    const wasHolding = ["RESERVED", "BORROWED"].includes(request.status);
     request.status = "REJECTED";
     request.deniedById = userId;
     request.updatedAt = new Date().toISOString();
+    if (wasHolding) {
+      const item = equipment.find((candidate) => candidate.id === request.equipmentId);
+      if (item) {
+        recomputeStoredStatus(item);
+        item.updatedAt = new Date().toISOString();
+      }
+    }
+    recordAudit({
+      action: "REQUEST_DENIED",
+      actorId: userId,
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: { status: request.status }
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -1068,6 +1117,14 @@ class DemoRepository {
     const newDue = input.dueAt ? new Date(input.dueAt) : new Date(currentDue.getTime() + 7 * 24 * 60 * 60 * 1000);
     request.dueAt = newDue.toISOString();
     request.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "REQUEST_EXTENDED",
+      actorId: input.actorId ?? null,
+      actorName: input.actorName ?? "",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: { dueAt: request.dueAt }
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -1079,7 +1136,7 @@ class DemoRepository {
     if (query.userId) {
       list = list.filter(r => r.lecturerId === Number(query.userId));
     }
-    
+
     if (query.status) {
       if (query.status === "OVERDUE") {
         const now = new Date();
@@ -1094,11 +1151,7 @@ class DemoRepository {
     }
 
     if (query.purpose) {
-      if (query.purpose === "VOVINAM") {
-        list = list.filter(r => r.classroom === "Vovinam Room");
-      } else {
-        list = list.filter(r => r.purpose === query.purpose);
-      }
+      list = list.filter(r => r.purpose === query.purpose);
     }
 
     if (query.search) {
@@ -1180,41 +1233,33 @@ class DemoRepository {
       throw error;
     }
     const actor = input.actorId != null ? users.find((candidate) => candidate.id === input.actorId) : null;
-    if (actor) {
-      const owner = users.find((candidate) => candidate.id === request.lecturerId);
-      const canManage = APPROVER_ROLES.includes(actor.role);
-      const isOwner = actor.id === request.lecturerId;
-      if (!canManage) {
-        if (isOwner) {
-          // Allowed to edit
-        } else if (actor.role === "LECTURER") {
-          if (!lecturerTeachesStudent(actor.id, request.lecturerId)) {
-            const error = new Error("You can only edit requests for students you teach.");
-            error.status = 403;
-            throw error;
-          }
-        } else {
-          const error = new Error("You do not have permission to edit this request.");
-          error.status = 403;
-          throw error;
-        }
+    const owner = users.find((candidate) => candidate.id === request.lecturerId);
+    const isOwner = actor != null && actor.id === request.lecturerId;
+    const canManage = actor != null && APPROVER_ROLES.includes(actor.role);
+    if (actor != null && !isOwner && !canManage) {
+      const teaches = actor.role === "LECTURER" && teachesStudent(actor.id, request.lecturerId);
+      if (!teaches) {
+        const error = new Error("You do not have permission to edit this request.");
+        error.status = 403;
+        throw error;
       }
     }
     const data = buildEditData(input, { toDate: (value) => new Date(value).toISOString() });
-    const owner = users.find((candidate) => candidate.id === request.lecturerId);
     const nextPurpose = data.purpose ?? request.purpose;
     if (owner?.role === "EVENT_STAFF" && nextPurpose !== "EVENT") {
       const error = new Error("Event staff can only borrow equipment for event support");
       error.status = 400;
       throw error;
     }
-    if (owner?.role === "STUDENT" && request.status !== "REQUESTED" && input.isExtendMode) {
+    if (request.status !== "REQUESTED" && input.isExtendMode) {
       if (data.dueAt) {
-        const origStart = request.startDate ?? request.createdAt;
-        const origDay = new Date(origStart).toDateString();
-        const newDay = new Date(data.dueAt).toDateString();
-        if (origDay !== newDay) {
-          const error = new Error("Extension is only allowed within the same day.");
+        // An extension may only push the due date later. Anchoring on the
+        // current due date (not the start date) lets multi-day loans —
+        // research projects, events — actually be extended.
+        const currentDue = new Date(request.dueAt).getTime();
+        const newDue = new Date(data.dueAt).getTime();
+        if (!(newDue > currentDue)) {
+          const error = new Error("An extension must set a later due date.");
           error.status = 400;
           throw error;
         }
@@ -1227,6 +1272,10 @@ class DemoRepository {
         }
       }
     }
+    if (data.handoverNotes !== undefined && (!data.handoverNotes || !data.handoverNotes.trim())) {
+      const nextPurpose = data.purpose ?? request.purpose;
+      data.handoverNotes = getDefaultNotes(nextPurpose);
+    }
     if (request.status === "RETURNED" && input.isExtendMode) {
       request.status = "BORROWED";
       request.returnedAt = null;
@@ -1234,6 +1283,19 @@ class DemoRepository {
     }
     Object.assign(request, data);
     request.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "REQUEST_EDITED",
+      actorId: input.actorId ?? null,
+      actorName: input.actorName ?? "",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: data
+    });
+    const item = equipment.find((candidate) => candidate.id === request.equipmentId);
+    if (item) {
+      recomputeStoredStatus(item);
+      item.updatedAt = new Date().toISOString();
+    }
     persistState();
     return attachEquipment(request);
   }
@@ -1254,6 +1316,13 @@ class DemoRepository {
     });
     request.custodyLog = JSON.stringify(log);
     request.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "CUSTODY_LOGGED",
+      actorName: entry.actor ?? "Unknown",
+      entityType: "borrowRequest",
+      entityId: request.id,
+      details: log.at(-1)
+    });
     persistState();
     return attachEquipment(request);
   }
@@ -1271,6 +1340,7 @@ class DemoRepository {
         requestId: request.id,
         status: request.status,
         purpose: request.purpose,
+        quantity: request.quantity ?? 1,
         start: request.startDate ?? request.createdAt,
         end: request.dueAt,
         borrower: users.find((user) => user.id === request.lecturerId)?.name ?? null
@@ -1282,20 +1352,84 @@ class DemoRepository {
     return users.filter((user) => user.role !== "STUDENT");
   }
 
+  async listEquipmentManagers() {
+    return users
+      .filter((user) => user.role === "EQUIPMENT_MANAGER")
+      .map((user) => ({ id: user.id, name: user.name, email: user.email, role: user.role }));
+  }
+
+  async listServerManagers() {
+    return users
+      .filter((user) => user.role === "SERVER_MANAGER")
+      .map((user) => ({ id: user.id, name: user.name, email: user.email, role: user.role }));
+  }
+
+  async listLecturers() {
+    return users
+      .filter((user) => user.role === "LECTURER")
+      .map((user) => ({ id: user.id, name: user.name, email: user.email, role: user.role }));
+  }
+
+  async getUser(id) {
+    return users.find((user) => user.id === id) ?? null;
+  }
+
   async listUnitsForUser(user) {
     if (!user) {
       return [];
     }
     if (user.role === "STUDENT") {
-      const unitIds = enrollments
-        .filter((enrollment) => enrollment.studentId === user.id)
-        .map((enrollment) => enrollment.unitId);
-      return units.filter((unit) => unitIds.includes(unit.id));
+      return unitsForStudent(user.id).map((unit) => ({ ...unit }));
     }
     if (user.role === "LECTURER") {
-      return units.filter((unit) => unit.lecturerId === user.id);
+      return units.filter((unit) => unit.lecturerId === user.id).map((unit) => ({ ...unit }));
     }
-    return units.slice();
+    return units.map((unit) => ({ ...unit }));
+  }
+
+  async importUnits(rows = []) {
+    const mapped = [];
+    for (const row of rows) {
+      const code = String(row.code ?? row.unitcode ?? "").trim();
+      if (!code) {
+        continue;
+      }
+      const lecturer = users.find((candidate) => candidate.email?.toLowerCase() === String(row.lectureremail ?? "").toLowerCase());
+      const semester = semesters.find((candidate) => candidate.code === String(row.semestercode ?? "").trim()) ?? semesters[0];
+      mapped.push({
+        id: 0,
+        code,
+        name: String(row.name ?? code).trim() || code,
+        semesterId: semester?.id ?? 1,
+        lecturerId: lecturer?.id ?? (Number(row.lecturerid) || 1),
+        dayOfWeek: Number(row.dayofweek) || 1,
+        startHour: Number(row.starthour) || 9,
+        endHour: Number(row.endhour) || 11,
+        classroom: String(row.classroom ?? "").trim()
+      });
+    }
+    if (!mapped.length) {
+      const error = new Error("No valid timetable rows found (a 'code' column is required).");
+      error.status = 400;
+      throw error;
+    }
+    let nextUnitId = nextId(units);
+    for (const unit of mapped) {
+      unit.id = nextUnitId++;
+    }
+    units.splice(0, units.length, ...mapped);
+    try {
+      localStorage.setItem(UNITS_KEY, JSON.stringify(units));
+    } catch {
+      // ignore persistence errors
+    }
+    recordAudit({
+      action: "SEMESTER_TIMETABLE_IMPORTED",
+      entityType: "system",
+      entityId: 0,
+      details: { count: mapped.length }
+    });
+    return { count: mapped.length, units: units.map((unit) => ({ ...unit })) };
   }
 
   async listProjectsForUser(user) {
@@ -1303,20 +1437,18 @@ class DemoRepository {
       return [];
     }
     if (user.role === "STUDENT") {
-      return researchProjects.filter((project) => project.memberIds.includes(user.id));
+      return projectsForStudent(user.id).map((project) => ({ ...project, memberIds: [...project.memberIds] }));
     }
     if (user.role === "LECTURER") {
-      return researchProjects.filter((project) => project.lecturerId === user.id);
+      return researchProjects
+        .filter((project) => project.lecturerId === user.id)
+        .map((project) => ({ ...project, memberIds: [...project.memberIds] }));
     }
-    return researchProjects.slice();
+    return researchProjects.map((project) => ({ ...project, memberIds: [...project.memberIds] }));
   }
 
   lecturerTeachesStudent(lecturerId, studentId) {
-    return lecturerTeachesStudent(lecturerId, studentId);
-  }
-
-  async getUser(id) {
-    return users.find((user) => user.id === id) ?? null;
+    return teachesStudent(lecturerId, studentId);
   }
 
   async getRequest(id) {
@@ -1326,7 +1458,6 @@ class DemoRepository {
   }
 
   async summary() {
-    autoReturnExpiredRequests();
     const now = new Date().toISOString();
     let available = 0;
     let fullyBooked = 0;
@@ -1358,8 +1489,77 @@ class DemoRepository {
       pendingRequests: borrowRequests.filter((r) => r.status === "REQUESTED").length,
       reservations: borrowRequests.filter((r) => r.status === "RESERVED").length,
       currentBorrowing: borrowRequests.filter((r) => r.status === "BORROWED").length,
+      smartAlerts: buildSmartAlerts({
+        equipment: await this.listEquipment(),
+        requests: borrowRequests.map(attachEquipment),
+        now
+      }).length,
       nextMeeting: "29/5 Sprint 1 demo"
     };
+  }
+
+  async smartAlerts() {
+    return buildSmartAlerts({
+      equipment: await this.listEquipment(),
+      requests: borrowRequests.map(attachEquipment)
+    });
+  }
+
+  async equipmentTimelines() {
+    return buildEquipmentTimelines({
+      equipment: await this.listEquipment(),
+      requests: borrowRequests.map(attachEquipment),
+      auditLog,
+      users
+    });
+  }
+
+  async listAuditLog() {
+    return auditLog.map((entry) => ({
+      ...entry,
+      actor: entry.actorId ? users.find((user) => user.id === entry.actorId) ?? entry.actor : entry.actor
+    }));
+  }
+
+  async notificationPreferences(userId) {
+    const key = String(userId ?? "default");
+    return {
+      ...defaultNotificationPreferences,
+      ...(notificationPreferences[key] ?? {})
+    };
+  }
+
+  async updateNotificationPreferences(userId, input = {}) {
+    const key = String(userId ?? "default");
+    notificationPreferences[key] = {
+      ...(notificationPreferences[key] ?? defaultNotificationPreferences),
+      ...input
+    };
+    recordAudit({
+      action: "NOTIFICATION_PREFERENCES_UPDATED",
+      actorId: userId ?? null,
+      entityType: "user",
+      entityId: userId ?? 0,
+      details: notificationPreferences[key]
+    });
+    persistState();
+    return this.notificationPreferences(userId);
+  }
+
+  async listReminderRules() {
+    return reminderRules;
+  }
+
+  async updateReminderRules(rules = []) {
+    reminderRules.splice(0, reminderRules.length, ...rules);
+    recordAudit({
+      action: "REMINDER_RULES_UPDATED",
+      entityType: "system",
+      entityId: 0,
+      details: { count: reminderRules.length }
+    });
+    persistState();
+    return reminderRules;
   }
 
   async sprintPlan() {
@@ -1373,7 +1573,7 @@ class DemoRepository {
     }));
   }
 
-  async updateUserRole(id, role, lecturerId = undefined) {
+  async updateUserRole(id, role, lecturerId = undefined, profile = {}) {
     const user = users.find((u) => u.id === id);
     if (!user) {
       const error = new Error("User not found");
@@ -1384,6 +1584,24 @@ class DemoRepository {
     if (lecturerId !== undefined) {
       user.lecturerId = lecturerId;
     }
+    if (profile.groupName !== undefined) {
+      user.groupName = profile.groupName;
+    }
+    if (profile.className !== undefined) {
+      user.className = profile.className;
+    }
+    recordAudit({
+      action: "USER_ACCESS_UPDATED",
+      actorId: profile.actorId ?? null,
+      entityType: "user",
+      entityId: user.id,
+      details: {
+        role: user.role,
+        lecturerId: user.lecturerId ?? null,
+        groupName: user.groupName ?? "",
+        className: user.className ?? ""
+      }
+    });
     persistState();
     return {
       ...user,
@@ -1401,10 +1619,17 @@ class DemoRepository {
       location: input.location,
       status: input.status ?? "AVAILABLE",
       conditionNotes: input.conditionNotes ?? "",
+      accessories: input.accessories ?? [],
       totalQuantity: DEFAULT_ITEM_QUANTITY,
       updatedAt: new Date().toISOString()
     };
     equipment.push(item);
+    recordAudit({
+      action: "EQUIPMENT_CREATED",
+      entityType: "equipment",
+      entityId: item.id,
+      details: { assetCode: item.assetCode, name: item.name }
+    });
     persistState();
     return item;
   }
@@ -1421,8 +1646,15 @@ class DemoRepository {
     item.location = input.location ?? item.location;
     item.status = input.status ?? item.status;
     item.conditionNotes = input.conditionNotes !== undefined ? input.conditionNotes : item.conditionNotes;
+    item.accessories = input.accessories ?? item.accessories ?? [];
     item.totalQuantity = DEFAULT_ITEM_QUANTITY;
     item.updatedAt = new Date().toISOString();
+    recordAudit({
+      action: "EQUIPMENT_UPDATED",
+      entityType: "equipment",
+      entityId: item.id,
+      details: { assetCode: item.assetCode, name: item.name }
+    });
     persistState();
     return item;
   }

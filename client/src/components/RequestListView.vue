@@ -1,17 +1,19 @@
 <script setup>
 import { computed, ref } from "vue";
-import { 
-  Search, 
-  Filter, 
-  AlertTriangle, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  ShieldAlert, 
-  Pencil, 
-  ScrollText, 
+import {
+  Search,
+  Filter,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
+  XCircle,
+  ShieldAlert,
+  Pencil,
+  ScrollText,
   ChevronRight,
-  Mail
+  Mail,
+  UserRound,
+  Wrench
 } from "@lucide/vue";
 
 const props = defineProps({
@@ -26,62 +28,50 @@ const props = defineProps({
   initialStatus: {
     type: String,
     default: "ALL"
+  },
+  timelines: {
+    type: Array,
+    default: () => []
   }
 });
 
-const emit = defineEmits(["approve", "deny", "extend", "extend-modal", "edit", "custody", "remind", "check-out", "return"]);
+const emit = defineEmits(["approve", "deny", "extend", "edit", "custody", "remind", "check-out", "extend-modal", "return"]);
+
+const selectedTimeline = ref(null);
+
+function showTimeline(equipmentId) {
+  const found = props.timelines.find(t => t.equipment.id === equipmentId);
+  if (found) {
+    selectedTimeline.value = found;
+  } else {
+    // Fallback if not found in timelines array: find from requests
+    const req = props.requests.find(r => r.equipmentId === equipmentId || r.equipment?.id === equipmentId);
+    selectedTimeline.value = {
+      equipment: req ? req.equipment : { name: "Equipment", assetCode: "" },
+      events: []
+    };
+  }
+}
 
 const searchText = ref("");
 const statusFilter = ref(props.initialStatus || "ALL");
 const purposeFilter = ref("ALL");
 
-const isStudent = computed(() => props.session.user.role === "STUDENT");
-const isSupportOrAdmin = computed(() => ["SUPPORT", "ADMIN"].includes(props.session.user.role));
+const APPROVER_ROLES = ["LECTURER", "EQUIPMENT_MANAGER", "SERVER_MANAGER", "ADMIN"];
 
-function canActOn(req) {
-  const role = props.session.user.role;
-  if (role === "LECTURER") {
-    return req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
-  }
-  return ["SUPPORT", "OPERATIONS", "ADMIN"].includes(role);
+const isStudent = computed(() => props.session.user.role === "STUDENT");
+
+function canActOn() {
+  return APPROVER_ROLES.includes(props.session.user.role);
 }
 
 function approvalStatusText(req) {
-  if (["RESERVED", "BORROWED", "RETURNED"].includes(req.status)) return "Approved";
-  if (req.status === "REJECTED") return "Rejected";
-  if (req.status === "CANCELLED") return "Denied";
   if (req.status === "REQUESTED") return "Pending Approval";
+  if (["RESERVED", "BORROWED"].includes(req.status)) return "Accepted";
+  if (req.status === "RETURNED") return "Success";
+  if (req.status === "CANCELLED") return "Denied";
+  if (req.status === "REJECTED") return "Rejected";
   return req.status;
-}
-
-function isOwner(req) {
-  return req.lecturerId === props.session.user.id;
-}
-
-function lecturerTeachesOwner(req) {
-  return props.session.user.role === "LECTURER" && req.lecturer?.role === "STUDENT" && req.lecturer?.lecturerId === props.session.user.id;
-}
-
-function canManage(req) {
-  return canActOn(req);
-}
-
-function canFullyEdit(req) {
-  if (req.status === "REQUESTED" && (isOwner(req) || canManage(req))) return true;
-  if (isSupportOrAdmin.value) return true;
-  if (lecturerTeachesOwner(req)) return true;
-  return false;
-}
-
-function canExtend(req) {
-  if (!["RESERVED", "BORROWED", "RETURNED"].includes(req.status)) return false;
-  if (req.status === "RETURNED" && new Date(req.dueAt) >= new Date()) return false;
-  return isOwner(req) || canManage(req) || lecturerTeachesOwner(req);
-}
-
-function canReturn(req) {
-  if (req.status !== "BORROWED") return false;
-  return isOwner(req) || canManage(req) || lecturerTeachesOwner(req);
 }
 
 function getPriorityScore(req) {
@@ -90,15 +80,57 @@ function getPriorityScore(req) {
   if (req.status === "RESERVED") return 4;
   if (req.status === "BORROWED") {
     const due = new Date(req.dueAt);
-    if (due < now) return 2; // Overdue
+    if (due < now) return 2;
     const limit = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    if (due < limit) return 3; // Near due (within 24 hours)
-    return 4; // Normal borrowed
+    if (due < limit) return 3;
+    return 4;
   }
   if (req.status === "RETURNED") return 5;
-  if (req.status === "CANCELLED") return 6;
   if (req.status === "REJECTED") return 6;
+  if (req.status === "CANCELLED") return 6;
   return 7;
+}
+
+const MANAGE_ROLES = ["EQUIPMENT_MANAGER", "SERVER_MANAGER", "ADMIN"];
+
+function isOwner(req) {
+  return props.session.user.id === req.lecturerId;
+}
+
+function canManage() {
+  return MANAGE_ROLES.includes(props.session.user.role);
+}
+
+function lecturerTeachesOwner(req) {
+  return props.session.user.role === "LECTURER" && req.lecturer?.lecturerId === props.session.user.id;
+}
+
+function canFullyEdit(req) {
+  if (canManage()) return true;
+  if (lecturerTeachesOwner(req)) return true;
+  if (isOwner(req) && req.status === "REQUESTED") return true;
+  return false;
+}
+
+function canExtend(req) {
+  if (!["RESERVED", "BORROWED", "RETURNED"].includes(req.status)) return false;
+  if (req.status === "RETURNED" && new Date(req.dueAt) >= new Date()) return false;
+  return isOwner(req) || canManage() || lecturerTeachesOwner(req);
+}
+
+function canReturn(req) {
+  if (req.status !== "BORROWED") return false;
+  return isOwner(req) || canManage() || lecturerTeachesOwner(req);
+}
+
+function purposeText(req) {
+  if (req.purpose === "LAB" || req.purpose === "RESEARCH") return "Research / Project";
+  return req.purpose;
+}
+
+function purposeClass(req) {
+  if (req.purpose === "LAB") return "research";
+  return req.purpose.toLowerCase();
 }
 
 const filteredRequests = computed(() => {
@@ -116,11 +148,11 @@ const filteredRequests = computed(() => {
       const purpose = r.purpose?.toLowerCase() || "";
       const program = r.program?.toLowerCase() || "";
       const unit = r.unitOrProject?.toLowerCase() || "";
-      
-      return equipName.includes(kw) || 
-             assetCode.includes(kw) || 
-             reqName.includes(kw) || 
-             reqEmail.includes(kw) || 
+
+      return equipName.includes(kw) ||
+             assetCode.includes(kw) ||
+             reqName.includes(kw) ||
+             reqEmail.includes(kw) ||
              classroom.includes(kw) ||
              purpose.includes(kw) ||
              program.includes(kw) ||
@@ -190,7 +222,7 @@ function getDisplayStatus(req) {
 }
 
 import { makeTranslator } from "../translate";
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 </script>
 
 <template>
@@ -205,10 +237,10 @@ const t = makeTranslator(props.session?.user?.email);
       <div class="filters-bar">
         <div class="search-input-wrap">
           <Search :size="16" class="search-icon" />
-          <input 
-            v-model="searchText" 
-            type="text" 
-            :placeholder="t('Search by equipment, requester, location...')" 
+          <input
+            v-model="searchText"
+            type="text"
+            :placeholder="t('Search by equipment, requester, location...')"
             class="search-input"
           />
         </div>
@@ -240,164 +272,165 @@ const t = makeTranslator(props.session?.user?.email);
       <table class="requests-table">
         <thead>
           <tr>
-            <th>{{ t('Priority & Status') }}</th>
             <th>{{ t('Requester') }}</th>
             <th>{{ t('Equipment') }}</th>
-            <th>{{ t('Purpose & Details') }}</th>
-            <th>{{ t('Classroom/Location') }}</th>
+            <th>{{ t('Classroom') }}</th>
+            <th>{{ t('Unit / Purpose') }}</th>
+            <th>{{ t('Quantity') }}</th>
             <th>{{ t('Due Date') }}</th>
             <th>{{ t('Actions') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr 
-            v-for="req in filteredRequests" 
-            :key="req.id" 
-            :class="{ 
+          <tr
+            v-for="req in filteredRequests"
+            :key="req.id"
+            :class="{
               'row-requested': req.status === 'REQUESTED',
               'row-overdue': isOverdue(req),
               'row-neardue': isNearDue(req)
             }"
           >
-            <!-- Status Badge -->
-            <td class="status-cell">
-              <div class="status-indicator-wrap">
-                <span :class="'status-chip ' + getDisplayStatus(req).toLowerCase().replace('_', '-')">
-                  {{ t(getDisplayStatus(req)).replace('_', ' ') }}
-                </span>
-              </div>
-            </td>
-
             <!-- Requester -->
             <td>
-              <div class="user-cell">
-                <strong class="user-name">{{ req.lecturer?.name }}</strong>
-                <span class="user-role-sub">{{ t(req.lecturer?.role) }}</span>
-                <span class="user-email-sub">{{ req.lecturer?.email }}</span>
-              </div>
+              <strong class="user-name" style="display: block; font-weight: 600;">{{ req.lecturer?.name }}</strong>
+              <code class="student-id-code" style="font-size: 13px; text-transform: uppercase; margin-top: 2px; display: inline-block;">{{ (req.lecturer?.studentId || '-').toUpperCase() }}</code>
             </td>
 
             <!-- Equipment -->
             <td>
               <div class="equip-cell">
                 <strong class="equip-name">{{ req.equipment?.name }}</strong>
-                <span class="asset-code">{{ req.equipment?.assetCode }}</span>
-                <span class="qty-sub">{{ t('Quantity: ') }}{{ req.quantity }}</span>
+                <span
+                  class="asset-code timeline-trigger"
+                  @click="showTimeline(req.equipmentId || req.equipment?.id)"
+                  :title="t('View equipment history timeline')"
+                  style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;"
+                >
+                  <Clock :size="10" />
+                  {{ req.equipment?.assetCode }}
+                </span>
               </div>
             </td>
 
-            <!-- Purpose & Details -->
+            <!-- Classroom -->
+            <td>{{ req.classroom ? (req.classroom.startsWith('HN-') ? 'HN-DT1-' + req.classroom.split('-').slice(2).join('-') : req.classroom) : '-' }}</td>
+
+            <!-- Unit / Purpose -->
             <td>
-              <div class="details-cell">
-                <span class="purpose-tag" :class="req.purpose === 'LAB' ? 'research' : req.purpose.toLowerCase()">{{ req.purpose === 'LAB' ? t('Research / Project') : t(req.purpose) }}</span>
-                <span v-if="req.program" class="program-sub">{{ req.program }}</span>
-                <span v-if="req.unitOrProject" class="unit-sub">{{ t('Unit: ') }}{{ req.unitOrProject }}</span>
-              </div>
+              <span class="program-span" style="display: block; font-size: 12px; color: #4e5b66;">{{ req.program || "-" }}</span>
+              <span class="purpose-span" :class="purposeClass(req)" style="display: inline-block; margin-top: 2px;">{{ t(purposeText(req)) }}</span>
+              <span v-if="req.handoverNotes" class="handover-notes-inline" style="color: #6b7280; font-size: 11px; margin-left: 4px; font-weight: normal; display: inline-block; vertical-align: middle;">({{ req.handoverNotes }})</span>
             </td>
 
-            <!-- Classroom/Location -->
-            <td>
-              <div class="location-cell">
-                <strong>{{ req.classroom ? (req.classroom.startsWith('HN-') ? 'HN-DT1-' + req.classroom.split('-').slice(2).join('-') : req.classroom) : '-' }}</strong>
-                <span class="location-sub">{{ req.equipment?.location }}</span>
-              </div>
-            </td>
+            <!-- Quantity -->
+            <td>{{ req.quantity || 1 }}</td>
 
             <!-- Due Date -->
             <td>
               <div class="due-cell" :class="{ 'overdue-text': isOverdue(req), 'warning-text': isNearDue(req) }">
-                <span v-if="req.startDate" style="color: #727285; font-size: 11px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</span>
+                <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                 <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
-                <span v-if="req.returnedAt" class="returned-sub">{{ t('Returned: ') }}{{ formatDate(req.returnedAt) }}</span>
+                <span v-if="req.returnedAt" class="returned-sub" style="display: block; font-size: 10px; color: #10b981; margin-top: 2px;">
+                  {{ t('Returned: ') }}{{ formatDate(req.returnedAt) }}
+                </span>
               </div>
             </td>
 
             <!-- Actions Column -->
             <td class="action-cell">
-              <div class="actions-wrapper">
-                 <!-- Approval Actions (Support/Admin/Lecturers) -->
-                <template v-if="req.status === 'REQUESTED' && canActOn(req)">
-                  <button 
-                    class="action-btn approve" 
-                    @click="emit('approve', req.id)"
-                    :title="t('Approve')"
+              <div class="actions-wrapper" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
+                <!-- Status Badge -->
+                <div class="status-indicator-wrap" style="margin-bottom: 2px;">
+                  <span :class="'status-chip ' + getDisplayStatus(req).toLowerCase().replace('_', '-')">
+                    {{ t(getDisplayStatus(req)).replace('_', ' ') }}
+                  </span>
+                </div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                  <!-- Approval Actions (Support/Admin/Lecturers) -->
+                  <template v-if="req.status === 'REQUESTED' && canActOn(req)">
+                    <button
+                      class="action-btn approve"
+                      @click="emit('approve', req.id)"
+                      :title="t('Approve')"
+                    >
+                      {{ t('Approve') }}
+                    </button>
+                    <button
+                      class="action-btn deny"
+                      @click="emit('deny', req.id)"
+                      :title="t('Deny')"
+                    >
+                      {{ t('Deny') }}
+                    </button>
+                  </template>
+                  <span
+                    v-else-if="req.status === 'REQUESTED' && !canActOn(req)"
+                    :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')"
                   >
-                    {{ t('Approve') }}
-                  </button>
-                  <button 
-                    class="action-btn deny" 
-                    @click="emit('deny', req.id)"
-                    :title="t('Deny')"
+                    {{ t(approvalStatusText(req)) }}
+                  </span>
+
+                  <!-- General actions -->
+                  <button
+                    v-if="canFullyEdit(req)"
+                    class="action-btn edit"
+                    @click="emit('edit', req)"
+                    :title="t('Edit')"
                   >
-                    {{ t('Deny') }}
+                    <Pencil :size="12" /> {{ t('Edit') }}
                   </button>
-                </template>
-                <span
-                  v-else-if="req.status === 'REQUESTED' && !canActOn(req)"
-                  :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(' ', '-')"
-                >
-                  {{ t(approvalStatusText(req)) }}
-                </span>
 
-                <!-- General actions -->
-                <button
-                  v-if="canFullyEdit(req)"
-                  class="action-btn edit"
-                  @click="emit('edit', req)"
-                  :title="t('Edit')"
-                >
-                  <Pencil :size="12" /> {{ t('Edit') }}
-                </button>
+                  <!-- Check out a reserved booking -->
+                  <button
+                    v-if="req.status === 'RESERVED' && !isStudent"
+                    class="action-btn approve"
+                    @click="emit('check-out', req.id)"
+                    :title="t('Check out reserved equipment')"
+                  >
+                    {{ t('Check Out') }}
+                  </button>
 
-                <!-- Check out a reserved booking -->
-                <button
-                  v-if="req.status === 'RESERVED' && !isStudent"
-                  class="action-btn approve"
-                  @click="emit('check-out', req.id)"
-                  :title="t('Check out reserved equipment')"
-                >
-                  {{ t('Check Out') }}
-                </button>
+                  <!-- Return action -->
+                  <button
+                    v-if="canReturn(req)"
+                    class="action-btn return"
+                    @click="emit('return', { id: req.id, payload: { isStatusOk: true } })"
+                    :title="t('Return borrowed equipment')"
+                  >
+                    {{ t('Return') }}
+                  </button>
 
-                <!-- Return action -->
-                <button
-                  v-if="canReturn(req)"
-                  class="action-btn return"
-                  @click="emit('return', { id: req.id, payload: { isStatusOk: true } })"
-                  :title="t('Return borrowed equipment')"
-                >
-                  {{ t('Return') }}
-                </button>
+                  <!-- Extend action -->
+                  <button
+                    v-if="canExtend(req)"
+                    class="action-btn extend"
+                    @click="emit('extend-modal', req)"
+                    :title="t('Extend borrowing')"
+                  >
+                    {{ t('Extend') }}
+                  </button>
 
-                <!-- Extend action -->
-                <button
-                  v-if="canExtend(req)"
-                  class="action-btn extend"
-                  @click="emit('extend-modal', req)"
-                  :title="t('Extend borrowing')"
-                >
-                  {{ t('Extend') }}
-                </button>
+                  <!-- Custody action for EVENT purposes -->
+                  <button
+                    v-if="req.purpose === 'EVENT'"
+                    class="action-btn custody"
+                    @click="emit('custody', req)"
+                    :title="t('View or update chain of custody')"
+                  >
+                    <ScrollText :size="12" /> {{ t('Custody') }}
+                  </button>
 
-                <!-- Custody action for EVENT purposes -->
-                <button 
-                  v-if="req.purpose === 'EVENT'"
-                  class="action-btn custody"
-                  @click="emit('custody', req)"
-                  :title="t('View or update chain of custody')"
-                >
-                  <ScrollText :size="12" /> {{ t('Custody') }}
-                </button>
-
-                <!-- Reminder email action (Staff only, for overdue or near due) -->
-                <button 
-                  v-if="req.status === 'BORROWED' && !isStudent && (isOverdue(req) || isNearDue(req))"
-                  class="action-btn remind"
-                  @click="emit('remind', req.id)"
-                  :title="t('Send email reminder to borrower')"
-                >
-                  <Mail :size="12" /> {{ t('Remind') }}
-                </button>
+                  <!-- Reminder email action (Staff only, for overdue or near due) -->
+                  <button
+                    v-if="req.status === 'BORROWED' && canActOn(req) && (isOverdue(req) || isNearDue(req))"
+                    class="action-btn remind"
+                    @click="emit('remind', req.id)"
+                    :title="t('Send email reminder to borrower')"
+                  >
+                    <Mail :size="12" /> {{ t('Remind') }}
+                  </button>
+                </div>
               </div>
             </td>
           </tr>
@@ -410,6 +443,58 @@ const t = makeTranslator(props.session?.user?.email);
       </table>
     </div>
   </section>
+
+  <!-- Equipment History Timeline Modal -->
+  <div v-if="selectedTimeline" class="modal-overlay" @click.self="selectedTimeline = null">
+    <div class="modal-card">
+      <header class="modal-header">
+        <h3>
+          <Clock :size="16" />
+          <span>{{ t('Equipment Timeline') }}</span>
+        </h3>
+        <button type="button" class="close-btn" @click="selectedTimeline = null">&times;</button>
+      </header>
+      <div class="modal-body timeline-modal-body">
+        <div class="timeline-equip-details">
+          <span class="asset-code">{{ selectedTimeline.equipment.assetCode }}</span>
+          <h4>{{ selectedTimeline.equipment.name }}</h4>
+          <p class="equip-meta">{{ t(selectedTimeline.equipment.category) }} · {{ selectedTimeline.equipment.location }}</p>
+        </div>
+
+        <ol class="modal-event-list">
+          <li v-for="event in selectedTimeline.events" :key="event.id" class="modal-event-item">
+            <div class="event-marker">
+              <Wrench v-if="event.type === 'AUDIT'" :size="12" />
+              <Clock v-else :size="12" />
+            </div>
+            <div class="event-body">
+              <div class="event-title-row">
+                <strong>{{ t(event.title) }}</strong>
+                <small>{{ formatDate(event.at) }}</small>
+              </div>
+              <div v-if="event.lecturer" class="event-person">
+                <UserRound :size="13" />
+                <span>{{ t('Lecturer') }}: {{ event.lecturer.name }} · {{ event.lecturer.email }}</span>
+              </div>
+              <div v-if="event.staff" class="event-person staff">
+                <span>{{ t('Staff') }}: {{ event.staff.name || event.staff.email }}</span>
+              </div>
+              <div class="event-details">
+                <span v-if="event.details?.purpose">{{ t('Purpose') }}: {{ t(event.details.purpose) }}</span>
+                <span v-if="event.details?.classroom">{{ t('Classroom') }}: {{ event.details.classroom }}</span>
+                <span v-if="event.details?.quantity">{{ t('Quantity: ') }}{{ event.details.quantity }}</span>
+                <span v-if="event.details?.remainingQuantity">{{ t('Remaining:') }} {{ event.details.remainingQuantity }}</span>
+                <span v-if="event.details?.conditionAfter">{{ t('Condition:') }} {{ event.details.conditionAfter }}</span>
+              </div>
+            </div>
+          </li>
+          <li v-if="selectedTimeline.events.length === 0" class="empty-line">
+            {{ t('No custody entries yet.') || 'Chưa có lịch sử hoạt động nào.' }}
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -715,5 +800,175 @@ const t = makeTranslator(props.session?.user?.email);
   color: #727285;
   font-style: italic;
   font-size: 13.5px;
+}
+
+/* Timeline trigger and modal styles */
+.timeline-trigger {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.timeline-trigger:hover {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f7f5ff;
+  border-bottom: 1px solid #eeeeef;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #3e3e4a;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.close-btn {
+  background: transparent;
+  border: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: #a7a7b4;
+  cursor: pointer;
+  padding: 0;
+}
+
+.timeline-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.timeline-equip-details {
+  border-bottom: 1px solid #eeeeef;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+}
+
+.timeline-equip-details h4 {
+  margin: 6px 0 2px;
+  font-size: 15px;
+  color: #2d2d3a;
+}
+
+.timeline-equip-details .equip-meta {
+  margin: 0;
+  color: #727285;
+  font-size: 12px;
+}
+
+.modal-event-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-event-item {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 12px;
+}
+
+.event-marker {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.event-title-row strong {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.event-title-row small {
+  color: #727285;
+  white-space: nowrap;
+}
+
+.event-person {
+  margin-top: 4px;
+  color: #474753;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.event-person.staff {
+  color: #047857;
+}
+
+.event-details {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.event-details span {
+  background: #f7f7fb;
+  border: 1px solid #ececf3;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #5d5d6f;
+}
+
+.empty-line {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 13px;
+  padding: 10px 0;
 }
 </style>

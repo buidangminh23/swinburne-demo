@@ -7,7 +7,7 @@ defineProps({
 });
 
 function statusClass(status) {
-  return `status-chip ${status.toLowerCase()}`;
+  return `status-chip ${(status || "").toLowerCase()}`;
 }
 
 function formatDateTime(dateStr) {

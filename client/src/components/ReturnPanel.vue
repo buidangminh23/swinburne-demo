@@ -2,16 +2,26 @@
 import { ref, reactive, watch, computed } from "vue";
 import { CheckCircle2, AlertTriangle, Check, X } from "@lucide/vue";
 
+import { makeTranslator } from "../translate";
+
 const props = defineProps({
   requests: {
     type: Array,
     default: () => []
+  },
+  session: {
+    type: Object,
+    required: true
   }
 });
+
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 const emit = defineEmits(["return"]);
 
 const selectedRequestId = ref("");
+const error = ref("");
+const submitting = ref(false);
 
 const returnableRequests = computed(() =>
   props.requests.filter((request) => request.status === "BORROWED")
@@ -24,33 +34,77 @@ const selectedRequest = computed(() =>
 const form = reactive({
   returnedQuantity: 1,
   isStatusOk: true,
-  damageReport: ""
+  damageReport: "",
+  conditionBefore: "",
+  conditionAfter: "",
+  photoBeforeUrl: "",
+  photoAfterUrl: "",
+  accessoryChecks: {}
+});
+
+const expectedAccessories = computed(() => selectedRequest.value?.equipment?.accessories ?? []);
+
+const selectedRemainingQuantity = computed(() => {
+  const req = selectedRequest.value;
+  if (!req) return 1;
+  return req.remainingQuantity ?? Math.max(1, (req.quantity ?? 1) - (req.returnedQuantity ?? 0));
 });
 
 // Watch selected request to update default returned quantity
 watch(selectedRequestId, (newVal) => {
+  error.value = "";
   const req = returnableRequests.value.find(r => r.id === Number(newVal));
   if (req) {
-    form.returnedQuantity = req.quantity ?? 1;
+    form.returnedQuantity = selectedRemainingQuantity.value;
     form.isStatusOk = true;
     form.damageReport = "";
+    form.conditionBefore = req.equipment?.conditionNotes ?? "";
+    form.conditionAfter = "";
+    form.photoBeforeUrl = req.photoBeforeUrl ?? "";
+    form.photoAfterUrl = "";
+    form.accessoryChecks = {};
+    for (const accessory of req.equipment?.accessories ?? []) {
+      form.accessoryChecks[accessory] = true;
+    }
   }
 });
 
 function submit() {
+  if (submitting.value) return;
+  error.value = "";
+
   if (!selectedRequestId.value) return;
-  
+
+  const remaining = selectedRemainingQuantity.value;
+  const returnedQuantity = Math.floor(Number(form.returnedQuantity));
+  if (isNaN(returnedQuantity) || returnedQuantity < 1) {
+    error.value = t("Quantity returned must be at least 1.");
+    return;
+  }
+  if (returnedQuantity > remaining) {
+    error.value = t("Quantity returned cannot exceed the remaining quantity.");
+    return;
+  }
+
+  submitting.value = true;
+
   emit("return", {
     id: Number(selectedRequestId.value),
     payload: {
-      returnedQuantity: Number(form.returnedQuantity),
+      returnedQuantity,
       isStatusOk: form.isStatusOk,
-      damageReport: form.isStatusOk ? "" : form.damageReport
+      damageReport: form.isStatusOk ? "" : form.damageReport,
+      conditionBefore: form.conditionBefore,
+      conditionAfter: form.conditionAfter,
+      photoBeforeUrl: form.photoBeforeUrl,
+      photoAfterUrl: form.photoAfterUrl,
+      accessoriesReturned: expectedAccessories.value.filter((item) => form.accessoryChecks[item]),
+      accessoriesMissing: expectedAccessories.value.filter((item) => !form.accessoryChecks[item])
     }
   });
 
-  // Reset selection
   selectedRequestId.value = "";
+  submitting.value = false;
 }
 </script>
 
@@ -59,21 +113,21 @@ function submit() {
     <div class="panel-heading compact">
       <CheckCircle2 :size="20" />
       <div>
-        <h2>Confirm return</h2>
-        <p>Close active borrowed items with checklist verification.</p>
+        <h2>{{ t('Confirm Return') }}</h2>
+        <p>{{ t('Close active borrowed items with checklist verification.') }}</p>
       </div>
     </div>
 
     <div v-if="returnableRequests.length === 0" class="return-list">
-      <p class="empty-state">No borrowed items pending return.</p>
+      <p class="empty-state">{{ t('No borrowed items pending return.') }}</p>
     </div>
 
     <div v-else class="return-flow-wrap">
       <!-- Select request -->
       <label class="form-field">
-        Select Borrow Record:
+        {{ t('Select Borrow Record:') }}
         <select v-model="selectedRequestId" class="select-request-dropdown">
-          <option value="">Choose item to return</option>
+          <option value="">{{ t('Choose item to return') }}</option>
           <option v-for="request in returnableRequests" :key="request.id" :value="request.id">
             {{ request.equipment?.assetCode }} - {{ request.equipment?.name }} ({{ request.lecturer?.name }})
           </option>
@@ -84,52 +138,82 @@ function submit() {
       <form v-if="selectedRequestId" class="stacked-form return-form" @submit.prevent="submit">
         <div class="checklist-grid">
           <label>
-            Quantity Returned:
+            {{ t('Quantity Returned:') }}
             <input
               v-model="form.returnedQuantity"
               type="number"
               min="1"
-              :max="selectedRequest?.quantity ?? 1"
+              :max="selectedRemainingQuantity"
               class="qty-input"
             />
+            <small class="field-hint">{{ t('Remaining: ') }}{{ selectedRemainingQuantity }} / {{ t('original ') }}{{ selectedRequest?.quantity ?? 1 }}</small>
           </label>
 
           <div class="status-verify-wrap">
-            <span class="verify-label">Status OK?</span>
+            <span class="verify-label">{{ t('Status OK?') }}</span>
             <div class="verify-buttons">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 :class="['verify-btn yes', { active: form.isStatusOk }]"
                 @click="form.isStatusOk = true"
               >
-                <Check :size="14" /> Yes
+                <Check :size="14" /> {{ t('Yes') }}
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 :class="['verify-btn no', { active: !form.isStatusOk }]"
                 @click="form.isStatusOk = false"
               >
-                <X :size="14" /> No
+                <X :size="14" /> {{ t('No') }}
               </button>
             </div>
           </div>
         </div>
 
+        <div v-if="expectedAccessories.length" class="accessory-checklist">
+          <span class="verify-label">{{ t('Accessory Checklist') }}</span>
+          <label v-for="accessory in expectedAccessories" :key="accessory" class="accessory-row">
+            <input v-model="form.accessoryChecks[accessory]" type="checkbox" />
+            <span>{{ accessory }}</span>
+          </label>
+        </div>
+
+        <div class="condition-grid">
+          <label>
+            {{ t('Condition Before') }}
+            <textarea v-model="form.conditionBefore" rows="2" :placeholder="t('Condition before handover...')"></textarea>
+          </label>
+          <label>
+            {{ t('Condition After') }}
+            <textarea v-model="form.conditionAfter" rows="2" :placeholder="t('Condition after return...')"></textarea>
+          </label>
+          <label>
+            {{ t('Before Photo URL') }}
+            <input v-model="form.photoBeforeUrl" type="url" placeholder="https://..." />
+          </label>
+          <label>
+            {{ t('After Photo URL') }}
+            <input v-model="form.photoAfterUrl" type="url" placeholder="https://..." />
+          </label>
+        </div>
+
         <!-- Damage Report Form -->
         <div v-if="!form.isStatusOk" class="damage-report-wrap">
           <label class="danger-alert-label">
-            <AlertTriangle :size="14" /> Damage/Incident Report:
-            <textarea 
-              v-model="form.damageReport" 
-              rows="3" 
-              placeholder="Describe damage, missing accessories, or issues..."
+            <AlertTriangle :size="14" /> {{ t('Damage/Incident Report:') }}
+            <textarea
+              v-model="form.damageReport"
+              rows="3"
+              :placeholder="t('Describe damage, missing accessories, or issues...')"
               required
             ></textarea>
           </label>
         </div>
 
-        <button type="submit" class="submit-return-btn">
-          Confirm Return
+        <p v-if="error" class="error">{{ error }}</p>
+
+        <button type="submit" class="submit-return-btn" :disabled="submitting">
+          {{ t('Confirm Return') }}
         </button>
       </form>
     </div>
@@ -161,6 +245,12 @@ function submit() {
 }
 .qty-input {
   width: 100%;
+}
+.field-hint {
+  color: #727285;
+  font-size: 11px;
+  margin-top: 4px;
+  display: block;
 }
 .status-verify-wrap {
   display: flex;
@@ -208,6 +298,37 @@ function submit() {
   border-radius: 3px;
   padding: 10px;
 }
+.accessory-checklist {
+  border: 1px solid #d8d8e4;
+  border-radius: 4px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.accessory-checklist .verify-label {
+  grid-column: 1 / -1;
+}
+.accessory-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #474753;
+}
+.condition-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.condition-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #474753;
+}
 .danger-alert-label {
   color: #b91c1c;
   display: flex;
@@ -223,6 +344,20 @@ function submit() {
 }
 .submit-return-btn:hover {
   background: #0ca678;
+}
+.submit-return-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.error {
+  color: #b91c1c;
+  background: #fff1f2;
+  border: 1px solid #fec0cb;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
 }
 .empty-state {
   padding: 0 28px 24px;

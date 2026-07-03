@@ -1,15 +1,17 @@
 <script setup>
-import { reactive, watch, computed } from "vue";
+import { reactive, ref, watch, computed } from "vue";
 import { Pencil } from "@lucide/vue";
 
 const classroomOptions = [
-  "HN-DT1-9.1",
-  "HN-DT1-9.2",
-  "HN-ATC-6.25",
-  "HN-ATC-6.28",
+  "HN-DT-9.1",
+  "HN-DT-9.2",
+  "HN-AT-6.25",
+  "HN-AT-6.28",
   "HN-BA-7.01",
   "HN-EN-4.02",
   "HN-EN-4.03",
+  "HCM-AB-2.1",
+  "HCM-CD-3.2",
   "HN-LIB-DESK",
   "HN-MED-DESK"
 ];
@@ -42,14 +44,12 @@ const showEventOption = computed(() => props.session?.user?.role === "EVENT_STAF
 const emit = defineEmits(["save", "close"]);
 
 import { makeTranslator } from "../translate";
-const t = makeTranslator(props.session?.user?.email);
+const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 const form = reactive({
   purpose: "CLASSROOM",
   program: "",
   unitOrProject: "",
-  unitId: null,
-  researchProjectId: null,
   classroom: "",
   dueAt: "",
   startDate: "",
@@ -68,21 +68,27 @@ function toLocalInput(iso) {
 
 const dueAtInput = ref(null);
 
+const getDefaultNotes = (purpose) => {
+  if (purpose === "CLASSROOM") return "Collected for classroom session";
+  if (purpose === "RESEARCH") return "Equipment needed for research project activity";
+  if (purpose === "LAB") return "Required for laboratory practical session";
+  if (purpose === "EVENT") return "Collected for campus event support";
+  return "Equipment request for academic purpose";
+};
+
 watch(
   () => props.request,
   (request) => {
     if (!request) return;
-    form.purpose = request.purpose === "LAB" ? "RESEARCH" : (request.purpose ?? "CLASSROOM");
+    form.purpose = request.purpose ?? "CLASSROOM";
     form.program = request.program ?? "";
     form.unitOrProject = request.unitOrProject ?? "";
-    form.unitId = request.unitId ?? null;
-    form.researchProjectId = request.researchProjectId ?? null;
     form.classroom = request.classroom ?? classroomOptions[0];
     form.dueAt = toLocalInput(request.dueAt);
     form.startDate = toLocalInput(request.startDate);
     form.recurrence = request.recurrence ?? "NONE";
     form.quantity = request.quantity ?? 1;
-    form.handoverNotes = request.handoverNotes ?? "";
+    form.handoverNotes = request.handoverNotes || getDefaultNotes(request.purpose ?? "CLASSROOM");
     if (props.isExtendMode) {
       setTimeout(() => {
         dueAtInput.value?.focus();
@@ -93,47 +99,72 @@ watch(
   { immediate: true }
 );
 
-watch(() => form.purpose, (newVal) => {
-  if (newVal === "RESEARCH") {
-    form.classroom = "";
-    form.unitId = null;
-  } else if (newVal === "EVENT") {
-    form.classroom = "";
-    form.unitId = null;
-    form.researchProjectId = null;
-  } else if (newVal === "CLASSROOM") {
-    form.researchProjectId = null;
-    if (!classroomOptions.includes(form.classroom)) {
-      form.classroom = classroomOptions[0];
+watch(() => form.purpose, (newVal, oldVal) => {
+  if (oldVal !== undefined) {
+    const oldDefault = getDefaultNotes(oldVal);
+    if (!form.handoverNotes || !form.handoverNotes.trim() || form.handoverNotes === oldDefault) {
+      form.handoverNotes = getDefaultNotes(newVal);
     }
   }
 });
 
+const error = ref("");
+const submitting = ref(false);
+
 function submit() {
-  if (props.isExtendMode && form.dueAt) {
+  if (submitting.value) return;
+  error.value = "";
+
+  if (!form.dueAt) {
+    error.value = t("Please provide a return date.");
+    return;
+  }
+  const dueDate = new Date(form.dueAt);
+  if (isNaN(dueDate.getTime())) {
+    error.value = t("Please provide a valid return date.");
+    return;
+  }
+  if (dueDate.getTime() <= Date.now()) {
+    error.value = t("Return date must be in the future.");
+    return;
+  }
+  if (props.isExtendMode) {
     const origStart = props.request.startDate ?? props.request.createdAt;
     const baseDateString = new Date(origStart).toDateString();
-    const dueDate = new Date(form.dueAt);
     if (dueDate.toDateString() !== baseDateString) {
-      alert(t("Extension is only allowed within the same day."));
+      error.value = t("Extension is only allowed within the same day.");
       return;
     }
   }
+  if (form.startDate) {
+    const startDate = new Date(form.startDate);
+    if (!isNaN(startDate.getTime()) && dueDate.getTime() <= startDate.getTime()) {
+      error.value = t("Return date must be after the start date.");
+      return;
+    }
+  }
+
+  if (!form.handoverNotes || !form.handoverNotes.trim()) {
+    form.handoverNotes = getDefaultNotes(form.purpose);
+  }
+
+  submitting.value = true;
+
   const payload = {
     purpose: form.purpose,
     program: form.program || null,
-    unitOrProject: form.purpose === "CLASSROOM" || form.purpose === "RESEARCH" ? form.unitOrProject : null,
-    unitId: form.purpose === "CLASSROOM" ? form.unitId : null,
-    researchProjectId: form.purpose === "RESEARCH" ? form.researchProjectId : null,
-    classroom: form.purpose === "CLASSROOM" ? (form.classroom || null) : null,
-    dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : undefined,
-    quantity: Number(form.quantity) || 1,
+    unitOrProject: form.unitOrProject || null,
+    classroom: form.purpose === "CLASSROOM" ? form.classroom || null : null,
+    dueAt: dueDate.toISOString(),
+    quantity: Math.max(1, Math.floor(Number(form.quantity)) || 1),
     recurrence: form.purpose === "CLASSROOM" && form.recurrence !== "NONE" ? form.recurrence : null,
     startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
     handoverNotes: form.handoverNotes || null,
     isExtendMode: props.isExtendMode
   };
   emit("save", { id: props.request.id, payload });
+
+  submitting.value = false;
 }
 </script>
 
@@ -154,13 +185,6 @@ function submit() {
           </select>
         </label>
 
-        <label v-if="form.purpose === 'CLASSROOM' && units.length">
-          {{ t('Unit') }}
-          <select v-model="form.unitId" :disabled="props.isExtendMode">
-            <option v-for="u in units" :key="u.id" :value="u.id">{{ u.code }} — {{ u.name }}</option>
-          </select>
-        </label>
-
         <label v-if="form.purpose === 'CLASSROOM'">
           {{ t('Classroom') }}
           <select v-model="form.classroom" :disabled="props.isExtendMode">
@@ -168,16 +192,10 @@ function submit() {
           </select>
         </label>
 
-        <label v-if="form.purpose === 'RESEARCH' && projects.length">
-          {{ t('Research Project') }}
-          <select v-model="form.researchProjectId" :disabled="props.isExtendMode">
-            <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-          </select>
-        </label>
         <div class="form-row">
           <label>
             {{ t('From') }}
-            <input v-model="form.startDate" type="datetime-local" />
+            <input v-model="form.startDate" type="datetime-local" :disabled="props.isExtendMode" />
           </label>
           <label>
             {{ t('To') }}
@@ -196,15 +214,16 @@ function submit() {
         </label>
         <label>
           {{ t('Quantity') }}
-          <input v-model="form.quantity" type="number" min="1" :disabled="props.isExtendMode" />
+          <input v-model="form.quantity" type="number" min="1" step="1" :disabled="props.isExtendMode" />
         </label>
         <label>
-          {{ t('Handover Notes') }}
-          <textarea v-model="form.handoverNotes" rows="2" :disabled="props.isExtendMode"></textarea>
+          {{ t('Handover Notes') }} ({{ t('Required') }})
+          <textarea v-model="form.handoverNotes" rows="2" maxlength="240" :disabled="props.isExtendMode" placeholder="Describe handover details (required)..."></textarea>
         </label>
+        <p v-if="error" class="error">{{ error }}</p>
         <div class="modal-actions">
           <button type="button" class="btn-cancel" @click="$emit('close')">{{ t('Cancel') }}</button>
-          <button type="submit" class="btn-confirm">{{ t('Save Changes') }}</button>
+          <button type="submit" class="btn-confirm" :disabled="submitting">{{ t('Save Changes') }}</button>
         </div>
       </form>
     </div>
@@ -311,5 +330,19 @@ function submit() {
 .btn-confirm {
   background: #5f63ff;
   color: #ffffff;
+}
+.btn-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.error {
+  color: #b91c1c;
+  background: #fff1f2;
+  border: 1px solid #fec0cb;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
 }
 </style>

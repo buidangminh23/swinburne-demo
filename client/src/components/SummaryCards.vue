@@ -1,5 +1,5 @@
 <script setup>
-import { ClipboardList, PackageCheck, Hourglass } from "@lucide/vue";
+import { ClipboardList, PackageCheck, CheckCircle2, Wrench } from "@lucide/vue";
 
 defineProps({
   summary: {
@@ -14,29 +14,29 @@ defineProps({
     <!-- Card 1: Pending Requests -->
     <article class="summary-card pending-card">
       <ClipboardList :size="30" class="icon-pending" />
-      <span class="card-value">{{ summary?.pendingRequests ?? "0" }}</span>
+      <span class="card-value">{{ summary?.activeRequests ?? "0" }}</span>
       <span class="card-label">Pending Requests</span>
     </article>
 
     <!-- Card 2: Current Borrowing -->
     <article class="summary-card borrowing-card">
       <PackageCheck :size="30" class="icon-borrowing" />
-      <span class="card-value">{{ summary?.currentBorrowing ?? "0" }}</span>
+      <span class="card-value">{{ summary?.borrowed ?? "0" }}</span>
       <span class="card-label">Current Borrowing</span>
     </article>
 
-    <!-- Card 3: Updating... Placeholder -->
-    <article class="summary-card placeholder-card">
-      <Hourglass :size="30" class="icon-placeholder" />
-      <span class="card-value text-muted">Updating...</span>
-      <span class="card-label">Coming Soon</span>
+    <!-- Card 3: Available -->
+    <article class="summary-card available-card">
+      <CheckCircle2 :size="30" class="icon-available" />
+      <span class="card-value">{{ summary?.available ?? "0" }}</span>
+      <span class="card-label">Available</span>
     </article>
 
-    <!-- Card 4: Updating... Placeholder -->
-    <article class="summary-card placeholder-card">
-      <Hourglass :size="30" class="icon-placeholder" />
-      <span class="card-value text-muted">Updating...</span>
-      <span class="card-label">Coming Soon</span>
+    <!-- Card 4: Maintenance -->
+    <article class="summary-card maintenance-card">
+      <Wrench :size="30" class="icon-maintenance" />
+      <span class="card-value">{{ summary?.maintenance ?? "0" }}</span>
+      <span class="card-label">Maintenance</span>
     </article>
   </section>
 </template>
@@ -63,19 +63,11 @@ defineProps({
   color: #0d9488 !important;
 }
 
-.icon-placeholder {
-  color: #a7a7b4 !important;
-  animation: spin 8s linear infinite;
+.icon-available {
+  color: #16a34a !important;
 }
 
-.text-muted {
-  color: #a7a7b4 !important;
-  font-weight: 600 !important;
-  font-size: 14px !important;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.icon-maintenance {
+  color: #d9182f !important;
 }
 </style>

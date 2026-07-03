@@ -220,7 +220,7 @@ textarea:focus {
 }
 
 .nav-group {
-  color: #666477;
+  color: #8f8ea3;
   font-size: 12px;
   margin-top: 22px;
   text-transform: uppercase;
@@ -376,7 +376,7 @@ textarea:focus {
 
 .breadcrumb {
   align-items: center;
-  color: #777785;
+  color: #65657a;
   display: flex;
   font-size: 15px;
   gap: 9px;
@@ -384,6 +384,13 @@ textarea:focus {
 
 .breadcrumb svg {
   color: #b5b5c4;
+}
+
+.breadcrumb-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #3e3e4a;
 }
 
 .portal-main {
@@ -617,8 +624,7 @@ tbody tr:hover {
 }
 
 .status-chip.available,
-.status-chip.approved,
-.status-chip.accepted {
+.status-chip.approved {
   background: #e3f8ef;
   color: #047857;
 }

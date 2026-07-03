@@ -4,12 +4,11 @@ const translations = {
   "Custom": "Tùy chỉnh",
   "All Requests": "Tất cả yêu cầu",
   "Pending Approvals": "Đang chờ duyệt",
-  "Pending Approval Status": "Trạng thái duyệt",
   "Borrow Equipment": "Mượn thiết bị",
   "History Log": "Nhật ký lịch sử",
   "Schedules": "Lịch khả dụng",
   "FAQ": "Hỏi đáp (FAQ)",
-  
+
   // Dashboard & widgets
   "Pending Approval Requests": "Yêu cầu đang chờ duyệt",
   "Overdue Returns": "Trả đồ quá hạn",
@@ -18,12 +17,12 @@ const translations = {
   "Requester": "Người yêu cầu",
   "Equipment": "Thiết bị",
   "University / Purpose": "Trường / Mục đích",
+  "Student ID": "Mã sinh viên",
   "Classroom": "Phòng học",
   "Actions": "Thao tác",
   "Approve": "Duyệt",
   "Deny": "Từ chối",
   "No pending approval requests.": "Không có yêu cầu nào đang chờ duyệt.",
-  "No approval status requests yet.": "Chưa có yêu cầu nào để hiển thị trạng thái duyệt.",
   "Borrower": "Người mượn",
   "Due Date": "Hạn trả",
   "Action": "Thao tác",
@@ -35,7 +34,12 @@ const translations = {
   "Edit": "Chỉnh sửa",
   "Return": "Trả đồ",
   "You have no active requests or borrows.": "Bạn không có yêu cầu hoặc thiết bị mượn hoạt động nào.",
-  
+  "Pending Approval Status": "Trạng thái phê duyệt",
+  "No approval status requests yet.": "Chưa có yêu cầu nào.",
+  "Unit / Purpose": "Học phần / Mục đích",
+  "Denied": "Bị từ chối",
+  "Rejected": "Bị từ chối",
+
   // Request lists and filters
   "All Requests & Borrows": "Tất cả Yêu cầu & Lượt mượn",
   "Prioritized request lifecycle view with advanced search and filters.": "Xem chu kỳ yêu cầu theo độ ưu tiên với tìm kiếm nâng cao và bộ lọc.",
@@ -45,8 +49,6 @@ const translations = {
   "Returned": "Đã trả",
   "Cancelled": "Đã hủy",
   "All Purposes": "Tất cả mục đích",
-  "Classroom": "Phòng học",
-  "Vovinam Room": "Phòng võ Vovinam",
   "Lab": "Phòng Lab",
   "Research": "Nghiên cứu",
   "Event": "Sự kiện",
@@ -62,14 +64,13 @@ const translations = {
   "Send email reminder to borrower": "Gửi mail nhắc nhở người mượn",
   "Remind": "Nhắc nhở",
   "No requests matching your filters were found.": "Không tìm thấy yêu cầu nào phù hợp với bộ lọc.",
-  
+
   // History log
   "Borrowing History Log": "Nhật ký Lịch sử Mượn thiết bị",
   "Search, filter, and view past and active borrow requests.": "Tìm kiếm, lọc và xem các yêu cầu mượn thiết bị trong quá khứ và hiện tại.",
   "Search items, users, classroom...": "Tìm kiếm thiết bị, người dùng, phòng học...",
   "Requested": "Đang chờ duyệt",
   "Approved": "Đã duyệt",
-  "Denied": "Từ chối",
   "Near Due Date": "Sắp đến hạn trả",
   "Overdue": "Quá hạn",
   "Date Created": "Ngày tạo",
@@ -88,7 +89,7 @@ const translations = {
   " records": " bản ghi",
   "Previous": "Trang trước",
   "Next": "Trang sau",
-  
+
   // Schedules View
   "Equipment Availability Schedule": "Lịch khả dụng của thiết bị",
   "Live 24h × 7-day availability per item from real bookings. Click a green slot to reserve at that exact time.": "Lịch khả dụng trực quan 24h × 7 ngày từ các lượt mượn thực tế. Nhấp vào ô màu xanh để đặt lịch tại thời điểm đó.",
@@ -114,7 +115,7 @@ const translations = {
   "Open": "Trống",
   "Booked": "Đã đặt",
   "Out": "Hỏng",
-  
+
   // Profile View
   "Role": "Vai trò",
   "User ID": "Mã người dùng",
@@ -125,7 +126,7 @@ const translations = {
   "Recent Borrow Activity": "Hoạt động mượn gần đây",
   "Asset: ": "Mã tài sản: ",
   "No borrow activity found.": "Không tìm thấy hoạt động mượn thiết bị nào.",
-  
+
   // FAQ View
   "Frequently Asked Questions": "Các câu hỏi thường gặp",
   "Find answers to common questions about the Swinburne Equipment Portal.": "Tìm câu trả lời cho các câu hỏi thường gặp về Cổng thiết bị Swinburne.",
@@ -133,7 +134,7 @@ const translations = {
   "Read our portal documentation or guidelines for detailed information on student and lecturer policies.": "Đọc tài liệu hướng dẫn hoặc nội quy cổng thông tin để biết chi tiết về chính sách cho sinh viên và giảng viên.",
   "View Guidelines": "Xem hướng dẫn",
   "Contact Swinburne Vietnam Support Desk for emergency equipment requests or physical support.": "Liên hệ Bàn hỗ trợ Swinburne Việt Nam cho các yêu cầu thiết bị khẩn cấp hoặc hỗ trợ kỹ thuật trực tiếp.",
-  
+
   // Edit Borrow Modal
   "Modify Borrow Request": "Chỉnh sửa yêu cầu mượn đồ",
   "Details": "Chi tiết",
@@ -144,12 +145,12 @@ const translations = {
   "Repeat Bi-weekly": "Lặp lại mỗi 2 tuần",
   "Repeat Monthly": "Lặp lại hàng tháng",
   "Save Changes": "Lưu thay đổi",
-  
+
   // Topbar and profile menu
   "Hi, ": "Xin chào, ",
   "My Profile": "Hồ sơ của tôi",
   "Sign Out": "Đăng xuất",
-  
+
   // Overdue warnings & Statuses
   "OVERDUE": "QUÁ HẠN",
   "NEAR_DUE": "SẮP HẾT HẠN",
@@ -157,17 +158,17 @@ const translations = {
   "BORROWED": "ĐANG MƯỢN",
   "RETURNED": "ĐÃ TRẢ",
   "CANCELLED": "ĐÃ HỦY",
-  
+
   // Purpose names
   "CLASSROOM": "GIẢNG DẠY",
-  "VOVINAM": "PHÒNG VÕ VOVINAM",
   "LAB": "PHÒNG LAB",
   "RESEARCH": "NGHIÊN CỨU",
   "EVENT": "SỰ KIỆN",
-  
+
   // Notifications
   "Notifications": "Thông báo",
-  
+  "No notifications yet.": "Chưa có thông báo nào.",
+
   // Chain of custody modal
   "Chain of custody — ": "Chuỗi bàn giao thiết bị — ",
   "No custody entries yet.": "Chưa có nhật ký bàn giao nào.",
@@ -180,7 +181,7 @@ const translations = {
   "From": "Từ",
   "To": "Đến",
   "Notes": "Ghi chú",
-  
+
   // Status panel & others
   "Lecturer": "Giảng viên",
   "Student": "Sinh viên",
@@ -209,15 +210,100 @@ const translations = {
   "Lab Session": "Buổi thực hành Lab",
   "Club Activity": "Hoạt động Câu lạc bộ",
   "Other": "Khác",
-  "Classroom Instruction": "Giảng dạy trên lớp",
-  "Research Work": "Nghiên cứu khoa học",
-  "Swinburne Event": "Sự kiện Swinburne",
   "Swinburne": "Swinburne",
   "Asia": "Asia",
   "FPT": "FPT",
   "Today": "Hôm nay",
   "Quantity": "Số lượng",
-  "Handover Notes": "Ghi chú bàn giao"
+  "Handover Notes": "Ghi chú bàn giao",
+
+  // Missing sidebar and panel translations
+  "Audit Log": "Nhật ký hệ thống",
+  "Update Status": "Cập nhật trạng thái",
+  "Equipment Timeline": "Dòng thời gian thiết bị",
+  "Confirm Return": "Xác nhận trả đồ",
+  "Notification Center": "Trung tâm thông báo",
+  "Staff": "Nhân viên",
+  "Remaining:": "Còn lại:",
+  "Condition:": "Tình trạng:",
+  "View equipment history timeline": "Xem lịch sử hoạt động thiết bị",
+
+  // Audit Log view
+  "System Audit Log": "Nhật ký hoạt động hệ thống",
+  "System-wide: request, return, status, equipment, user, and notification changes.": "Toàn hệ thống: các thay đổi về yêu cầu, trả đồ, trạng thái, thiết bị, người dùng và thông báo.",
+  "Toan he thong: request, return, status, equipment, user, and notification changes.": "Toàn hệ thống: các thay đổi về yêu cầu, trả đồ, trạng thái, thiết bị, người dùng và thông báo.",
+  "Search audit log...": "Tìm kiếm nhật ký hoạt động...",
+  "All actions": "Tất cả hoạt động",
+  "Time": "Thời gian",
+  "Actor": "Người thực hiện",
+  "Entity": "Đối tượng",
+  "No audit entries match the filters.": "Không có nhật ký hoạt động nào khớp với bộ lọc.",
+
+  // Status panel
+  "Keep inventory state accurate.": "Giữ cho trạng thái kho chính xác.",
+  "Select item": "Chọn thiết bị",
+  "Available": "Khả dụng",
+  "Maintenance": "Bảo trì",
+  "Retired": "Đã thanh lý",
+  "Update equipment status": "Cập nhật trạng thái thiết bị",
+
+  // Return panel
+  "Close active borrowed items with checklist verification.": "Đóng các lượt mượn hoạt động với xác nhận danh sách kiểm tra.",
+  "No borrowed items pending return.": "Không có thiết bị đang mượn nào cần trả.",
+  "Select Borrow Record:": "Chọn bản ghi mượn:",
+  "Choose item to return": "Chọn thiết bị để trả",
+  "Quantity Returned:": "Số lượng trả:",
+  "Status OK?": "Trạng thái ổn?",
+  "Yes": "Có",
+  "No": "Không",
+  "Accessory Checklist": "Danh sách phụ kiện",
+  "Condition Before": "Tình trạng trước",
+  "Condition After": "Tình trạng sau",
+  "Condition before handover...": "Tình trạng trước khi bàn giao...",
+  "Condition after return...": "Tình trạng sau khi trả...",
+  "Before Photo URL": "URL ảnh trước",
+  "After Photo URL": "URL ảnh sau",
+  "Damage/Incident Report:": "Báo cáo hư hỏng/sự cố:",
+  "Describe damage, missing accessories, or issues...": "Mô tả hư hỏng, thiếu phụ kiện hoặc sự cố...",
+
+  // Alerts & Equipment Names
+  "Overdue return": "Trả quá hạn",
+  "Return due soon": "Sắp đến hạn trả",
+  "Partial return open": "Trả lại một phần",
+  "Maintenance item": "Thiết bị bảo trì",
+  "Fully booked": "Đã đặt hết",
+  "Logitech Rally Camera Kit": "Bộ Camera Logitech Rally",
+  "Wireless Presentation Clicker": "Bút trình chiếu không dây",
+  "Portable Projector": "Máy chiếu di động",
+  "HDMI Capture Adapter": "Cáp chuyển đổi HDMI Capture",
+  "Lapel Microphone Set": "Bộ micro cài áo",
+  "Filter notifications, tune preferences, and control demo auto reminder rules.": "Lọc thông báo, tùy chỉnh tùy chọn và kiểm soát các quy tắc nhắc nhở tự động.",
+  "Search notifications...": "Tìm kiếm thông báo...",
+  "All types": "Tất cả loại",
+  "All status": "Tất cả trạng thái",
+  "Unread": "Chưa đọc",
+  "Read": "Đã đọc",
+  "No notifications match the filters.": "Không có thông báo nào khớp với bộ lọc.",
+  "Notification Preferences": "Tùy chọn thông báo",
+  "Save Preferences": "Lưu tùy chọn",
+  "Auto Reminder Rules": "Quy tắc nhắc nhở tự động",
+  "Save Rules": "Lưu quy tắc",
+  "Remaining: ": "Còn lại: ",
+  "original ": "ban đầu ",
+  "Reserved": "Đã đặt lịch",
+  "Pending Approval": "Đang chờ duyệt",
+  "Check Out": "Lấy đồ",
+  "Check out reserved equipment": "Lấy thiết bị đã đặt lịch",
+  "Custody": "Bàn giao",
+  "Classroom / University": "Phòng học / Trường đại học",
+  "Equipment Management": "Quản lý thiết bị",
+  "User Management": "Quản lý người dùng",
+  "Pending Requests": "Yêu cầu đang chờ",
+  "Current Borrowing": "Đang mượn",
+  "Updating...": "Đang cập nhật...",
+  "Coming Soon": "Sắp ra mắt",
+  "Accepted": "Chấp nhận",
+  "Success": "Thành công"
 };
 
 export function makeTranslator() {
