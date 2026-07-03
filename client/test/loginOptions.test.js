@@ -12,6 +12,12 @@ test("login demo data no longer exposes the Vovinam account", () => {
   assert.equal(translate.includes("vovinamteacher@fpt.edu.vn"), false);
 });
 
+test("production mode renders a typed-email fallback so login stays possible without demo accounts", () => {
+  assert.ok(loginView.includes('v-if="!accounts.length"'));
+  assert.ok(loginView.includes("submitCustomEmail"));
+  assert.ok(loginView.includes('v-model="customEmail"'));
+});
+
 test("login location selector lists cities only", () => {
   for (const label of ["Hanoi", "Ho Chi Minh City", "Da Nang", "Can Tho"]) {
     assert.ok(loginView.includes(`label: "${label}"`));

@@ -41,7 +41,6 @@ const demoAccounts = [
 const accounts = isProductionMode ? [] : demoAccounts;
 
 const loginError = ref("");
-const showCustomInput = ref(false);
 const customEmail = ref("");
 
 onMounted(() => {
@@ -235,6 +234,26 @@ function getInitial(name) {
                 <span v-if="acc.role" class="account-type">{{ acc.role }}</span>
               </div>
             </button>
+
+            <div v-if="!accounts.length" class="custom-email-input-wrap">
+              <form class="custom-email-form" @submit.prevent="submitCustomEmail">
+                <label class="custom-email-label">
+                  Enter your email
+                  <input
+                    v-model="customEmail"
+                    type="email"
+                    class="custom-email-input"
+                    placeholder="name@fpt.edu.vn"
+                    autocomplete="email"
+                    :disabled="busy"
+                  />
+                </label>
+                <div class="custom-email-actions">
+                  <button type="button" class="custom-email-back-btn" :disabled="busy" @click="step = 'location'; selectedLocation = '';">Back</button>
+                  <button type="submit" class="custom-email-submit-btn" :disabled="busy || !customEmail">Next</button>
+                </div>
+              </form>
+            </div>
           </div>
 
           <p v-if="loginError" class="google-error-msg">{{ loginError }}</p>
