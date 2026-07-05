@@ -112,16 +112,19 @@ const statusLabel = { AVAILABLE: "Available", MAINTENANCE: "Maintenance", BORROW
       <!-- Filters -->
       <div class="filter-bar">
         <div class="search-wrap">
-          <input v-model="search" type="text" placeholder="Search by name, asset code, location…" class="search-input" />
+          <label for="admin-eq-search" class="sr-only">Search equipment</label>
+          <input id="admin-eq-search" v-model="search" type="text" placeholder="Search by name, asset code, location…" class="search-input" aria-label="Search equipment" />
         </div>
-        <select v-model="filterStatus" class="filter-sel">
+        <label for="admin-eq-status" class="sr-only">Filter by status</label>
+        <select id="admin-eq-status" v-model="filterStatus" class="filter-sel" aria-label="Filter by status">
           <option value="ALL">All Status</option>
           <option value="AVAILABLE">Available</option>
           <option value="BORROWED">Borrowed</option>
           <option value="MAINTENANCE">Maintenance</option>
           <option value="RETIRED">Retired</option>
         </select>
-        <select v-model="filterCategory" class="filter-sel">
+        <label for="admin-eq-category" class="sr-only">Filter by category</label>
+        <select id="admin-eq-category" v-model="filterCategory" class="filter-sel" aria-label="Filter by category">
           <option value="ALL">All Categories</option>
           <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
         </select>

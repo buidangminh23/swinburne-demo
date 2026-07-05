@@ -83,7 +83,7 @@ button:disabled {
 
 .login-panel p,
 .panel-heading p {
-  color: #727285;
+  color: #5b5b6b;
   line-height: 1.5;
   margin: 8px 0 0;
 }
@@ -243,7 +243,7 @@ textarea:focus {
 
 .topbar-actions {
   align-items: center;
-  color: #727285;
+  color: #5b5b6b;
   display: flex;
   font-size: 13px;
   gap: 10px;
@@ -557,7 +557,7 @@ textarea:focus {
 }
 
 .table-empty {
-  color: #727285;
+  color: #5b5b6b;
   font-size: 13px;
   margin: 0;
   padding: 0 0 22px;
@@ -636,7 +636,7 @@ tbody tr:hover {
 
 .status-chip.borrowed {
   background: #fff1d6;
-  color: #c66b00;
+  color: #a14707;
 }
 
 .status-chip.overdue {
@@ -648,7 +648,7 @@ tbody tr:hover {
 .status-chip.near-due,
 .status-chip.neardue {
   background: #fef3c7;
-  color: #d97706;
+  color: #92400e;
 }
 
 .status-chip.returned,
@@ -659,18 +659,18 @@ tbody tr:hover {
 
 .status-chip.cancelled {
   background: #fafafa;
-  color: #9e9e9e;
+  color: #616161;
 }
 
 .status-chip.denied,
 .status-chip.rejected {
   background: #ffe7ec;
-  color: #d9182f;
+  color: #c21427;
 }
 
 .status-chip.maintenance {
   background: #ffe7ec;
-  color: #d9182f;
+  color: #c21427;
 }
 
 .status-chip.retired {
@@ -713,7 +713,7 @@ tbody tr:hover {
 }
 
 .return-row span {
-  color: #727285;
+  color: #5b5b6b;
   font-size: 12px;
   margin-top: 4px;
 }
@@ -736,7 +736,7 @@ tbody tr:hover {
 }
 
 .empty-state {
-  color: #727285;
+  color: #5b5b6b;
   font-size: 13px;
   margin: 0;
 }
@@ -761,7 +761,7 @@ tbody tr:hover {
 }
 
 .sprint-card span {
-  color: #727285;
+  color: #5b5b6b;
   font-size: 12px;
   font-weight: 800;
 }
@@ -781,7 +781,7 @@ tbody tr:hover {
 }
 
 .sprint-card ul {
-  color: #727285;
+  color: #5b5b6b;
   display: grid;
   font-size: 12px;
   gap: 5px;
@@ -912,4 +912,16 @@ tbody tr:hover {
     align-items: stretch;
     flex-direction: column;
   }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

@@ -202,13 +202,16 @@ const roleIcons = {
       <!-- Filters -->
       <div class="filter-bar">
         <div class="search-wrap">
-          <input v-model="search" type="text" placeholder="Search by name, email..." class="search-input" />
+          <label for="admin-users-search" class="sr-only">Search users</label>
+          <input id="admin-users-search" v-model="search" type="text" placeholder="Search by name, email..." class="search-input" aria-label="Search users" />
         </div>
-        <select v-model="filterRole" class="filter-sel">
+        <label for="admin-users-role" class="sr-only">Filter by role</label>
+        <select id="admin-users-role" v-model="filterRole" class="filter-sel" aria-label="Filter by role">
           <option value="ALL">All Roles</option>
           <option v-for="(label, role) in roleLabels" :key="role" :value="role">{{ label }}</option>
         </select>
-        <select v-model="filterGroup" class="filter-sel">
+        <label for="admin-users-group" class="sr-only">Filter by group</label>
+        <select id="admin-users-group" v-model="filterGroup" class="filter-sel" aria-label="Filter by group">
           <option value="ALL">All Groups</option>
           <option v-for="group in groups" :key="group" :value="group">{{ group }}</option>
         </select>
@@ -264,12 +267,14 @@ const roleIcons = {
                     :value="getPendingGroup(user.id, user.groupName ?? '')"
                     :class="{ 'role-select--dirty': pendingGroupMap.has(user.id) }"
                     placeholder="Group"
+                    :aria-label="t('Group')"
                     @input="stageGroup(user, $event)"
                   />
                   <input
                     :value="getPendingClass(user.id, user.className ?? '')"
                     :class="{ 'role-select--dirty': pendingClassMap.has(user.id) }"
                     placeholder="Class"
+                    :aria-label="t('Class')"
                     @input="stageClass(user, $event)"
                   />
                 </div>
@@ -280,6 +285,7 @@ const roleIcons = {
                     :value="getPendingLecturer(user.id, user.lecturerId)"
                     @change="stageLecturer(user, $event)"
                     :class="['lecturer-select', { 'role-select--dirty': pendingLecturerMap.has(user.id) }]"
+                    :aria-label="'Lecturer for ' + user.name"
                   >
                     <option :value="null">Unassigned</option>
                     <option v-for="l in lecturers" :key="l.id" :value="l.id">{{ l.name }}</option>
@@ -294,6 +300,7 @@ const roleIcons = {
                     :disabled="user.id === currentUser?.id"
                     :class="['role-select', { 'role-select--dirty': hasPending(user.id) }]"
                     @change="stageRole(user, $event)"
+                    :aria-label="'Role for ' + user.name"
                   >
                     <option
                       v-for="(label, role) in roleLabels"

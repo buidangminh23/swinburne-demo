@@ -187,17 +187,21 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
       <div class="filters-bar">
         <div class="filter-group search-box">
           <Search :size="16" class="filter-icon" />
+          <label for="history-search" class="sr-only">{{ t('Search history') }}</label>
           <input
+            id="history-search"
             v-model="filters.search"
             type="text"
             :placeholder="t('Search items, users, classroom...')"
             class="filter-input"
+            :aria-label="t('Search history')"
           />
         </div>
 
         <div class="filter-group">
           <Filter :size="16" class="filter-icon" />
-          <select v-model="derivedFilter" class="filter-select">
+          <label for="history-status-filter" class="sr-only">{{ t('Filter by status') }}</label>
+          <select id="history-status-filter" v-model="derivedFilter" class="filter-select" :aria-label="t('Filter by status')">
             <option value="">{{ t('All Statuses') }}</option>
             <option value="REQUESTED">{{ t('Requested') }}</option>
             <option value="RESERVED">{{ t('Reserved') }}</option>
@@ -210,7 +214,8 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
         </div>
 
         <div class="filter-group">
-          <select v-model="filters.purpose" class="filter-select">
+          <label for="history-purpose-filter" class="sr-only">{{ t('Filter by purpose') }}</label>
+          <select id="history-purpose-filter" v-model="filters.purpose" class="filter-select" :aria-label="t('Filter by purpose')">
             <option value="">{{ t('All Purposes') }}</option>
             <option value="CLASSROOM">{{ t('Classroom') }}</option>
             <option value="RESEARCH">{{ t('Research / Project') }}</option>
@@ -219,7 +224,8 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
         </div>
 
         <div class="filter-group">
-          <select v-model="filters.sortBy" class="filter-select">
+          <label for="history-sort-by" class="sr-only">{{ t('Sort by') }}</label>
+          <select id="history-sort-by" v-model="filters.sortBy" class="filter-select" :aria-label="t('Sort by')">
             <option value="createdAt">{{ t('Date Created') }}</option>
             <option value="dueAt">{{ t('Due Date') }}</option>
             <option value="returnedAt">{{ t('Returned Date') }}</option>
@@ -257,7 +263,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
           </thead>
           <tbody>
             <tr v-for="(request, index) in rows" :key="request.id">
-              <td style="color: #727285; font-weight: 600;">
+              <td style="color: #6e6e81; font-weight: 600;">
                 {{ (filters.page - 1) * filters.limit + index + 1 }}
               </td>
               <td>
@@ -359,7 +365,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
   min-width: 200px;
 }
 .filter-icon {
-  color: #727285;
+  color: #6e6e81;
   margin-right: 6px;
 }
 .filter-input {
@@ -394,7 +400,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 .user-sub, .asset-sub, .program-sub {
   display: block;
   font-size: 11px;
-  color: #727285;
+  color: #6e6e81;
   margin-top: 2px;
 }
 .purpose-badge {
@@ -407,7 +413,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 }
 .empty-row-text {
   text-align: center;
-  color: #727285;
+  color: #6e6e81;
   padding: 40px;
   font-style: italic;
 }
@@ -420,7 +426,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 }
 .pagination-info {
   font-size: 13px;
-  color: #727285;
+  color: #6e6e81;
 }
 .pagination-actions {
   display: flex;

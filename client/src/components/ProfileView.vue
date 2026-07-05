@@ -161,7 +161,7 @@ const recentActivities = computed(() => {
               <tr v-for="req in recentActivities" :key="req.id">
                 <td>
                   <strong style="display:block; color: #464650;">{{ req.equipment?.name }}</strong>
-                  <small style="color: #727285;">{{ t('Asset: ') }}{{ req.equipment?.assetCode }}</small>
+                  <small style="color: #6e6e81;">{{ t('Asset: ') }}{{ req.equipment?.assetCode }}</small>
                 </td>
                 <td>
                   <span style="font-size: 12px; color: #464650;">{{ formatSimpleDate(req.dueAt) }}</span>
@@ -247,7 +247,7 @@ const recentActivities = computed(() => {
 }
 
 .profile-email {
-  color: #727285;
+  color: #6e6e81;
   font-size: 14px;
   display: flex;
   align-items: center;
@@ -274,7 +274,7 @@ const recentActivities = computed(() => {
 }
 
 .info-label {
-  color: #727285;
+  color: #6e6e81;
   font-weight: 500;
 }
 
@@ -304,7 +304,7 @@ const recentActivities = computed(() => {
 
 .role-badge.lecturer {
   background: #fef3c7;
-  color: #d97706;
+  color: #92400e;
 }
 
 .role-badge.support {
@@ -361,7 +361,7 @@ const recentActivities = computed(() => {
 
 .pending-requests .stat-icon-wrap {
   background: #fffbeb;
-  color: #d97706;
+  color: #92400e;
 }
 
 .total-transactions .stat-icon-wrap {
@@ -371,7 +371,7 @@ const recentActivities = computed(() => {
 
 .stat-details h3 {
   font-size: 12px;
-  color: #727285;
+  color: #6e6e81;
   margin: 0 0 4px 0;
   font-weight: 600;
 }
@@ -411,12 +411,12 @@ const recentActivities = computed(() => {
 
 .status-chip.approved {
   background: #ecfdf5;
-  color: #059669;
+  color: #047857;
 }
 
 .status-chip.borrowed {
   background: #fffbeb;
-  color: #d97706;
+  color: #92400e;
 }
 
 .status-chip.returned {
@@ -426,7 +426,7 @@ const recentActivities = computed(() => {
 
 .status-chip.cancelled {
   background: #fef2f2;
-  color: #dc2626;
+  color: #b91c1c;
 }
 
 .widget-table {
