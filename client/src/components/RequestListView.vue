@@ -237,16 +237,20 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
       <div class="filters-bar">
         <div class="search-input-wrap">
           <Search :size="16" class="search-icon" />
+          <label for="search-requests" class="sr-only">{{ t('Search requests') }}</label>
           <input
+            id="search-requests"
             v-model="searchText"
             type="text"
             :placeholder="t('Search by equipment, requester, location...')"
             class="search-input"
+            :aria-label="t('Search requests')"
           />
         </div>
 
         <div class="filters-select-wrap">
-          <select v-model="statusFilter" class="filter-select">
+          <label for="status-filter" class="sr-only">{{ t('Filter by status') }}</label>
+          <select id="status-filter" v-model="statusFilter" class="filter-select" :aria-label="t('Filter by status')">
             <option value="ALL">{{ t('All Statuses') }}</option>
             <option value="REQUESTED">{{ t('Pending Approval') }}</option>
             <option value="RESERVED">{{ t('Reserved') }}</option>
@@ -258,7 +262,8 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
             <option value="CANCELLED">{{ t('Cancelled') }}</option>
           </select>
 
-          <select v-model="purposeFilter" class="filter-select">
+          <label for="purpose-filter" class="sr-only">{{ t('Filter by purpose') }}</label>
+          <select id="purpose-filter" v-model="purposeFilter" class="filter-select" :aria-label="t('Filter by purpose')">
             <option value="ALL">{{ t('All Purposes') }}</option>
             <option value="CLASSROOM">{{ t('Classroom') }}</option>
             <option value="RESEARCH">{{ t('Research / Project') }}</option>
@@ -329,9 +334,9 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
             <!-- Due Date -->
             <td>
               <div class="due-cell" :class="{ 'overdue-text': isOverdue(req), 'warning-text': isNearDue(req) }">
-                <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
+                <small v-if="req.startDate" style="display: block; color: #5b5b6b; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                 <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
-                <span v-if="req.returnedAt" class="returned-sub" style="display: block; font-size: 10px; color: #10b981; margin-top: 2px;">
+                <span v-if="req.returnedAt" class="returned-sub" style="display: block; font-size: 10px; color: #047857; margin-top: 2px;">
                   {{ t('Returned: ') }}{{ formatDate(req.returnedAt) }}
                 </span>
               </div>
@@ -636,7 +641,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 .badge-tag.neardue {
   background: #fef3c7;
-  color: #d97706;
+  color: #92400e;
 }
 
 .user-cell, .equip-cell, .details-cell, .location-cell, .due-cell {
@@ -658,7 +663,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 .user-email-sub, .qty-sub, .location-sub, .returned-sub, .program-sub, .unit-sub {
   font-size: 11px;
-  color: #727285;
+  color: #6e6e81;
 }
 
 .equip-name {
@@ -741,34 +746,34 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 .action-btn.edit {
   background: #f0fdfa;
-  color: #0d9488;
+  color: #0f766e;
   border-color: #99f6e4;
 }
 
 .action-btn.edit:hover {
-  background: #0d9488;
+  background: #0f766e;
   color: white;
 }
 
 .action-btn.extend {
   background: #fffbeb;
-  color: #d97706;
+  color: #b45309;
   border-color: #fde68a;
 }
 
 .action-btn.extend:hover {
-  background: #d97706;
+  background: #b45309;
   color: white;
 }
 
 .action-btn.return {
-  background: #e6fcf5;
-  color: #0ca678;
-  border-color: #c3fae8;
+  background: #e3f8ef;
+  color: #047857;
+  border-color: #a7f3d0;
 }
 
 .action-btn.return:hover {
-  background: #0ca678;
+  background: #047857;
   color: white;
 }
 
@@ -785,7 +790,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 .action-btn.remind {
   background: #f0f9ff;
-  color: #0284c7;
+  color: #0369a1;
   border-color: #bae6fd;
 }
 

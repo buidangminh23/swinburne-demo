@@ -156,7 +156,8 @@ function getInitial(name) {
       <img class="logo-img" :src="swinburneLogo" alt="Swinburne Vietnam logo" />
 
       <div class="dropdown-wrap" :class="{ 'has-error': showError }">
-        <select v-model="selectedLocation" class="location-dropdown">
+        <label for="location-select" class="sr-only">Choose location</label>
+        <select id="location-select" v-model="selectedLocation" class="location-dropdown" aria-label="Choose location">
           <option value="" disabled selected>Choose location</option>
           <option v-for="loc in locations" :key="loc.value" :value="loc.value">
             {{ loc.label }}
@@ -237,17 +238,19 @@ function getInitial(name) {
 
             <div v-if="!accounts.length" class="custom-email-input-wrap">
               <form class="custom-email-form" @submit.prevent="submitCustomEmail">
-                <label class="custom-email-label">
+                <label class="custom-email-label" for="custom-email-input">
                   Enter your email
-                  <input
-                    v-model="customEmail"
-                    type="email"
-                    class="custom-email-input"
-                    placeholder="name@fpt.edu.vn"
-                    autocomplete="email"
-                    :disabled="busy"
-                  />
                 </label>
+                <input
+                  id="custom-email-input"
+                  v-model="customEmail"
+                  type="email"
+                  class="custom-email-input"
+                  placeholder="name@fpt.edu.vn"
+                  autocomplete="email"
+                  :disabled="busy"
+                  aria-label="Enter your email"
+                />
                 <div class="custom-email-actions">
                   <button type="button" class="custom-email-back-btn" :disabled="busy" @click="step = 'location'; selectedLocation = '';">Back</button>
                   <button type="submit" class="custom-email-submit-btn" :disabled="busy || !customEmail">Next</button>
