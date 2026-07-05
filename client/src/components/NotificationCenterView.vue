@@ -73,7 +73,7 @@ function saveRules() {
         <p>Filter notifications, tune preferences, and control demo auto reminder rules.</p>
       </div>
       <div class="notification-filters">
-        <input v-model="search" type="text" placeholder="Search notifications..." :aria-label="t('Search notifications')" />
+        <input v-model="search" type="text" placeholder="Search notifications..." aria-label="Search notifications" />
         <select v-model="typeFilter">
           <option value="ALL">All types</option>
           <option v-for="type in availableTypes" :key="type" :value="type">{{ type }}</option>
