@@ -688,7 +688,7 @@ const t = (text) => makeTranslator(props.session?.user?.email)(text);
 
 .status-chip.rejected {
   background: #ffe7ec;
-  color: #d9182f;
+  color: #c21427;
 }
 
 .overdue-text {
