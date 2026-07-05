@@ -55,7 +55,7 @@ function formatDetails(value) {
       <div class="audit-filters">
         <label class="search-box">
           <Search :size="15" />
-          <input v-model="search" type="text" :placeholder="t('Search audit log...')" />
+          <input v-model="search" type="text" :placeholder="t('Search audit log...')" :aria-label="t('Search audit log')" />
         </label>
         <select v-model="actionFilter">
           <option value="ALL">{{ t('All actions') }}</option>

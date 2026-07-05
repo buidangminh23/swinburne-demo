@@ -433,7 +433,7 @@ watchEffect(() => {
                       </td>
                       <td>{{ req.quantity || 1 }}</td>
                       <td>
-                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
+                        <small v-if="req.startDate" style="display: block; color: #5b5b6b; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td class="action-cell">
@@ -472,7 +472,7 @@ watchEffect(() => {
                       <td>{{ req.lecturer?.name }}</td>
                       <td>{{ req.equipment?.name }}</td>
                       <td class="overdue-text">
-                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px; font-weight: normal;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
+                        <small v-if="req.startDate" style="display: block; color: #5b5b6b; font-size: 10px; font-weight: normal;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td>
@@ -504,7 +504,7 @@ watchEffect(() => {
                       <td>{{ req.lecturer?.name }}</td>
                       <td>{{ req.equipment?.name }}</td>
                       <td class="warning-text">
-                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px; font-weight: normal;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
+                        <small v-if="req.startDate" style="display: block; color: #5b5b6b; font-size: 10px; font-weight: normal;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td class="action-cell">
@@ -544,7 +544,7 @@ watchEffect(() => {
                       </td>
                       <td>{{ req.quantity || 1 }}</td>
                       <td>
-                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
+                        <small v-if="req.startDate" style="display: block; color: #5b5b6b; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td><span :class="'status-chip ' + approvalStatusText(req).toLowerCase().replace(/ /g, '-')">{{ t(approvalStatusText(req)) }}</span></td>
@@ -588,7 +588,7 @@ watchEffect(() => {
                       </td>
                       <td>{{ req.quantity || 1 }}</td>
                       <td>
-                        <small v-if="req.startDate" style="display: block; color: #727285; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
+                        <small v-if="req.startDate" style="display: block; color: #5b5b6b; font-size: 10px;">{{ t('From') }}: {{ formatDate(req.startDate) }}</small>
                         <span>{{ t('To') }}: {{ formatDate(req.dueAt) }}</span>
                       </td>
                       <td><span :class="'status-chip ' + requesterDisplayStatus(req).toLowerCase().replace(/_/g, '-').replace(/ /g, '-')">{{ t(requesterDisplayStatus(req)).replace(/_/g, ' ') }}</span></td>
@@ -806,22 +806,22 @@ watchEffect(() => {
 }
 .approve-btn { background: #e3f8ef; color: #047857; border: 1px solid #a7e9cc; }
 .approve-btn:hover { background: #047857; color: white; }
-.deny-btn { background: #ffe7ec; color: #d9182f; border: 1px solid #fec0cb; }
-.deny-btn:hover { background: #d9182f; color: white; }
+.deny-btn { background: #ffe7ec; color: #b91c1c; border: 1px solid #fec0cb; }
+.deny-btn:hover { background: #b91c1c; color: white; }
 .remind-btn { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .remind-btn:hover { background: #1d4ed8; color: white; }
 .extend-btn { background: #fffbeb; color: #b45309; border: 1px solid #fef3c7; }
 .extend-btn:hover { background: #b45309; color: white; }
-.return-btn { background: #e6fcf5; color: #0ca678; border: 1px solid #c3fae8; }
-.return-btn:hover { background: #0ca678; color: white; }
+.return-btn { background: #e6fcf5; color: #087f5b; border: 1px solid #c3fae8; }
+.return-btn:hover { background: #087f5b; color: white; }
 .overdue-text { color: #d9182f; font-weight: 700; }
 .warning-text { color: #b45309; font-weight: 700; }
-.empty-widget-text { text-align: center; padding: 20px; color: #727285; font-style: italic; }
+.empty-widget-text { text-align: center; padding: 20px; color: #5b5b6b; font-style: italic; }
 
 .program-span {
   display: block;
   font-size: 11px;
-  color: #727285;
+  color: #5b5b6b;
 }
 .purpose-span {
   display: inline-block;
@@ -868,7 +868,7 @@ watchEffect(() => {
 .notif-empty {
   padding: 18px 16px;
   font-size: 12px;
-  color: #727285;
+  color: #5b5b6b;
   font-style: italic;
 }
 .notif-item {
@@ -985,7 +985,7 @@ watchEffect(() => {
 }
 .custody-empty {
   font-size: 12px;
-  color: #727285;
+  color: #5b5b6b;
   font-style: italic;
 }
 .custody-form {
