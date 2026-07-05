@@ -38,7 +38,7 @@ function formatDate(value) {
       <div class="timeline-filters">
         <label class="search-box">
           <Search :size="15" />
-          <input v-model="search" type="text" placeholder="Search equipment..." />
+          <input v-model="search" type="text" placeholder="Search equipment..." aria-label="Search equipment" />
         </label>
         <select v-model="selectedId">
           <option value="ALL">All equipment</option>

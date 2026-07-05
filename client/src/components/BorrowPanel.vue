@@ -383,7 +383,7 @@ function submit() {
       <div class="wizard-section">
         <h3 class="section-title">2. Select Equipment</h3>
         <div class="search-wrap">
-          <input v-model="search" type="text" placeholder="Search available items..." class="item-search-input" />
+          <input v-model="search" type="text" placeholder="Search available items..." class="item-search-input" :aria-label="t('Search available items')" />
         </div>
 
         <div class="available-items-list">
