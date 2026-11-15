@@ -1,5 +1,7 @@
 # Swinburne Equipment Portal
 
+<p align="center"><a href="LICENSE"><img src="https://img.shields.io/github/license/buidangminh23/swinburne-demo" height="20" alt="license" /></a></p>
+
 Web portal for borrowing, returning, and scheduling classroom and lab equipment.
 One codebase ships as two Vercel apps (demo + production), differing only by
 build-time environment variables.
