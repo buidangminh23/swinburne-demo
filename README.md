@@ -11,16 +11,6 @@ build-time environment variables.
 - **Demo:** https://swinburne-demo.vercel.app
 - **Production:** https://swinburne-equipment-portal.vercel.app
 
-## Try it locally
-
-With Node.js 18+:
-
-```bash
-npx @minhspark/swinburne-demo
-```
-
-This serves the demo build on your computer and opens your browser. Demo data stays in the browser's local storage.
-
 ## Tech Stack
 
 - **Frontend:** Vue 3 + Vite single-page app (runs in the browser).
