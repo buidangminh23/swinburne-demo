@@ -8,6 +8,4 @@ npx @minhspark/swinburne-demo
 
 It serves the built web app on `http://localhost:4173` and opens your browser. The demo keeps its data in the browser's local storage, so nothing is sent to a server. Add `--port <n>` to pick a port or `--no-open` to skip opening the browser.
 
-Live demo: https://swinburne-demo.vercel.app
-
 MIT License.
